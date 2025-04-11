@@ -11,6 +11,8 @@ import Tasks from "@/pages/Tasks";
 import DecisionHistory from "@/pages/DecisionHistory";
 import Analytics from "@/pages/Analytics";
 import Translate from "@/pages/Translate";
+import CitizenRequests from "@/pages/CitizenRequests";
+import Meetings from "@/pages/Meetings";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 import { User } from "./lib/types";
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/history" component={DecisionHistory} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/translate" component={Translate} />
+      <Route path="/citizen-requests" component={CitizenRequests} />
+      <Route path="/meetings" component={Meetings} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -51,7 +55,7 @@ function App() {
         <Header currentUser={currentUser} />
         <div className="flex flex-1">
           <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
-          <main className="flex-1 py-6 lg:ml-64 transition-all duration-300 ease-in-out">
+          <main className={`flex-1 py-6 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <Router />
             </div>
