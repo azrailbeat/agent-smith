@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -20,7 +20,13 @@ import {
   Users,
   Calendar,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  PlusCircle,
+  PlusSquare,
+  ArrowUpCircle,
+  CheckSquare,
+  XCircle,
+  MoveHorizontal
 } from "lucide-react";
 import { 
   Dialog, 
@@ -35,6 +41,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DragDropContext, Droppable, Draggable } from "@tanstack/react-dropzone";
 
 // Интерфейсы для типизации
 interface Meeting {

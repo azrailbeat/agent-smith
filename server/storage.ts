@@ -183,56 +183,50 @@ export class MemStorage implements IStorage {
     });
     
     // Initialize default agents
-    Promise.all(this.getIntegrations())
-      .then(integrations => {
-        const openAiIntegration = integrations.find(i => i.type === "openai");
-        
-        if (openAiIntegration) {
-          const defaultAgents: InsertAgent[] = [
-            {
-              name: "Помощник по запросам граждан",
-              type: "citizen_requests",
-              description: "Обрабатывает и категоризирует запросы от граждан, помогает составить ответы",
-              modelId: openAiIntegration.id,
-              isActive: true,
-              systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - помочь государственным служащим эффективно обрабатывать запросы граждан, категоризировать их и помогать составлять профессиональные и информативные ответы.",
-              config: {
-                temperature: 0.2,
-                maxTokens: 2048
-              }
-            },
-            {
-              name: "Протоколы собраний",
-              type: "meeting_protocols",
-              description: "Анализирует записи и протоколы совещаний, выделяет ключевую информацию",
-              modelId: openAiIntegration.id,
-              isActive: true,
-              systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - выделять ключевую информацию из записей совещаний, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
-              config: {
-                temperature: 0.1,
-                maxTokens: 4096
-              }
-            },
-            {
-              name: "Переводчик",
-              type: "translator",
-              description: "Переводит документы между казахским, русским и английским языками",
-              modelId: openAiIntegration.id,
-              isActive: true,
-              systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов между этими языками.",
-              config: {
-                temperature: 0.3,
-                maxTokens: 8192
-              }
-            }
-          ];
-          
-          defaultAgents.forEach(agent => {
-            this.createAgent(agent);
-          });
+    const defaultIntegrationId = 1; // Предполагаем, что OpenAI интеграция будет иметь ID 1
+    
+    const defaultAgents: InsertAgent[] = [
+      {
+        name: "Помощник по запросам граждан",
+        type: "citizen_requests",
+        description: "Обрабатывает и категоризирует запросы от граждан, помогает составить ответы",
+        modelId: defaultIntegrationId,
+        isActive: true,
+        systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - помочь государственным служащим эффективно обрабатывать запросы граждан, категоризировать их и помогать составлять профессиональные и информативные ответы.",
+        config: {
+          temperature: 0.2,
+          maxTokens: 2048
         }
-      })
-      .catch(err => console.error("Failed to create default agents:", err));
+      },
+      {
+        name: "Протоколы собраний",
+        type: "meeting_protocols",
+        description: "Анализирует записи и протоколы совещаний, выделяет ключевую информацию",
+        modelId: defaultIntegrationId,
+        isActive: true,
+        systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - выделять ключевую информацию из записей совещаний, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
+        config: {
+          temperature: 0.1,
+          maxTokens: 4096
+        }
+      },
+      {
+        name: "Переводчик",
+        type: "translator",
+        description: "Переводит документы между казахским, русским и английским языками",
+        modelId: defaultIntegrationId,
+        isActive: true,
+        systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов между этими языками.",
+        config: {
+          temperature: 0.3,
+          maxTokens: 8192
+        }
+      }
+    ];
+    
+    defaultAgents.forEach(agent => {
+      this.createAgent(agent);
+    });
   }
 
   // User methods
