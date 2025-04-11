@@ -33,7 +33,7 @@ html {
 
 /* Custom gradient text */
 .gradient-text {
-  @apply bg-gradient-to-r from-blue-400 to-indigo-600 text-transparent bg-clip-text;
+  @apply bg-gradient-to-r from-blue-400 to-blue-600 text-transparent bg-clip-text font-semibold;
 }
 
 @layer base {
