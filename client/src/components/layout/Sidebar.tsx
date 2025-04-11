@@ -25,7 +25,8 @@ interface SidebarProps {
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const [location] = useLocation();
-
+  
+  // Исправленные пути для навигации
   const navItems = [
     {
       name: "Дашборд",
@@ -87,11 +88,11 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                       <TooltipTrigger asChild>
                         <Link href={item.path}>
                           <Button
-                            variant={location === item.path ? "default" : "ghost"}
+                            variant={location === item.path || (item.path === "/" && location === "") ? "default" : "ghost"}
                             size="icon"
                             className={cn(
                               "w-full justify-center",
-                              location === item.path
+                              location === item.path || (item.path === "/" && location === "")
                                 ? "bg-primary-100 text-primary-900 hover:bg-primary-200 hover:text-primary-900"
                                 : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
                             )}
@@ -106,10 +107,10 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                 ) : (
                   <Link href={item.path}>
                     <Button
-                      variant={location === item.path ? "default" : "ghost"}
+                      variant={location === item.path || (item.path === "/" && location === "") ? "default" : "ghost"}
                       className={cn(
                         "w-full justify-start",
-                        location === item.path
+                        location === item.path || (item.path === "/" && location === "")
                           ? "bg-primary-100 text-primary-900 hover:bg-primary-200 hover:text-primary-900"
                           : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
                       )}
