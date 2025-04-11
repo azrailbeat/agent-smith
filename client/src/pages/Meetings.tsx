@@ -47,7 +47,7 @@ import {
   PopoverTrigger 
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { DragDropContext, Droppable, Draggable } from "@tanstack/react-dropzone";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 // Интерфейсы для типизации
 interface Meeting {
@@ -96,6 +96,21 @@ const DEPARTMENTS: Department[] = [
   { id: "internal", name: "Министерство внутренних дел" },
 ];
 
+// Интерфейс для колонок Канбан-доски
+interface KanbanColumn {
+  id: string;
+  title: string;
+  meetingIds: number[];
+}
+
+// Объект, который будет содержать состояние доски
+interface KanbanBoard {
+  columns: {
+    [key: string]: KanbanColumn;
+  };
+  columnOrder: string[];
+}
+
 const Meetings = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -122,6 +137,37 @@ const Meetings = () => {
   });
   const [activeTab, setActiveTab] = useState("all");
   
+  // Состояние для выбранного месяца в календаре
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
+  // Состояние для Канбан-доски
+  const [kanbanBoard, setKanbanBoard] = useState<KanbanBoard>({
+    columns: {
+      scheduled: {
+        id: "scheduled",
+        title: "Запланированные",
+        meetingIds: []
+      },
+      in_progress: {
+        id: "in_progress",
+        title: "В процессе",
+        meetingIds: []
+      },
+      completed: {
+        id: "completed",
+        title: "Завершенные",
+        meetingIds: []
+      },
+      cancelled: {
+        id: "cancelled",
+        title: "Отмененные",
+        meetingIds: []
+      }
+    },
+    columnOrder: ["scheduled", "in_progress", "completed", "cancelled"]
+  });
+  
   const { toast } = useToast();
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
   const audioRecorder = useRef<MediaRecorder | null>(null);
@@ -143,6 +189,100 @@ const Meetings = () => {
     },
     staleTime: 60000
   });
+  
+  // Эффект для обновления структуры канбан-доски при получении данных о встречах
+  useEffect(() => {
+    if (meetings.length > 0) {
+      // Группируем встречи по статусам
+      const newBoard: KanbanBoard = {
+        columns: {
+          scheduled: {
+            id: "scheduled",
+            title: "Запланированные",
+            meetingIds: []
+          },
+          in_progress: {
+            id: "in_progress",
+            title: "В процессе",
+            meetingIds: []
+          },
+          completed: {
+            id: "completed",
+            title: "Завершенные",
+            meetingIds: []
+          },
+          cancelled: {
+            id: "cancelled",
+            title: "Отмененные",
+            meetingIds: []
+          }
+        },
+        columnOrder: ["scheduled", "in_progress", "completed", "cancelled"]
+      };
+      
+      // Распределяем встречи по колонкам
+      meetings.forEach(meeting => {
+        if (newBoard.columns[meeting.status]) {
+          newBoard.columns[meeting.status].meetingIds.push(meeting.id);
+        }
+      });
+      
+      setKanbanBoard(newBoard);
+    }
+  }, [meetings]);
+  
+  // Обработчик события перетаскивания
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    
+    // Если нет destination или перетаскивание в то же место - ничего не делаем
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
+    
+    // Получаем ID встречи из строки draggableId
+    const meetingId = parseInt(draggableId.replace('meeting-', ''));
+    
+    // Находим встречу в списке
+    const meetingToUpdate = meetings.find(m => m.id === meetingId);
+    if (!meetingToUpdate) return;
+    
+    // Обновляем статус встречи (в реальном приложении здесь был бы API-запрос)
+    const newStatus = destination.droppableId as 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+    
+    // Обновляем встречу в кэше
+    queryClient.setQueryData(['/api/meetings'], (oldData: Meeting[]) => {
+      return oldData.map(m => {
+        if (m.id === meetingId) {
+          return { ...m, status: newStatus };
+        }
+        return m;
+      });
+    });
+    
+    // Обновляем доску канбан локально
+    const newBoard = { ...kanbanBoard };
+    
+    // Удаляем ID из исходной колонки
+    newBoard.columns[source.droppableId].meetingIds = 
+      newBoard.columns[source.droppableId].meetingIds.filter(id => id !== meetingId);
+    
+    // Добавляем ID в целевую колонку
+    newBoard.columns[destination.droppableId].meetingIds.splice(
+      destination.index,
+      0,
+      meetingId
+    );
+    
+    setKanbanBoard(newBoard);
+    
+    toast({
+      title: "Статус встречи обновлен",
+      description: `Встреча перемещена в статус "${renderMeetingStatus(newStatus).props.children}"`
+    });
+  };
 
   // Мутация для сохранения встречи
   const saveMeetingMutation = useMutation({
