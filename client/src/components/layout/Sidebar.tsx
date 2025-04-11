@@ -73,7 +73,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   return (
     <div
       className={cn(
-        "fixed left-0 top-14 h-screen bg-white border-r transition-all duration-300 ease-in-out z-20",
+        "fixed left-0 top-14 h-screen bg-neutral-800 border-r border-neutral-700 transition-all duration-300 ease-in-out z-20",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -93,8 +93,8 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                             className={cn(
                               "w-full justify-center",
                               location === item.path || (item.path === "/" && location === "")
-                                ? "bg-primary-100 text-primary-900 hover:bg-primary-200 hover:text-primary-900"
-                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
+                                ? "bg-primary-900/50 text-primary-300 hover:bg-primary-900/70 hover:text-primary-200"
+                                : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700"
                             )}
                           >
                             {item.icon}
@@ -111,8 +111,8 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                       className={cn(
                         "w-full justify-start",
                         location === item.path || (item.path === "/" && location === "")
-                          ? "bg-primary-100 text-primary-900 hover:bg-primary-200 hover:text-primary-900"
-                          : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
+                          ? "bg-primary-900/50 text-primary-300 hover:bg-primary-900/70 hover:text-primary-200"
+                          : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700"
                       )}
                     >
                       <span className="mr-2">{item.icon}</span>
@@ -130,7 +130,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
             variant="ghost"
             size={collapsed ? "icon" : "default"}
             onClick={onToggle}
-            className="w-full justify-center"
+            className="w-full justify-center text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700"
           >
             {collapsed ? <ChevronRight size={20} /> : <><ChevronLeft size={20} className="mr-2" /> Свернуть</>}
           </Button>
