@@ -160,6 +160,7 @@ const Tasks = () => {
       priority: newTask.priority as Task['priority'],
       dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined,
       status: 'pending',
+      createdBy: 1, // Default to admin user for now
     });
   };
   

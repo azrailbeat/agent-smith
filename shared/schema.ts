@@ -301,3 +301,46 @@ export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
 
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
+
+// Citizen Requests schema
+export const citizenRequests = pgTable("citizen_requests", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  contactInfo: text("contact_info").notNull(),
+  requestType: text("request_type").notNull(),
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("new"),
+  priority: text("priority").default("medium"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  assignedTo: integer("assigned_to"),
+  aiProcessed: boolean("ai_processed").default(false),
+  aiClassification: text("ai_classification"),
+  aiSuggestion: text("ai_suggestion"),
+  responseText: text("response_text"),
+  closedAt: timestamp("closed_at"),
+  attachments: text("attachments").array(),
+});
+
+export const insertCitizenRequestSchema = createInsertSchema(citizenRequests).pick({
+  fullName: true,
+  contactInfo: true,
+  requestType: true,
+  subject: true,
+  description: true,
+  status: true,
+  priority: true,
+  assignedTo: true,
+  attachments: true,
+});
+
+export const citizenRequestsRelations = relations(citizenRequests, ({ one }) => ({
+  assignedUser: one(users, {
+    fields: [citizenRequests.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+export type CitizenRequest = typeof citizenRequests.$inferSelect;
+export type InsertCitizenRequest = z.infer<typeof insertCitizenRequestSchema>;
