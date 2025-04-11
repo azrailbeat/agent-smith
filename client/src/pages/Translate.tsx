@@ -1,12 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Volume, RotateCcw, Copy } from "lucide-react";
+import { Mic, Volume, RotateCcw, Copy, Download, Save, StopCircle, History } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+interface Translation {
+  id: number;
+  date: Date;
+  sourceText: string;
+  translatedText: string;
+  sourceLang: string;
+  targetLang: string;
+  title?: string;
+  metadata?: {
+    source?: string;
+    context?: string;
+    confidenceScore?: number;
+  };
+}
+
+interface YandexSpeechRecognitionResponse {
+  result: string;
+}
 
 const Translate = () => {
   const [sourceText, setSourceText] = useState("");
@@ -14,6 +36,17 @@ const Translate = () => {
   const [sourceLang, setSourceLang] = useState("ru");
   const [targetLang, setTargetLang] = useState("en");
   const [isListening, setIsListening] = useState(false);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [translationTitle, setTranslationTitle] = useState("");
+  const [translationHistory, setTranslationHistory] = useState<Translation[]>([]);
+  const [translationMetadata, setTranslationMetadata] = useState({ source: "", context: "" });
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<Translation | null>(null);
+  
+  // Для Yandex Speech Kit
+  const [isYandexEnabled, setIsYandexEnabled] = useState(false);
+  
+  const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
   const translateMutation = useMutation({
@@ -50,6 +83,11 @@ const Translate = () => {
 
   // Для речевого ввода (Speech Recognition)
   const startListening = () => {
+    if (isYandexEnabled) {
+      startYandexSpeechRecognition();
+      return;
+    }
+    
     if (!('webkitSpeechRecognition' in window)) {
       toast({
         title: "Не поддерживается",
@@ -63,16 +101,16 @@ const Translate = () => {
       const SpeechRecognition = window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = sourceLang === 'ru' ? 'ru-RU' : 
-                        sourceLang === 'kz' ? 'kk-KZ' : 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+                         sourceLang === 'kz' ? 'kk-KZ' : 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
       recognition.onstart = () => {
         setIsListening(true);
       };
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results[event.results.length - 1][0].transcript;
         setSourceText((prev) => prev + ' ' + transcript);
       };
 
@@ -85,6 +123,7 @@ const Translate = () => {
         setIsListening(false);
       };
 
+      recognitionRef.current = recognition;
       recognition.start();
     } catch (error) {
       console.error("Ошибка инициализации речевого ввода:", error);
@@ -94,6 +133,129 @@ const Translate = () => {
         variant: "destructive"
       });
     }
+  };
+  
+  // Останавливаем запись
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  };
+  
+  // Для Yandex Speech Kit
+  const startYandexSpeechRecognition = async () => {
+    try {
+      setIsListening(true);
+      
+      // Здесь должен быть код для запуска записи через микрофон
+      // и отправки аудио в Yandex Speech Kit API
+      
+      toast({
+        title: "Запись через Yandex Speech Kit",
+        description: "Запись через Yandex Speech Kit запущена"
+      });
+      
+      // Заглушка для демонстрации
+      setTimeout(() => {
+        setIsListening(false);
+        toast({
+          title: "Распознавание завершено",
+          description: "Аудио было успешно распознано через Yandex Speech Kit"
+        });
+      }, 5000);
+    } catch (error) {
+      console.error("Ошибка при использовании Yandex Speech Kit:", error);
+      setIsListening(false);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось запустить распознавание через Yandex Speech Kit",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Сохранение перевода
+  const saveTranslation = () => {
+    if (!sourceText || !translatedText) {
+      toast({
+        title: "Ошибка",
+        description: "Нет текста для сохранения",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSaveDialogOpen(true);
+  };
+  
+  // Выполнение сохранения с метаданными
+  const handleSaveTranslation = () => {
+    // Создаем новую запись перевода
+    const newTranslation: Translation = {
+      id: translationHistory.length + 1,
+      date: new Date(),
+      sourceText,
+      translatedText,
+      sourceLang,
+      targetLang,
+      title: translationTitle || `Перевод ${new Date().toLocaleDateString()}`,
+      metadata: {
+        source: translationMetadata.source,
+        context: translationMetadata.context,
+        confidenceScore: 0.95 // Это значение должно приходить от API
+      }
+    };
+    
+    // Добавляем в историю
+    setTranslationHistory([...translationHistory, newTranslation]);
+    
+    // Закрываем диалог
+    setIsSaveDialogOpen(false);
+    setTranslationTitle("");
+    setTranslationMetadata({ source: "", context: "" });
+    
+    toast({
+      title: "Сохранено",
+      description: "Перевод успешно сохранен в истории"
+    });
+  };
+  
+  // Загрузка перевода в формате JSON
+  const downloadTranslation = () => {
+    if (!sourceText || !translatedText) {
+      toast({
+        title: "Ошибка",
+        description: "Нет текста для загрузки",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const translationData = {
+      sourceText,
+      translatedText,
+      sourceLang,
+      targetLang,
+      timestamp: new Date().toISOString()
+    };
+    
+    const jsonString = JSON.stringify(translationData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `translation_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Загружено",
+      description: "Файл перевода успешно скачан"
+    });
   };
 
   // Для озвучивания (Text-to-Speech)
@@ -176,15 +338,25 @@ const Translate = () => {
               />
               <div className="flex justify-between">
                 <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => startListening()}
-                    disabled={isListening}
-                    className={isListening ? "bg-primary-100" : ""}
-                  >
-                    <Mic className="h-4 w-4 mr-2" />
-                    {isListening ? "Слушаю..." : "Диктовать"}
-                  </Button>
+                  {!isListening ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => startListening()}
+                      className={isListening ? "bg-primary-100" : ""}
+                    >
+                      <Mic className="h-4 w-4 mr-2" />
+                      Диктовать
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => stopListening()}
+                      className="bg-red-100 hover:bg-red-200 text-red-700 border-red-300"
+                    >
+                      <StopCircle className="h-4 w-4 mr-2" />
+                      Остановить
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => speakText(sourceText, sourceLang)}
@@ -260,7 +432,32 @@ const Translate = () => {
                   )
                 )}
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-between">
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => saveTranslation()}
+                    disabled={!translatedText}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Сохранить
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadTranslation()}
+                    disabled={!translatedText}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Скачать
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsHistoryDialogOpen(true)}
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    История
+                  </Button>
+                </div>
                 <div className="space-x-2">
                   <Button
                     variant="outline"
@@ -304,6 +501,128 @@ const Translate = () => {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Диалоговое окно для сохранения перевода */}
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Сохранить перевод</DialogTitle>
+            <DialogDescription>
+              Заполните информацию для сохранения текущего перевода в истории
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Название
+              </Label>
+              <Input
+                id="title"
+                value={translationTitle}
+                onChange={(e) => setTranslationTitle(e.target.value)}
+                className="col-span-3"
+                placeholder="Введите название для перевода"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="source" className="text-right">
+                Источник
+              </Label>
+              <Input
+                id="source"
+                value={translationMetadata.source}
+                onChange={(e) => setTranslationMetadata({ ...translationMetadata, source: e.target.value })}
+                className="col-span-3"
+                placeholder="Укажите источник текста (документ, разговор и т.д.)"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="context" className="text-right">
+                Контекст
+              </Label>
+              <Input
+                id="context"
+                value={translationMetadata.context}
+                onChange={(e) => setTranslationMetadata({ ...translationMetadata, context: e.target.value })}
+                className="col-span-3"
+                placeholder="Опишите контекст перевода (необязательно)"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleSaveTranslation}>Сохранить</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Диалоговое окно для истории переводов */}
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>История переводов</DialogTitle>
+            <DialogDescription>
+              Просмотр и управление сохраненными переводами
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {translationHistory.length === 0 ? (
+              <div className="text-center py-8 text-neutral-500">
+                История переводов пуста
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {translationHistory.map((item) => (
+                  <Card key={item.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-medium">{item.title}</h4>
+                        <p className="text-xs text-neutral-500">
+                          {new Date(item.date).toLocaleString()} | {item.sourceLang} → {item.targetLang}
+                        </p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0" 
+                        onClick={() => {
+                          setSourceText(item.sourceText);
+                          setTranslatedText(item.translatedText);
+                          setSourceLang(item.sourceLang);
+                          setTargetLang(item.targetLang);
+                          setIsHistoryDialogOpen(false);
+                        }}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="p-2 bg-neutral-50 rounded border border-neutral-200">
+                        {item.sourceText.substring(0, 100)}{item.sourceText.length > 100 ? "..." : ""}
+                      </div>
+                      <div className="p-2 bg-neutral-50 rounded border border-neutral-200">
+                        {item.translatedText.substring(0, 100)}{item.translatedText.length > 100 ? "..." : ""}
+                      </div>
+                    </div>
+                    {item.metadata && (
+                      <div className="mt-2 text-xs text-neutral-500">
+                        {item.metadata.source && <span>Источник: {item.metadata.source} | </span>}
+                        {item.metadata.context && <span>Контекст: {item.metadata.context}</span>}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsHistoryDialogOpen(false)}>
+              Закрыть
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

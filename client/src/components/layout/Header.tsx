@@ -31,17 +31,17 @@ const Header = ({ currentUser }: HeaderProps) => {
             <nav className="ml-6 flex space-x-8">
               {navigation.map((item) => (
                 <Link key={item.href} href={item.href}>
-                  <a 
+                  <span 
                     className={`
                       ${location === item.href
                         ? "border-b-2 border-white"
                         : "border-transparent border-b-2 hover:border-neutral-300"
                       } 
-                      px-1 pt-1 inline-flex items-center text-sm font-medium
+                      px-1 pt-1 inline-flex items-center text-sm font-medium cursor-pointer
                     `}
                   >
                     {item.name}
-                  </a>
+                  </span>
                 </Link>
               ))}
             </nav>
