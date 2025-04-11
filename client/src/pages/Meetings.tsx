@@ -26,7 +26,12 @@ import {
   ArrowUpCircle,
   CheckSquare,
   XCircle,
-  MoveHorizontal
+  MoveHorizontal,
+  Bot,
+  Database,
+  MessageSquare,
+  SendHorizontal,
+  Plus
 } from "lucide-react";
 import { 
   Dialog, 
@@ -41,6 +46,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import { 
   Popover, 
   PopoverContent, 
@@ -381,7 +387,7 @@ const Meetings = () => {
       
       // Для демо просто имитируем задержку и генерацию
       setTimeout(() => {
-        const updatedMeeting = { 
+        const updatedMeeting: Meeting = { 
           ...meeting,
           protocol: {
             summary: "На встрече обсуждались вопросы цифровизации государственных услуг и внедрения системы Agent Smith в работу правительственных органов. Были представлены результаты пилотного проекта в Министерстве цифрового развития.",
@@ -396,7 +402,7 @@ const Meetings = () => {
                 description: "Подготовить детальный план внедрения системы Agent Smith",
                 assignee: "Ержан Амиров",
                 deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-                status: "pending",
+                status: 'pending',
                 meetingId: meeting.id
               },
               {
@@ -404,7 +410,7 @@ const Meetings = () => {
                 description: "Согласовать бюджет на разработку модулей для казахского языка",
                 assignee: "Айжан Нурланова",
                 deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                status: "pending",
+                status: 'pending',
                 meetingId: meeting.id
               },
               {
@@ -412,7 +418,7 @@ const Meetings = () => {
                 description: "Сформировать состав межведомственной рабочей группы",
                 assignee: "Марат Сагинтаев",
                 deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                status: "pending",
+                status: 'pending',
                 meetingId: meeting.id
               }
             ]
@@ -1605,74 +1611,174 @@ const Meetings = () => {
       
       {/* Диалог просмотра протокола */}
       <Dialog open={viewProtocolDialogOpen} onOpenChange={setViewProtocolDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader>
-            <DialogTitle>
-              Протокол встречи
-              {selectedMeeting?.blockchainHash && (
-                <Badge className="ml-2 bg-green-100 text-green-800">В блокчейне</Badge>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedMeeting?.title} • {selectedMeeting?.date ? formatDate(selectedMeeting.date) : ''}
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="pb-2 border-b">
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-xl font-bold">
+                  {selectedMeeting?.title}
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-sm">
+                  {selectedMeeting?.organizer} • {selectedMeeting?.date ? formatDate(selectedMeeting?.date) : "-"}
+                </DialogDescription>
+              </div>
+              <div className="flex gap-2 items-center">
+                {selectedMeeting?.status && (
+                  <Badge className={`${
+                    selectedMeeting.status === 'completed' ? 'bg-green-50 text-green-700' : 
+                    selectedMeeting.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
+                    selectedMeeting.status === 'cancelled' ? 'bg-red-50 text-red-700' :
+                    'bg-yellow-50 text-yellow-700'
+                  }`}>
+                    {renderMeetingStatus(selectedMeeting.status).props.children}
+                  </Badge>
+                )}
+                {selectedMeeting?.blockchainHash && (
+                  <Badge className="bg-green-50 text-green-700 border-green-200">
+                    <Check className="h-3 w-3 mr-1" /> GovChain
+                  </Badge>
+                )}
+              </div>
+            </div>
           </DialogHeader>
           
-          <div className="py-4">
+          <div className="py-4 space-y-6">
+            <div className="flex flex-wrap gap-4 items-start bg-muted/30 p-3 rounded-md">
+              <div className="min-w-[150px] bg-white p-2 rounded border">
+                <h4 className="text-xs font-medium text-neutral-500">Организатор</h4>
+                <p className="text-sm font-medium">{selectedMeeting?.organizer}</p>
+              </div>
+              
+              <div className="min-w-[150px] bg-white p-2 rounded border">
+                <h4 className="text-xs font-medium text-neutral-500">Дата и время</h4>
+                <p className="text-sm font-medium">{selectedMeeting?.date ? formatDate(selectedMeeting?.date) : "-"}</p>
+              </div>
+              
+              <div className="min-w-[150px] bg-white p-2 rounded border">
+                <h4 className="text-xs font-medium text-neutral-500">Продолжительность</h4>
+                <p className="text-sm font-medium">{selectedMeeting?.duration} минут</p>
+              </div>
+              
+              <div className="min-w-[150px] bg-white p-2 rounded border">
+                <h4 className="text-xs font-medium text-neutral-500">Место проведения</h4>
+                <p className="text-sm font-medium">{selectedMeeting?.location}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium flex items-center">
+                  <Users className="h-4 w-4 mr-1" /> 
+                  Участники
+                </h4>
+                <Badge variant="outline">{selectedMeeting?.participants.length} человек</Badge>
+              </div>
+              <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded">
+                {selectedMeeting?.participants.map((participant, index) => (
+                  <Badge key={index} variant="secondary">
+                    {participant}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <h4 className="text-sm font-medium flex items-center">
+                  <FileText className="h-4 w-4 mr-1" /> 
+                  Описание
+                </h4>
+              </div>
+              <Card className="p-3 bg-gray-50">
+                <p className="text-sm whitespace-pre-wrap">{selectedMeeting?.description}</p>
+              </Card>
+            </div>
+            
             {!selectedMeeting?.protocol ? (
-              <div className="flex flex-col items-center justify-center h-40">
-                <div className="h-6 w-6 border-t-2 border-primary-500 rounded-full animate-spin"></div>
-                <span className="mt-3 text-neutral-500">Генерация протокола...</span>
-                <p className="mt-2 text-xs text-neutral-400 text-center max-w-md">
-                  Agent Smith анализирует содержание встречи и создает официальный протокол с решениями и задачами
+              <div className="flex flex-col items-center justify-center py-8 space-y-4 bg-gray-50 rounded-lg">
+                <div className="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-primary-600" />
+                </div>
+                <h3 className="text-lg font-medium">Протокол не создан</h3>
+                <p className="text-sm text-neutral-500 text-center max-w-md">
+                  Протокол встречи еще не был создан. Создайте его, чтобы зафиксировать решения и задачи.
                 </p>
+                <Button onClick={() => generateProtocol(selectedMeeting!)}>
+                  <Bot className="h-4 w-4 mr-2" />
+                  Сгенерировать протокол с помощью AI
+                </Button>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-neutral-700 mb-2">Участники:</h3>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedMeeting.participants.map(participant => (
-                      <Badge key={participant} variant="outline" className="mr-1">
-                        {participant}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+              <div className="space-y-4">
+                <Separator className="my-4" />
                 
-                <div>
-                  <h3 className="text-sm font-medium text-neutral-700 mb-2">Резюме:</h3>
-                  <div className="p-3 bg-neutral-50 rounded-md border border-neutral-200 text-sm">
-                    {selectedMeeting.protocol.summary}
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-neutral-700 mb-2">Принятые решения:</h3>
-                  <ul className="space-y-2">
-                    {selectedMeeting.protocol.decisions.map((decision, index) => (
-                      <li key={index} className="flex items-start">
-                        <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary-100 text-primary-800 mr-2 mt-0.5">
-                          {index + 1}
-                        </div>
-                        <span className="text-sm">{decision}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-medium text-neutral-700">Задачи:</h3>
-                    <Button variant="outline" size="sm" onClick={() => openAddTaskDialog(selectedMeeting)}>
-                      Добавить задачу
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-medium flex items-center">
+                    <Bot className="h-4 w-4 mr-1" /> 
+                    Протокол встречи
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => downloadProtocol(selectedMeeting)}>
+                      <Download className="h-3 w-3 mr-1" /> Скачать
                     </Button>
+                    {!selectedMeeting?.blockchainHash && (
+                      <Button variant="outline" size="sm" onClick={() => saveToBlockchain(selectedMeeting.id)}>
+                        <Save className="h-3 w-3 mr-1" /> В блокчейн
+                      </Button>
+                    )}
                   </div>
-                  <div className="rounded-md border">
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Резюме встречи</h4>
+                    <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Bot className="h-3 w-3 mr-1" /> AI
+                    </Badge>
+                  </div>
+                  <Card className="p-3 bg-blue-50/30 border-blue-100">
+                    <p className="text-sm whitespace-pre-wrap">{selectedMeeting?.protocol.summary}</p>
+                  </Card>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Принятые решения</h4>
+                    <Badge variant="outline">{selectedMeeting.protocol.decisions.length}</Badge>
+                  </div>
+                  <Card className="p-3 bg-gray-50">
+                    <ul className="space-y-2">
+                      {selectedMeeting.protocol.decisions.map((decision, index) => (
+                        <li key={index} className="flex items-start">
+                          <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary-100 text-primary-800 mr-2 mt-0.5">
+                            {index + 1}
+                          </div>
+                          <span className="text-sm">{decision}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium flex items-center">
+                      <ListChecks className="h-4 w-4 mr-1" /> 
+                      Задачи
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{selectedMeeting.protocol.tasks.length}</Badge>
+                      <Button size="sm" variant="outline" onClick={() => openAddTaskDialog(selectedMeeting)}>
+                        <Plus className="h-3 w-3 mr-1" /> Добавить
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-md overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Описание</TableHead>
+                          <TableHead>Задача</TableHead>
                           <TableHead>Ответственный</TableHead>
                           <TableHead>Срок</TableHead>
                           <TableHead>Статус</TableHead>
@@ -1692,12 +1798,49 @@ const Meetings = () => {
                   </div>
                 </div>
                 
+                <div className="pt-2">
+                  <div className="flex items-center">
+                    <h4 className="text-sm font-medium flex items-center">
+                      <MessageSquare className="h-4 w-4 mr-1" /> 
+                      AI-ассистент
+                    </h4>
+                  </div>
+                  <div className="mt-2 flex gap-3">
+                    <Input 
+                      placeholder="Спросите об этой встрече..." 
+                      className="flex-1" 
+                    />
+                    <Button size="sm">
+                      <SendHorizontal className="h-4 w-4 mr-1" /> Спросить
+                    </Button>
+                  </div>
+                </div>
+                
                 {selectedMeeting.blockchainHash && (
-                  <div>
-                    <h3 className="text-sm font-medium text-neutral-700 mb-2">Хэш в блокчейне:</h3>
-                    <div className="p-3 bg-green-50 rounded-md border border-green-200 text-sm font-mono overflow-x-auto">
-                      {selectedMeeting.blockchainHash}
+                  <div className="space-y-2 pt-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium flex items-center">
+                        <Database className="h-4 w-4 mr-1" /> 
+                        Блокчейн-верификация
+                      </h4>
+                      <Badge className="bg-green-50 text-green-700 border-green-200">
+                        <Check className="h-3 w-3 mr-1" /> Подтверждено
+                      </Badge>
                     </div>
+                    <Card className="p-3 bg-green-50/30 border-green-100">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>Хеш транзакции:</span>
+                          <span>Дата подтверждения:</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <code className="bg-white p-1 rounded font-mono text-xs w-[60%] truncate">
+                            {selectedMeeting.blockchainHash}
+                          </code>
+                          <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </Card>
                   </div>
                 )}
               </div>
