@@ -99,6 +99,8 @@ export class MemStorage implements IStorage {
     this.messages = new Map();
     this.activities = new Map();
     this.systemStatuses = new Map();
+    this.integrations = new Map();
+    this.agents = new Map();
     
     this.userIdCounter = 1;
     this.taskIdCounter = 1;
@@ -107,6 +109,8 @@ export class MemStorage implements IStorage {
     this.messageIdCounter = 1;
     this.activityIdCounter = 1;
     this.systemStatusIdCounter = 1;
+    this.integrationIdCounter = 1;
+    this.agentIdCounter = 1;
     
     // Initialize with some default data
     this.initializeDefaultData();
@@ -135,6 +139,100 @@ export class MemStorage implements IStorage {
     statuses.forEach(status => {
       this.updateSystemStatus(status.serviceName, status);
     });
+
+    // Initialize default integrations
+    const defaultIntegrations: InsertIntegration[] = [
+      {
+        name: "OpenAI GPT-4o",
+        type: "openai",
+        apiUrl: "https://api.openai.com/v1",
+        apiKey: process.env.OPENAI_API_KEY || "",
+        isActive: true,
+        config: {}
+      },
+      {
+        name: "Yandex Speech Kit",
+        type: "speech",
+        apiUrl: "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize",
+        apiKey: "",
+        isActive: true,
+        config: { 
+          languageCodes: ["ru-RU", "kk-KZ", "en-US"] 
+        }
+      },
+      {
+        name: "Внутренний Planka",
+        type: "planka",
+        apiUrl: "https://planka.gov.kz/api",
+        apiKey: "",
+        isActive: false,
+        config: {}
+      },
+      {
+        name: "OpenProject",
+        type: "openproject",
+        apiUrl: "https://openproject.gov.kz/api/v3",
+        apiKey: "",
+        isActive: false,
+        config: {}
+      }
+    ];
+    
+    defaultIntegrations.forEach(integration => {
+      this.createIntegration(integration);
+    });
+    
+    // Initialize default agents
+    Promise.all(this.getIntegrations())
+      .then(integrations => {
+        const openAiIntegration = integrations.find(i => i.type === "openai");
+        
+        if (openAiIntegration) {
+          const defaultAgents: InsertAgent[] = [
+            {
+              name: "Помощник по запросам граждан",
+              type: "citizen_requests",
+              description: "Обрабатывает и категоризирует запросы от граждан, помогает составить ответы",
+              modelId: openAiIntegration.id,
+              isActive: true,
+              systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - помочь государственным служащим эффективно обрабатывать запросы граждан, категоризировать их и помогать составлять профессиональные и информативные ответы.",
+              config: {
+                temperature: 0.2,
+                maxTokens: 2048
+              }
+            },
+            {
+              name: "Протоколы собраний",
+              type: "meeting_protocols",
+              description: "Анализирует записи и протоколы совещаний, выделяет ключевую информацию",
+              modelId: openAiIntegration.id,
+              isActive: true,
+              systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - выделять ключевую информацию из записей совещаний, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
+              config: {
+                temperature: 0.1,
+                maxTokens: 4096
+              }
+            },
+            {
+              name: "Переводчик",
+              type: "translator",
+              description: "Переводит документы между казахским, русским и английским языками",
+              modelId: openAiIntegration.id,
+              isActive: true,
+              systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов между этими языками.",
+              config: {
+                temperature: 0.3,
+                maxTokens: 8192
+              }
+            }
+          ];
+          
+          defaultAgents.forEach(agent => {
+            this.createAgent(agent);
+          });
+        }
+      })
+      .catch(err => console.error("Failed to create default agents:", err));
   }
 
   // User methods
@@ -349,6 +447,96 @@ export class MemStorage implements IStorage {
       this.systemStatuses.set(serviceName, newStatus);
       return newStatus;
     }
+  }
+
+  // Integration methods
+  async getIntegrations(): Promise<Integration[]> {
+    return Array.from(this.integrations.values());
+  }
+
+  async getIntegration(id: number): Promise<Integration | undefined> {
+    return this.integrations.get(id);
+  }
+
+  async getIntegrationsByType(type: string): Promise<Integration[]> {
+    return Array.from(this.integrations.values()).filter(
+      integration => integration.type === type
+    );
+  }
+
+  async createIntegration(insertIntegration: InsertIntegration): Promise<Integration> {
+    const id = this.integrationIdCounter++;
+    const integration: Integration = {
+      ...insertIntegration,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.integrations.set(id, integration);
+    return integration;
+  }
+
+  async updateIntegration(id: number, updateData: Partial<InsertIntegration>): Promise<Integration | undefined> {
+    const integration = this.integrations.get(id);
+    if (!integration) return undefined;
+    
+    const updatedIntegration: Integration = {
+      ...integration,
+      ...updateData,
+      updatedAt: new Date()
+    };
+    
+    this.integrations.set(id, updatedIntegration);
+    return updatedIntegration;
+  }
+
+  async deleteIntegration(id: number): Promise<boolean> {
+    return this.integrations.delete(id);
+  }
+
+  // Agent methods
+  async getAgents(): Promise<Agent[]> {
+    return Array.from(this.agents.values());
+  }
+
+  async getAgent(id: number): Promise<Agent | undefined> {
+    return this.agents.get(id);
+  }
+
+  async getAgentsByType(type: string): Promise<Agent[]> {
+    return Array.from(this.agents.values()).filter(
+      agent => agent.type === type
+    );
+  }
+
+  async createAgent(insertAgent: InsertAgent): Promise<Agent> {
+    const id = this.agentIdCounter++;
+    const agent: Agent = {
+      ...insertAgent,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.agents.set(id, agent);
+    return agent;
+  }
+
+  async updateAgent(id: number, updateData: Partial<InsertAgent>): Promise<Agent | undefined> {
+    const agent = this.agents.get(id);
+    if (!agent) return undefined;
+    
+    const updatedAgent: Agent = {
+      ...agent,
+      ...updateData,
+      updatedAt: new Date()
+    };
+    
+    this.agents.set(id, updatedAgent);
+    return updatedAgent;
+  }
+
+  async deleteAgent(id: number): Promise<boolean> {
+    return this.agents.delete(id);
   }
 }
 

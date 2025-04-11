@@ -18,7 +18,9 @@ import {
   insertDocumentSchema, 
   insertMessageSchema, 
   insertActivitySchema, 
-  insertBlockchainRecordSchema 
+  insertBlockchainRecordSchema,
+  insertIntegrationSchema,
+  insertAgentSchema
 } from "@shared/schema";
 
 // Configure multer for file uploads
@@ -519,6 +521,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const translatedText = await translateText(text, from, to);
       res.json({ translatedText });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Integration routes
+  app.get('/api/integrations', async (req, res) => {
+    try {
+      const integrations = await storage.getIntegrations();
+      res.json(integrations);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/integrations/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid integration ID' });
+    }
+    
+    try {
+      const integration = await storage.getIntegration(id);
+      if (!integration) {
+        return res.status(404).json({ error: 'Integration not found' });
+      }
+      
+      res.json(integration);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/integrations/type/:type', async (req, res) => {
+    const { type } = req.params;
+    
+    try {
+      const integrations = await storage.getIntegrationsByType(type);
+      res.json(integrations);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/integrations', async (req, res) => {
+    try {
+      const integrationData = insertIntegrationSchema.parse(req.body);
+      const integration = await storage.createIntegration(integrationData);
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.body.userId || 1,
+        actionType: 'integration_created',
+        description: `Created integration "${integration.name}"`,
+        relatedId: integration.id,
+        relatedType: 'integration'
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/integrations/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid integration ID' });
+    }
+    
+    try {
+      const updateData = insertIntegrationSchema.partial().parse(req.body);
+      const integration = await storage.updateIntegration(id, updateData);
+      
+      if (!integration) {
+        return res.status(404).json({ error: 'Integration not found' });
+      }
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.body.userId || 1,
+        actionType: 'integration_updated',
+        description: `Updated integration "${integration.name}"`,
+        relatedId: integration.id,
+        relatedType: 'integration'
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/integrations/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid integration ID' });
+    }
+    
+    try {
+      const integration = await storage.getIntegration(id);
+      if (!integration) {
+        return res.status(404).json({ error: 'Integration not found' });
+      }
+      
+      const deleted = await storage.deleteIntegration(id);
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.body.userId || 1,
+        actionType: 'integration_deleted',
+        description: `Deleted integration "${integration.name}"`,
+        relatedType: 'integration'
+      });
+      
+      res.json({ success: deleted });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Agent routes
+  app.get('/api/agents', async (req, res) => {
+    try {
+      const agents = await storage.getAgents();
+      res.json(agents);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/agents/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid agent ID' });
+    }
+    
+    try {
+      const agent = await storage.getAgent(id);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      
+      res.json(agent);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/agents/type/:type', async (req, res) => {
+    const { type } = req.params;
+    
+    try {
+      const agents = await storage.getAgentsByType(type);
+      res.json(agents);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/agents', async (req, res) => {
+    try {
+      const agentData = insertAgentSchema.parse(req.body);
+      const agent = await storage.createAgent(agentData);
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.body.userId || 1,
+        actionType: 'agent_created',
+        description: `Created agent "${agent.name}"`,
+        relatedId: agent.id,
+        relatedType: 'agent'
+      });
+      
+      res.json(agent);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/agents/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid agent ID' });
+    }
+    
+    try {
+      const updateData = insertAgentSchema.partial().parse(req.body);
+      const agent = await storage.updateAgent(id, updateData);
+      
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.body.userId || 1,
+        actionType: 'agent_updated',
+        description: `Updated agent "${agent.name}"`,
+        relatedId: agent.id,
+        relatedType: 'agent'
+      });
+      
+      res.json(agent);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/agents/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid agent ID' });
+    }
+    
+    try {
+      const agent = await storage.getAgent(id);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      
+      const deleted = await storage.deleteAgent(id);
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.body.userId || 1,
+        actionType: 'agent_deleted',
+        description: `Deleted agent "${agent.name}"`,
+        relatedType: 'agent'
+      });
+      
+      res.json({ success: deleted });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

@@ -1,0 +1,757 @@
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock } from "lucide-react";
+import { Integration, Agent } from "@shared/schema";
+
+// Integration form for add/edit
+interface IntegrationFormProps {
+  integration?: Integration;
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+}
+
+const IntegrationForm = ({ integration, onSubmit, onCancel }: IntegrationFormProps) => {
+  const [formData, setFormData] = useState({
+    name: integration?.name || "",
+    type: integration?.type || "",
+    apiUrl: integration?.apiUrl || "",
+    apiKey: integration?.apiKey || "",
+    isActive: integration?.isActive || true,
+    config: integration?.config ? JSON.stringify(integration.config, null, 2) : "{}"
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, isActive: checked }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    let configObj = {};
+    try {
+      configObj = JSON.parse(formData.config);
+    } catch (error) {
+      alert("Ошибка в формате JSON конфигурации");
+      return;
+    }
+    
+    onSubmit({
+      ...formData,
+      config: configObj
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Название</Label>
+          <Input 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            required 
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="type">Тип</Label>
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+            required
+          >
+            <option value="">Выберите тип</option>
+            <option value="openai">OpenAI</option>
+            <option value="speech">Распознавание речи</option>
+            <option value="planka">Planka</option>
+            <option value="openproject">OpenProject</option>
+            <option value="telegram">Telegram</option>
+            <option value="custom">Другой</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="apiUrl">URL API</Label>
+        <Input 
+          id="apiUrl" 
+          name="apiUrl" 
+          value={formData.apiUrl} 
+          onChange={handleChange} 
+          required 
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="apiKey">API ключ</Label>
+        <Input 
+          id="apiKey" 
+          name="apiKey" 
+          type="password"
+          value={formData.apiKey} 
+          onChange={handleChange} 
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="isActive"
+          checked={formData.isActive}
+          onCheckedChange={handleSwitchChange}
+        />
+        <Label htmlFor="isActive">Активна</Label>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="config">Конфигурация (JSON)</Label>
+        <Textarea
+          id="config"
+          name="config"
+          value={formData.config}
+          onChange={handleChange}
+          rows={5}
+          className="font-mono text-sm"
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Отмена
+        </Button>
+        <Button type="submit">
+          {integration ? "Обновить" : "Добавить"}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+// Agent form for add/edit
+interface AgentFormProps {
+  agent?: Agent;
+  integrations: Integration[];
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+}
+
+const AgentForm = ({ agent, integrations, onSubmit, onCancel }: AgentFormProps) => {
+  const [formData, setFormData] = useState({
+    name: agent?.name || "",
+    type: agent?.type || "",
+    description: agent?.description || "",
+    modelId: agent?.modelId || "",
+    systemPrompt: agent?.systemPrompt || "",
+    isActive: agent?.isActive || true,
+    config: agent?.config ? JSON.stringify(agent.config, null, 2) : '{\n  "temperature": 0.7,\n  "maxTokens": 2048\n}'
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, isActive: checked }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    let configObj = {};
+    try {
+      configObj = JSON.parse(formData.config);
+    } catch (error) {
+      alert("Ошибка в формате JSON конфигурации");
+      return;
+    }
+    
+    onSubmit({
+      ...formData,
+      config: configObj,
+      modelId: parseInt(formData.modelId)
+    });
+  };
+
+  // Filter only active AI integrations (OpenAI)
+  const aiIntegrations = integrations.filter(i => 
+    i.isActive && (i.type === "openai")
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Название</Label>
+          <Input 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            required 
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="type">Тип</Label>
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+            required
+          >
+            <option value="">Выберите тип</option>
+            <option value="citizen_requests">Обработка запросов граждан</option>
+            <option value="meeting_protocols">Протоколы совещаний</option>
+            <option value="translator">Переводчик</option>
+            <option value="summarizer">Суммаризатор документов</option>
+            <option value="custom">Пользовательский</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Описание</Label>
+        <Textarea 
+          id="description" 
+          name="description" 
+          value={formData.description} 
+          onChange={handleChange} 
+          rows={2}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="modelId">Интеграция AI</Label>
+        <select
+          id="modelId"
+          name="modelId"
+          value={formData.modelId}
+          onChange={handleChange}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+          required
+        >
+          <option value="">Выберите интеграцию AI</option>
+          {aiIntegrations.map(integration => (
+            <option key={integration.id} value={integration.id}>
+              {integration.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="systemPrompt">Системный промпт</Label>
+        <Textarea
+          id="systemPrompt"
+          name="systemPrompt"
+          value={formData.systemPrompt}
+          onChange={handleChange}
+          rows={5}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="isActive"
+          checked={formData.isActive}
+          onCheckedChange={handleSwitchChange}
+        />
+        <Label htmlFor="isActive">Активен</Label>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="config">Конфигурация (JSON)</Label>
+        <Textarea
+          id="config"
+          name="config"
+          value={formData.config}
+          onChange={handleChange}
+          rows={5}
+          className="font-mono text-sm"
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Отмена
+        </Button>
+        <Button type="submit">
+          {agent ? "Обновить" : "Добавить"}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+// Main Settings page component
+const Settings = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // State for dialogs
+  const [isIntegrationDialogOpen, setIsIntegrationDialogOpen] = useState(false);
+  const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false);
+  const [currentIntegration, setCurrentIntegration] = useState<Integration | undefined>(undefined);
+  const [currentAgent, setCurrentAgent] = useState<Agent | undefined>(undefined);
+
+  // Fetch integrations
+  const { 
+    data: integrations = [], 
+    isLoading: isLoadingIntegrations 
+  } = useQuery({
+    queryKey: ['/api/integrations'],
+    queryFn: () => apiRequest('/api/integrations')
+  });
+
+  // Fetch agents
+  const { 
+    data: agents = [], 
+    isLoading: isLoadingAgents 
+  } = useQuery({
+    queryKey: ['/api/agents'],
+    queryFn: () => apiRequest('/api/agents')
+  });
+
+  // Integration mutations
+  const createIntegrationMutation = useMutation({
+    mutationFn: (data: any) => 
+      apiRequest('/api/integrations', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      setIsIntegrationDialogOpen(false);
+      toast({
+        title: "Успех",
+        description: "Интеграция успешно создана",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось создать интеграцию",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const updateIntegrationMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number, data: any }) => 
+      apiRequest(`/api/integrations/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      setIsIntegrationDialogOpen(false);
+      toast({
+        title: "Успех",
+        description: "Интеграция успешно обновлена",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить интеграцию",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest(`/api/integrations/${id}`, {
+        method: 'DELETE'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      toast({
+        title: "Успех",
+        description: "Интеграция успешно удалена",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить интеграцию",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Agent mutations
+  const createAgentMutation = useMutation({
+    mutationFn: (data: any) => 
+      apiRequest('/api/agents', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
+      setIsAgentDialogOpen(false);
+      toast({
+        title: "Успех",
+        description: "Агент успешно создан",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось создать агента",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const updateAgentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number, data: any }) => 
+      apiRequest(`/api/agents/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
+      setIsAgentDialogOpen(false);
+      toast({
+        title: "Успех",
+        description: "Агент успешно обновлен",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить агента",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteAgentMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest(`/api/agents/${id}`, {
+        method: 'DELETE'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
+      toast({
+        title: "Успех",
+        description: "Агент успешно удален",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить агента",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handlers
+  const handleAddIntegration = () => {
+    setCurrentIntegration(undefined);
+    setIsIntegrationDialogOpen(true);
+  };
+
+  const handleEditIntegration = (integration: Integration) => {
+    setCurrentIntegration(integration);
+    setIsIntegrationDialogOpen(true);
+  };
+
+  const handleDeleteIntegration = (id: number) => {
+    if (window.confirm("Вы уверены, что хотите удалить эту интеграцию?")) {
+      deleteIntegrationMutation.mutate(id);
+    }
+  };
+
+  const handleIntegrationSubmit = (data: any) => {
+    if (currentIntegration) {
+      updateIntegrationMutation.mutate({ id: currentIntegration.id, data });
+    } else {
+      createIntegrationMutation.mutate(data);
+    }
+  };
+
+  const handleAddAgent = () => {
+    setCurrentAgent(undefined);
+    setIsAgentDialogOpen(true);
+  };
+
+  const handleEditAgent = (agent: Agent) => {
+    setCurrentAgent(agent);
+    setIsAgentDialogOpen(true);
+  };
+
+  const handleDeleteAgent = (id: number) => {
+    if (window.confirm("Вы уверены, что хотите удалить этого агента?")) {
+      deleteAgentMutation.mutate(id);
+    }
+  };
+
+  const handleAgentSubmit = (data: any) => {
+    if (currentAgent) {
+      updateAgentMutation.mutate({ id: currentAgent.id, data });
+    } else {
+      createAgentMutation.mutate(data);
+    }
+  };
+
+  // Helper for displaying integration type in a user-friendly way
+  const getIntegrationType = (type: string) => {
+    const types: Record<string, string> = {
+      openai: "OpenAI",
+      speech: "Распознавание речи",
+      planka: "Planka",
+      openproject: "OpenProject",
+      telegram: "Telegram",
+      custom: "Другой"
+    };
+    return types[type] || type;
+  };
+
+  // Helper for displaying agent type in a user-friendly way
+  const getAgentType = (type: string) => {
+    const types: Record<string, string> = {
+      citizen_requests: "Обработка запросов граждан",
+      meeting_protocols: "Протоколы совещаний",
+      translator: "Переводчик",
+      summarizer: "Суммаризатор документов",
+      custom: "Пользовательский"
+    };
+    return types[type] || type;
+  };
+
+  return (
+    <div className="container mx-auto py-6">
+      <h1 className="text-3xl font-bold mb-6">Настройки</h1>
+      
+      <Tabs defaultValue="integrations" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="integrations">Внешние интеграции</TabsTrigger>
+          <TabsTrigger value="agents">AI Агенты</TabsTrigger>
+        </TabsList>
+        
+        {/* Integrations Tab */}
+        <TabsContent value="integrations">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Внешние интеграции</h2>
+            <Button onClick={handleAddIntegration}>
+              <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию
+            </Button>
+          </div>
+          
+          <Card>
+            <CardContent className="pt-6">
+              {isLoadingIntegrations ? (
+                <div className="text-center py-4">Загрузка интеграций...</div>
+              ) : integrations.length === 0 ? (
+                <div className="text-center py-4">
+                  <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <p>Интеграции не настроены</p>
+                  <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                    <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Тип</TableHead>
+                      <TableHead>URL API</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead className="w-24 text-right">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {integrations.map((integration) => (
+                      <TableRow key={integration.id}>
+                        <TableCell className="font-medium">{integration.name}</TableCell>
+                        <TableCell>{getIntegrationType(integration.type)}</TableCell>
+                        <TableCell className="max-w-xs truncate">{integration.apiUrl}</TableCell>
+                        <TableCell>
+                          {integration.isActive ? (
+                            <div className="flex items-center">
+                              <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                              Активна
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <span className="h-2 w-2 rounded-full bg-gray-500 mr-2"></span>
+                              Отключена
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditIntegration(integration)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteIntegration(integration.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Integration Dialog */}
+          <Dialog open={isIntegrationDialogOpen} onOpenChange={setIsIntegrationDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {currentIntegration ? "Редактировать интеграцию" : "Добавить интеграцию"}
+                </DialogTitle>
+                <DialogDescription>
+                  {currentIntegration 
+                    ? "Обновите настройки интеграции с внешней системой" 
+                    : "Настройте новую интеграцию с внешней системой"}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <IntegrationForm
+                integration={currentIntegration}
+                onSubmit={handleIntegrationSubmit}
+                onCancel={() => setIsIntegrationDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+        
+        {/* Agents Tab */}
+        <TabsContent value="agents">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">AI Агенты</h2>
+            <Button onClick={handleAddAgent}>
+              <Plus className="mr-2 h-4 w-4" /> Добавить агента
+            </Button>
+          </div>
+          
+          <Card>
+            <CardContent className="pt-6">
+              {isLoadingAgents ? (
+                <div className="text-center py-4">Загрузка агентов...</div>
+              ) : agents.length === 0 ? (
+                <div className="text-center py-4">
+                  <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <p>Агенты не настроены</p>
+                  <Button onClick={handleAddAgent} variant="outline" className="mt-2">
+                    <Plus className="mr-2 h-4 w-4" /> Добавить агента
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Тип</TableHead>
+                      <TableHead>Описание</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead className="w-24 text-right">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {agents.map((agent) => (
+                      <TableRow key={agent.id}>
+                        <TableCell className="font-medium">{agent.name}</TableCell>
+                        <TableCell>{getAgentType(agent.type)}</TableCell>
+                        <TableCell className="max-w-xs truncate">{agent.description}</TableCell>
+                        <TableCell>
+                          {agent.isActive ? (
+                            <div className="flex items-center">
+                              <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                              Активен
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <span className="h-2 w-2 rounded-full bg-gray-500 mr-2"></span>
+                              Отключен
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditAgent(agent)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteAgent(agent.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Agent Dialog */}
+          <Dialog open={isAgentDialogOpen} onOpenChange={setIsAgentDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {currentAgent ? "Редактировать агента" : "Добавить агента"}
+                </DialogTitle>
+                <DialogDescription>
+                  {currentAgent 
+                    ? "Обновите настройки AI агента" 
+                    : "Настройте нового AI агента для обработки данных"}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <AgentForm
+                agent={currentAgent}
+                integrations={integrations}
+                onSubmit={handleAgentSubmit}
+                onCancel={() => setIsAgentDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default Settings;

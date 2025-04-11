@@ -13,6 +13,7 @@ import Analytics from "@/pages/Analytics";
 import Translate from "@/pages/Translate";
 import CitizenRequests from "@/pages/CitizenRequests";
 import Meetings from "@/pages/Meetings";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 import { User } from "./lib/types";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/translate" component={Translate} />
       <Route path="/citizen-requests" component={CitizenRequests} />
       <Route path="/meetings" component={Meetings} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
