@@ -842,10 +842,18 @@ const Meetings = () => {
         {/* Вкладка всех встреч */}
         <TabsContent value="all">
           <div className="space-y-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold mb-1">Канбан-доска протоколов встреч</h2>
+              <p className="text-sm text-neutral-500">Перетаскивайте карточки для изменения статуса встреч</p>
+            </div>
+            
             {isLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <div className="h-6 w-6 border-t-2 border-primary-500 rounded-full animate-spin"></div>
-                <span className="ml-2 text-neutral-500">Загрузка встреч...</span>
+              <div className="animate-pulse space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-64 bg-neutral-100 rounded-lg"></div>
+                  ))}
+                </div>
               </div>
             ) : meetings.length === 0 ? (
               <div className="text-center py-12">
@@ -857,118 +865,137 @@ const Meetings = () => {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {meetings.map(meeting => (
-                  <Card key={meeting.id} className="overflow-hidden">
-                    <div className="p-5">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-semibold">{meeting.title}</h3>
-                          <div className="flex items-center space-x-2 mt-1">
-                            {renderMeetingStatus(meeting.status)}
-                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                              <Users className="h-3 w-3 mr-1" /> {meeting.participants.length} участников
-                            </Badge>
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {kanbanBoard.columnOrder.map((columnId) => {
+                    const column = kanbanBoard.columns[columnId];
+                    const columnMeetings = column.meetingIds
+                      .map(id => meetings.find(m => m.id === id))
+                      .filter(Boolean) as Meeting[];
+                    
+                    // Определяем цвет заголовка колонки в зависимости от статуса
+                    let headerColor = "bg-neutral-100";
+                    switch (columnId) {
+                      case "scheduled": headerColor = "bg-yellow-50"; break;
+                      case "in_progress": headerColor = "bg-blue-50"; break;
+                      case "completed": headerColor = "bg-green-50"; break;
+                      case "cancelled": headerColor = "bg-red-50"; break;
+                    }
+                    
+                    return (
+                      <div key={columnId} className="flex flex-col">
+                        <div className={`rounded-t-lg px-4 py-3 border-x border-t border-border ${headerColor}`}>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-medium text-foreground">
+                              {column.title}
+                            </h3>
                             <Badge variant="outline">
-                              <Clock className="h-3 w-3 mr-1" /> {meeting.duration} мин
+                              {columnMeetings.length}
                             </Badge>
-                            {meeting.recordedAudio && (
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                                <Mic className="h-3 w-3 mr-1" /> Аудиозапись
-                              </Badge>
-                            )}
                           </div>
-                          <p className="text-sm text-neutral-500 mt-2">
-                            {meeting.organizer} • {formatDate(meeting.date)}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => meeting.protocol ? viewProtocol(meeting) : generateProtocol(meeting)}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            {meeting.protocol ? "Протокол" : "Создать протокол"}
-                          </Button>
-                          
-                          {meeting.protocol && !meeting.blockchainHash && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => saveToBlockchain(meeting.id)}
-                            >
-                              <Save className="h-4 w-4 mr-1" />
-                              В блокчейн
-                            </Button>
-                          )}
-                          
-                          {meeting.protocol && meeting.blockchainHash && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="bg-green-50 text-green-700 border-green-200"
-                            >
-                              <Check className="h-4 w-4 mr-1" />
-                              В блокчейне
-                            </Button>
-                          )}
-                          
-                          {meeting.protocol && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => downloadProtocol(meeting)}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Скачать
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <div className="text-sm text-neutral-700 line-clamp-2">
-                          {meeting.description}
                         </div>
                         
-                        {meeting.protocol && meeting.protocol.tasks.length > 0 && (
-                          <div className="mt-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-sm font-medium">Задачи ({meeting.protocol.tasks.length})</h4>
-                              <Button size="sm" variant="ghost" onClick={() => openAddTaskDialog(meeting)}>
-                                + Добавить задачу
-                              </Button>
+                        <Droppable droppableId={columnId}>
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className="flex-1 bg-muted/40 rounded-b-lg p-2 min-h-[500px] border border-border"
+                            >
+                              {columnMeetings.map((meeting, index) => (
+                                <Draggable 
+                                  key={`meeting-${meeting.id}`}
+                                  draggableId={`meeting-${meeting.id}`} 
+                                  index={index}
+                                >
+                                  {(provided) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className="mb-3"
+                                    >
+                                      <Card className="overflow-hidden shadow-sm">
+                                        <div className="p-4">
+                                          <div>
+                                            <h3 className="text-sm font-semibold line-clamp-1">{meeting.title}</h3>
+                                            <div className="mt-1 text-xs text-neutral-500">
+                                              {formatDate(meeting.date)} • {meeting.duration} мин
+                                            </div>
+                                            <div className="mt-1">
+                                              <Badge variant="outline" className="text-xs">{meeting.organizer}</Badge>
+                                            </div>
+                                          </div>
+                                          
+                                          {meeting.description && (
+                                            <div className="mt-2 text-xs text-neutral-600 line-clamp-2">
+                                              {meeting.description}
+                                            </div>
+                                          )}
+                                          
+                                          {meeting.protocol?.summary && (
+                                            <div className="mt-2 text-xs text-neutral-700 bg-neutral-50 p-2 rounded border border-neutral-200 line-clamp-2">
+                                              {meeting.protocol.summary}
+                                            </div>
+                                          )}
+                                          
+                                          <div className="mt-3 flex justify-between items-center">
+                                            <div className="flex items-center space-x-1">
+                                              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                                <Users className="h-3 w-3" /> {meeting.participants.length}
+                                              </Badge>
+                                              
+                                              {meeting.protocol?.tasks && meeting.protocol.tasks.length > 0 && (
+                                                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                                  <ListChecks className="h-3 w-3" /> {meeting.protocol.tasks.length}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            
+                                            <div>
+                                              {meeting.blockchainHash && (
+                                                <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                                  <Check className="h-3 w-3 mr-1" /> GovChain
+                                                </Badge>
+                                              )}
+                                              
+                                              {meeting.protocol && (
+                                                <Button 
+                                                  size="sm" 
+                                                  variant="ghost"
+                                                  className="h-6 ml-1 p-0 w-6"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    viewProtocol(meeting);
+                                                  }}
+                                                >
+                                                  <FileText className="h-4 w-4" />
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                              
+                              {columnMeetings.length === 0 && (
+                                <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border border-dashed border-muted-foreground/30 rounded-md m-4">
+                                  <MoveHorizontal className="h-3 w-3 mr-2" />
+                                  Перетащите встречи сюда
+                                </div>
+                              )}
                             </div>
-                            <div className="bg-neutral-50 rounded-md">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Задача</TableHead>
-                                    <TableHead>Ответственный</TableHead>
-                                    <TableHead>Срок</TableHead>
-                                    <TableHead>Статус</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {meeting.protocol.tasks.map(task => (
-                                    <TableRow key={task.id}>
-                                      <TableCell>{task.description}</TableCell>
-                                      <TableCell>{task.assignee}</TableCell>
-                                      <TableCell>{formatDate(task.deadline)}</TableCell>
-                                      <TableCell>{renderTaskStatus(task.status)}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </Droppable>
                       </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              </DragDropContext>
             )}
           </div>
         </TabsContent>
