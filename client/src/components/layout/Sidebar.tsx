@@ -15,7 +15,10 @@ import {
   ChevronRight,
   Users,
   FileCheck,
-  Settings
+  Settings,
+  Bot,
+  Building2,
+  Network
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -27,54 +30,82 @@ interface SidebarProps {
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   const [location] = useLocation();
   
-  // Исправленные пути для навигации
-  const navItems = [
+  // Группы для навигации
+  const navGroups = [
     {
-      name: "Дашборд",
-      path: "/",
-      icon: <LayoutDashboard size={20} />
+      title: "Основное",
+      items: [
+        {
+          name: "Дашборд",
+          path: "/",
+          icon: <LayoutDashboard size={20} />
+        },
+        {
+          name: "Задачи",
+          path: "/tasks",
+          icon: <ListChecks size={20} />
+        },
+        {
+          name: "Обращения граждан",
+          path: "/citizen-requests",
+          icon: <MessageSquare size={20} />
+        },
+        {
+          name: "Протоколы встреч",
+          path: "/meetings",
+          icon: <Calendar size={20} />
+        }
+      ]
     },
     {
-      name: "Задачи",
-      path: "/tasks",
-      icon: <ListChecks size={20} />
+      title: "Управление",
+      items: [
+        {
+          name: "ИИ агенты",
+          path: "/ai-agents",
+          icon: <Bot size={20} />
+        },
+        {
+          name: "Орг. структура",
+          path: "/org-structure",
+          icon: <Building2 size={20} />
+        },
+        {
+          name: "Документы",
+          path: "/documents",
+          icon: <FileCheck size={20} />
+        }
+      ]
     },
     {
-      name: "Обращения граждан",
-      path: "/citizen-requests",
-      icon: <MessageSquare size={20} />
-    },
-    {
-      name: "Протоколы встреч",
-      path: "/meetings",
-      icon: <Calendar size={20} />
-    },
-    {
-      name: "История",
-      path: "/history",
-      icon: <History size={20} />
-    },
-    {
-      name: "Аналитика",
-      path: "/analytics",
-      icon: <BarChart2 size={20} />
-    },
-    {
-      name: "Документы",
-      path: "/documents",
-      icon: <FileCheck size={20} />
-    },
-    {
-      name: "Перевод",
-      path: "/translate",
-      icon: <Mic size={20} />
-    },
-    {
-      name: "Настройки",
-      path: "/settings",
-      icon: <Settings size={20} />
+      title: "Информация",
+      items: [
+        {
+          name: "История",
+          path: "/history",
+          icon: <History size={20} />
+        },
+        {
+          name: "Аналитика",
+          path: "/analytics",
+          icon: <BarChart2 size={20} />
+        },
+        {
+          name: "Перевод",
+          path: "/translate",
+          icon: <Mic size={20} />
+        },
+        {
+          name: "Настройки",
+          path: "/settings",
+          icon: <Settings size={20} />
+        }
+      ]
     }
   ];
+  
+  // Собираем все элементы навигации для удобной итерации
+  const navItems = navGroups.flatMap(group => group.items);
 
   return (
     <div
@@ -85,10 +116,10 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     >
       <div className="flex flex-col h-[calc(100vh-3.5rem)] pb-4">
         <div className="flex-1 py-5">
-          <ul className="space-y-2 px-3">
-            {navItems.map((item) => (
-              <li key={item.path}>
-                {collapsed ? (
+          {collapsed ? (
+            <ul className="space-y-2 px-3">
+              {navItems.map((item) => (
+                <li key={item.path}>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -110,25 +141,40 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                       <TooltipContent side="right">{item.name}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                ) : (
-                  <Link href={item.path}>
-                    <Button
-                      variant={location === item.path || (item.path === "/" && location === "") ? "default" : "ghost"}
-                      className={cn(
-                        "w-full justify-start rounded-lg",
-                        location === item.path || (item.path === "/" && location === "")
-                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 hover:text-emerald-800"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                      )}
-                    >
-                      <span className="mr-3">{item.icon}</span>
-                      {item.name}
-                    </Button>
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="space-y-6">
+              {navGroups.map((group, index) => (
+                <div key={index}>
+                  <h3 className="mb-2 px-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    {group.title}
+                  </h3>
+                  <ul className="space-y-1 px-3">
+                    {group.items.map((item) => (
+                      <li key={item.path}>
+                        <Link href={item.path}>
+                          <Button
+                            variant={location === item.path || (item.path === "/" && location === "") ? "default" : "ghost"}
+                            className={cn(
+                              "w-full justify-start rounded-lg",
+                              location === item.path || (item.path === "/" && location === "")
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 hover:text-emerald-800"
+                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                            )}
+                          >
+                            <span className="mr-3">{item.icon}</span>
+                            {item.name}
+                          </Button>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         
         <div className="px-3 mt-auto">

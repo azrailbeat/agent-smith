@@ -3,6 +3,44 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Department schema
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentId: integer("parent_id").references(() => departments.id),
+  headId: integer("head_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDepartmentSchema = createInsertSchema(departments).pick({
+  name: true,
+  description: true,
+  parentId: true,
+  headId: true,
+});
+
+// Position schema
+export const positions = pgTable("positions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  departmentId: integer("department_id").references(() => departments.id).notNull(),
+  level: integer("level").default(0), // Организационный уровень (0 - руководитель, 1 - зам и т.д.)
+  canApprove: boolean("can_approve").default(false),
+  canAssign: boolean("can_assign").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPositionSchema = createInsertSchema(positions).pick({
+  name: true,
+  departmentId: true,
+  level: true,
+  canApprove: true,
+  canAssign: true,
+});
+
 // Users schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -11,7 +49,12 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   avatarUrl: text("avatar_url"),
   department: text("department"),
+  departmentId: integer("department_id").references(() => departments.id),
+  positionId: integer("position_id").references(() => positions.id),
   role: text("role").default("user"),
+  email: text("email"),
+  phone: text("phone"),
+  isActive: boolean("is_active").default(true),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

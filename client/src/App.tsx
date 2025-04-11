@@ -16,6 +16,9 @@ import Meetings from "@/pages/Meetings";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 import AboutSystem from "@/pages/AboutSystem";
+import OrgStructurePage from "@/pages/OrgStructure";
+import Documents from "@/pages/Documents";
+import AIAgents from "@/pages/AIAgents";
 import { useState } from "react";
 import { User } from "./lib/types";
 
@@ -29,6 +32,9 @@ function Router() {
       <Route path="/translate" component={Translate} />
       <Route path="/citizen-requests" component={CitizenRequests} />
       <Route path="/meetings" component={Meetings} />
+      <Route path="/documents" component={Documents} />
+      <Route path="/org-structure" component={OrgStructurePage} />
+      <Route path="/ai-agents" component={AIAgents} />
       <Route path="/settings" component={Settings} />
       <Route path="/about" component={AboutSystem} />
       <Route component={NotFound} />

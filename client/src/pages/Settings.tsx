@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock } from "lucide-react";
+import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers } from "lucide-react";
 import { Integration, Agent } from "@shared/schema";
 
 // Integration form for add/edit
@@ -86,6 +86,7 @@ const IntegrationForm = ({ integration, onSubmit, onCancel }: IntegrationFormPro
             <option value="planka">Planka</option>
             <option value="openproject">OpenProject</option>
             <option value="telegram">Telegram</option>
+            <option value="moralis">Moralis (Blockchain)</option>
             <option value="custom">Другой</option>
           </select>
         </div>
