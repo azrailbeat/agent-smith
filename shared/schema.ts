@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Users schema
 export const users = pgTable("users", {
@@ -149,6 +150,72 @@ export const insertSystemStatusSchema = createInsertSchema(systemStatus).pick({
   status: true,
   details: true,
 });
+
+// Relations definitions
+export const usersRelations = relations(users, ({ many }) => ({
+  createdTasks: many(tasks, { relationName: "user_created_tasks" }),
+  assignedTasks: many(tasks, { relationName: "user_assigned_tasks" }),
+  uploadedDocuments: many(documents),
+  messages: many(messages),
+  activities: many(activities),
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  assignedTo: one(users, {
+    fields: [tasks.assignedTo],
+    references: [users.id],
+    relationName: "user_assigned_tasks",
+  }),
+  createdBy: one(users, {
+    fields: [tasks.createdBy],
+    references: [users.id],
+    relationName: "user_created_tasks",
+  }),
+  documents: many(documents),
+  blockchainRecords: many(blockchainRecords),
+  messages: many(messages),
+}));
+
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  task: one(tasks, {
+    fields: [documents.taskId],
+    references: [tasks.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [documents.uploadedBy],
+    references: [users.id],
+  }),
+  blockchainRecords: many(blockchainRecords),
+}));
+
+export const blockchainRecordsRelations = relations(blockchainRecords, ({ one }) => ({
+  task: one(tasks, {
+    fields: [blockchainRecords.taskId],
+    references: [tasks.id],
+  }),
+  document: one(documents, {
+    fields: [blockchainRecords.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  user: one(users, {
+    fields: [messages.userId],
+    references: [users.id],
+  }),
+  task: one(tasks, {
+    fields: [messages.taskId],
+    references: [tasks.id],
+  }),
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  user: one(users, {
+    fields: [activities.userId],
+    references: [users.id],
+  }),
+}));
 
 // Type exports
 export type User = typeof users.$inferSelect;

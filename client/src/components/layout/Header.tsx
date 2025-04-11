@@ -14,6 +14,7 @@ const Header = ({ currentUser }: HeaderProps) => {
     { name: "Мои задачи", href: "/tasks" },
     { name: "История решений", href: "/history" },
     { name: "Аналитика", href: "/analytics" },
+    { name: "Переводчик", href: "/translate" },
   ];
 
   return (
