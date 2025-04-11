@@ -20,7 +20,8 @@ import {
   insertActivitySchema, 
   insertBlockchainRecordSchema,
   insertIntegrationSchema,
-  insertAgentSchema
+  insertAgentSchema,
+  insertCitizenRequestSchema
 } from "@shared/schema";
 
 // Configure multer for file uploads
