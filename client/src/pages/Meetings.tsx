@@ -1262,95 +1262,196 @@ const Meetings = () => {
         
         {/* Вкладка задач */}
         <TabsContent value="tasks">
-          <Card>
-            <CardHeader>
-              <CardTitle>Задачи по итогам встреч</CardTitle>
-              <CardDescription>
-                Отслеживание и управление задачами, назначенными на стратегических совещаниях
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-5">
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" className="bg-white">Все задачи</Button>
-                    <Button variant="ghost" size="sm">Мои задачи</Button>
-                    <Button variant="ghost" size="sm">Просроченные</Button>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Select defaultValue="status">
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Статус" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="status">Любой статус</SelectItem>
-                        <SelectItem value="pending">Ожидает</SelectItem>
-                        <SelectItem value="in_progress">В работе</SelectItem>
-                        <SelectItem value="completed">Выполнена</SelectItem>
-                        <SelectItem value="cancelled">Отменена</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </div>
+          <div className="space-y-5">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">Задачи по итогам встреч</h2>
+                <p className="text-sm text-neutral-500 mt-1">Канбан-доска для управления задачами</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedMeeting(null);
+                    setNewTask({
+                      description: "",
+                      assignee: "",
+                      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                      status: "pending"
+                    });
+                    setIsCreateTaskDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Новая задача
+                </Button>
+                <Input
+                  placeholder="Поиск по задачам..."
+                  className="w-[240px]"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-2 mb-4">
+              <Button variant="outline" size="sm" className="bg-white">Все задачи</Button>
+              <Button variant="ghost" size="sm">Мои задачи</Button>
+              <Button variant="ghost" size="sm">Просроченные</Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Колонка "Ожидает" */}
+              <div className="bg-neutral-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-medium text-neutral-700">Ожидает</h3>
+                  <Badge variant="outline" className="bg-neutral-100">
+                    {meetings.flatMap(m => m.protocol?.tasks || []).filter(t => t.status === 'pending').length}
+                  </Badge>
                 </div>
-                
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[400px]">Задача</TableHead>
-                        <TableHead>Протокол</TableHead>
-                        <TableHead>Ответственный</TableHead>
-                        <TableHead>Срок</TableHead>
-                        <TableHead>Статус</TableHead>
-                        <TableHead className="text-right">Действия</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {meetings.flatMap(meeting => 
-                        meeting.protocol?.tasks.map(task => (
-                          <TableRow key={task.id}>
-                            <TableCell className="font-medium">{task.description}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-1">
-                                <span className="text-sm truncate max-w-[150px]">{meeting.title}</span>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" asChild>
-                                  <a href="#" onClick={(e) => { e.preventDefault(); viewProtocol(meeting); }}>
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </Button>
-                              </div>
-                            </TableCell>
-                            <TableCell>{task.assignee}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-1">
-                                <Calendar className="h-3 w-3 text-neutral-500" />
-                                <span>{formatDate(task.deadline)}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>{renderTaskStatus(task.status)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end space-x-1">
-                                <Button variant="ghost" size="sm" className="h-7 px-2">
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2">
-                                  <FileText className="h-4 w-4 text-blue-600" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )) || []
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="space-y-3">
+                  {meetings.flatMap(meeting => 
+                    meeting.protocol?.tasks?.filter(t => t.status === 'pending').map(task => (
+                      <Card key={`task-${task.id}`} className="cursor-pointer hover:shadow-md">
+                        <CardContent className="p-3">
+                          <div className="mb-2">
+                            <p className="font-medium text-sm">{task.description}</p>
+                            <p className="text-xs text-neutral-500 mt-1">Встреча: {meeting.title}</p>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="flex items-center text-xs text-neutral-500">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(task.deadline)}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {task.blockchainHash && (
+                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {task.assignee.split(' ')[0]}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )) || []
+                  )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Колонка "В работе" */}
+              <div className="bg-neutral-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-medium text-neutral-700">В работе</h3>
+                  <Badge variant="outline" className="bg-neutral-100">
+                    {meetings.flatMap(m => m.protocol?.tasks || []).filter(t => t.status === 'in_progress').length}
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  {meetings.flatMap(meeting => 
+                    meeting.protocol?.tasks?.filter(t => t.status === 'in_progress').map(task => (
+                      <Card key={`task-${task.id}`} className="cursor-pointer hover:shadow-md">
+                        <CardContent className="p-3">
+                          <div className="mb-2">
+                            <p className="font-medium text-sm">{task.description}</p>
+                            <p className="text-xs text-neutral-500 mt-1">Встреча: {meeting.title}</p>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="flex items-center text-xs text-neutral-500">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(task.deadline)}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {task.blockchainHash && (
+                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {task.assignee.split(' ')[0]}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )) || []
+                  )}
+                </div>
+              </div>
+
+              {/* Колонка "Выполнено" */}
+              <div className="bg-neutral-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-medium text-neutral-700">Выполнено</h3>
+                  <Badge variant="outline" className="bg-neutral-100">
+                    {meetings.flatMap(m => m.protocol?.tasks || []).filter(t => t.status === 'completed').length}
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  {meetings.flatMap(meeting => 
+                    meeting.protocol?.tasks?.filter(t => t.status === 'completed').map(task => (
+                      <Card key={`task-${task.id}`} className="cursor-pointer hover:shadow-md">
+                        <CardContent className="p-3">
+                          <div className="mb-2">
+                            <p className="font-medium text-sm">{task.description}</p>
+                            <p className="text-xs text-neutral-500 mt-1">Встреча: {meeting.title}</p>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="flex items-center text-xs text-neutral-500">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(task.deadline)}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {task.blockchainHash && (
+                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {task.assignee.split(' ')[0]}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )) || []
+                  )}
+                </div>
+              </div>
+
+              {/* Колонка "Отменено" */}
+              <div className="bg-neutral-50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-medium text-neutral-700">Отменено</h3>
+                  <Badge variant="outline" className="bg-neutral-100">
+                    {meetings.flatMap(m => m.protocol?.tasks || []).filter(t => t.status === 'cancelled').length}
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  {meetings.flatMap(meeting => 
+                    meeting.protocol?.tasks?.filter(t => t.status === 'cancelled').map(task => (
+                      <Card key={`task-${task.id}`} className="cursor-pointer hover:shadow-md">
+                        <CardContent className="p-3">
+                          <div className="mb-2">
+                            <p className="font-medium text-sm">{task.description}</p>
+                            <p className="text-xs text-neutral-500 mt-1">Встреча: {meeting.title}</p>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="flex items-center text-xs text-neutral-500">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(task.deadline)}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {task.blockchainHash && (
+                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {task.assignee.split(' ')[0]}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )) || []
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </TabsContent>
         
         {/* Вкладка статистики */}
