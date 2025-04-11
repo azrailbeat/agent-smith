@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -44,8 +44,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 // Интерфейс для колонок Канбан-доски
 interface KanbanColumn {
@@ -85,10 +84,13 @@ const Tasks = () => {
   // Мутация для создания новой задачи
   const createTaskMutation = useMutation({
     mutationFn: async (task: Partial<Task>) => {
-      return apiRequest('/api/tasks', {
+      return await fetch('/api/tasks', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(task)
-      });
+      }).then(res => res.json());
     },
     onSuccess: () => {
       // Очищаем форму и закрываем диалог
@@ -121,10 +123,13 @@ const Tasks = () => {
   // Мутация для обновления статуса задачи
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({id, status}: {id: number, status: string}) => {
-      return apiRequest(`/api/tasks/${id}`, {
+      return await fetch(`/api/tasks/${id}`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ status })
-      });
+      }).then(res => res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['/api/tasks']});
@@ -331,6 +336,140 @@ const Tasks = () => {
         </div>
       </div>
 
+      {/* Dialog for creating a new task */}
+      <Dialog open={showNewTaskDialog} onOpenChange={setShowNewTaskDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Создание новой задачи</DialogTitle>
+            <DialogDescription>
+              Заполните информацию о новой задаче
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Название задачи</Label>
+              <input
+                id="title"
+                value={newTask.title}
+                onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                placeholder="Введите название задачи"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Описание</Label>
+              <Textarea
+                id="description"
+                value={newTask.description}
+                onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                placeholder="Введите описание задачи"
+                className="min-h-[80px]"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="priority">Приоритет</Label>
+              <Select
+                value={newTask.priority}
+                onValueChange={(value) => setNewTask({...newTask, priority: value})}
+              >
+                <SelectTrigger id="priority">
+                  <SelectValue placeholder="Выберите приоритет" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Низкий</SelectItem>
+                  <SelectItem value="medium">Средний</SelectItem>
+                  <SelectItem value="high">Высокий</SelectItem>
+                  <SelectItem value="urgent">Срочный</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">Срок исполнения</Label>
+              <input
+                id="dueDate"
+                type="date"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-between">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowNewTaskDialog(false)}
+            >
+              Отмена
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleCreateTask}
+              disabled={createTaskMutation.isPending}
+            >
+              {createTaskMutation.isPending ? "Создание..." : "Создать задачу"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog for task history */}
+      <Dialog open={showTaskHistoryDialog} onOpenChange={setShowTaskHistoryDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>История изменений задачи</DialogTitle>
+            <DialogDescription>
+              {selectedTask?.title}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="space-y-4">
+                {/* История изменений - заменить на реальные данные */}
+                <div className="border-l-2 border-green-500 pl-4 pb-4 relative">
+                  <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-0"></div>
+                  <div className="text-xs text-muted-foreground">Сегодня, 14:30</div>
+                  <div className="text-sm mt-1">Задача создана</div>
+                </div>
+                
+                <div className="border-l-2 border-yellow-500 pl-4 pb-4 relative">
+                  <div className="absolute w-3 h-3 bg-yellow-500 rounded-full -left-[7px] top-0"></div>
+                  <div className="text-xs text-muted-foreground">Сегодня, 15:10</div>
+                  <div className="text-sm mt-1">Изменен статус: <span className="font-medium">Ожидает</span> → <span className="font-medium">В процессе</span></div>
+                </div>
+                
+                <div className="border-l-2 border-blue-500 pl-4 pb-4 relative">
+                  <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[7px] top-0"></div>
+                  <div className="text-xs text-muted-foreground">Сегодня, 16:45</div>
+                  <div className="text-sm mt-1">Добавлен документ: <span className="font-medium">Отчет.pdf</span></div>
+                </div>
+                
+                <div className="border-l-2 border-green-500 pl-4 pb-0 relative">
+                  <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-0"></div>
+                  <div className="text-xs text-muted-foreground">Сегодня, 17:20</div>
+                  <div className="text-sm mt-1">Изменен статус: <span className="font-medium">В процессе</span> → <span className="font-medium">Готово к проверке</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              onClick={() => setShowTaskHistoryDialog(false)}
+            >
+              Закрыть
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Kanban Board View */}
       <div className="mb-4">
         <h2 className="text-lg font-semibold mb-1">Канбан-доска задач</h2>
@@ -389,8 +528,8 @@ const Tasks = () => {
             // Обновляем состояние доски
             setKanbanBoard(newBoard);
             
-            // Обновляем статус задачи в базе данных (в реальном приложении)
-            // updateTaskStatus({ id: taskId, status: destination.droppableId });
+            // Обновляем статус задачи в базе данных 
+            updateTaskStatusMutation.mutate({ id: taskId, status: destination.droppableId });
             
             // Обновляем локальное состояние задач
             const taskToUpdate = tasks.find(t => t.id === taskId);
@@ -447,6 +586,7 @@ const Tasks = () => {
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
                                 className="mb-3"
+                                onClick={() => openTaskHistory(task)}
                               >
                                 <Card className="overflow-hidden shadow-sm">
                                   <div className="p-4">
