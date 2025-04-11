@@ -31,6 +31,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
 // Интерфейсы для типизации
@@ -414,6 +415,9 @@ const CitizenRequests = () => {
           <TabsTrigger value="all" className="data-[state=active]:bg-primary-50 data-[state=active]:text-primary-900">
             Все обращения
           </TabsTrigger>
+          <TabsTrigger value="integrations" className="data-[state=active]:bg-primary-50 data-[state=active]:text-primary-900">
+            Интеграции
+          </TabsTrigger>
           <TabsTrigger value="stats" className="data-[state=active]:bg-primary-50 data-[state=active]:text-primary-900">
             Статистика
           </TabsTrigger>
@@ -701,6 +705,240 @@ const CitizenRequests = () => {
                 ))}
               </div>
             )}
+          </div>
+        </TabsContent>
+        
+        {/* Вкладка интеграций */}
+        <TabsContent value="integrations">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Внешние интеграции</CardTitle>
+                  <CardDescription>
+                    Настройка источников для получения обращений граждан
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Telegram интеграция */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-blue-100 p-2 rounded-full">
+                          <svg className="h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.568 8.16c-.18 1.896-.978 6.504-1.378 8.628-.168.9-.504 1.2-.822 1.23-.696.06-1.224-.456-1.896-.9-1.05-.696-1.638-1.128-2.676-1.8-1.182-.762-.42-1.182.258-1.86.174-.18 3.162-2.892 3.222-3.136.006-.03.01-.132-.048-.186s-.18-.036-.258-.024c-.108.024-1.8 1.14-5.064 3.348-.48.33-.912.486-1.302.48-.426-.012-1.242-.24-1.848-.444-.744-.24-1.332-.366-1.284-.774.024-.21.324-.426.888-.648 3.504-1.524 5.832-2.532 6.984-3.024 3.318-1.422 4.014-1.674 4.476-1.682.106-.002.356.016.516.2.13.13.174.376.162.57z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Telegram Bot</h3>
+                          <p className="text-sm text-neutral-500">Получение обращений через Telegram</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Switch id="telegram-integration" />
+                        <Button variant="outline" size="sm">Настроить</Button>
+                      </div>
+                    </div>
+                    <div className="pl-11 space-y-2">
+                      <div className="text-sm text-neutral-500">API Token</div>
+                      <div className="flex space-x-2">
+                        <Input type="password" value="••••••••••••••••••••••••••••••" disabled className="font-mono" />
+                        <Button variant="ghost" size="icon">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </Button>
+                      </div>
+                      <div className="text-sm text-neutral-500">Webhook URL</div>
+                      <div className="flex space-x-2">
+                        <Input value="https://api.agent-smith.gov.kz/webhook/telegram" disabled />
+                        <Button variant="ghost" size="icon">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Email интеграция */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-orange-100 p-2 rounded-full">
+                          <svg className="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Email</h3>
+                          <p className="text-sm text-neutral-500">Получение обращений через электронную почту</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Switch id="email-integration" />
+                        <Button variant="outline" size="sm">Настроить</Button>
+                      </div>
+                    </div>
+                    <div className="pl-11 space-y-2">
+                      <div className="text-sm text-neutral-500">Email для обращений</div>
+                      <div className="flex space-x-2">
+                        <Input value="appeals@agent-smith.gov.kz" />
+                      </div>
+                      <div className="text-sm text-neutral-500">IMAP-сервер</div>
+                      <div className="flex space-x-2">
+                        <Input value="imap.agent-smith.gov.kz" />
+                      </div>
+                      <div className="text-sm text-neutral-500">Частота проверки</div>
+                      <div className="flex space-x-2">
+                        <select className="px-3 py-1 border rounded-md w-full">
+                          <option value="5">Каждые 5 минут</option>
+                          <option value="10">Каждые 10 минут</option>
+                          <option value="30">Каждые 30 минут</option>
+                          <option value="60">Каждый час</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* API интеграция */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-purple-100 p-2 rounded-full">
+                          <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-medium">REST API</h3>
+                          <p className="text-sm text-neutral-500">Получение обращений через JSON API</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Switch id="api-integration" checked={true} />
+                        <Button variant="outline" size="sm">Настроить</Button>
+                      </div>
+                    </div>
+                    <div className="pl-11 space-y-2">
+                      <div className="text-sm text-neutral-500">API Endpoint</div>
+                      <div className="flex space-x-2">
+                        <Input value="https://api.agent-smith.gov.kz/v1/citizen-requests" />
+                        <Button variant="ghost" size="icon">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </Button>
+                      </div>
+                      <div className="text-sm text-neutral-500">API Token</div>
+                      <div className="flex space-x-2">
+                        <Input type="password" value="sk_••••••••••••••••••••••••••••••" className="font-mono" />
+                        <Button variant="ghost" size="icon">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </Button>
+                      </div>
+                      <div className="text-sm text-neutral-500">Формат запроса</div>
+                      <div className="flex space-x-2">
+                        <Textarea 
+                          rows={6} 
+                          className="font-mono text-xs"
+                          value={`{
+  "title": "Обращение гражданина",
+  "content": "Текст обращения...",
+  "category": "documents",
+  "priority": "medium",
+  "citizenInfo": {
+    "name": "Иванов Иван",
+    "contact": "+7 701 123 4567",
+    "address": "г. Астана, ул. Примерная 123"
+  }
+}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4">
+                  <Button>Сохранить настройки</Button>
+                </CardFooter>
+              </Card>
+            </div>
+            
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Журнал событий</CardTitle>
+                  <CardDescription>
+                    События интеграций и обработки данных
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="border-l-4 border-green-500 pl-4 py-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Получено обращение через API</span>
+                        <span className="text-xs text-neutral-500">2 мин назад</span>
+                      </div>
+                      <p className="text-sm text-neutral-600">ID: 1234, тема: "Запрос на справку"</p>
+                    </div>
+                    
+                    <div className="border-l-4 border-green-500 pl-4 py-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Получено обращение через Email</span>
+                        <span className="text-xs text-neutral-500">1 час назад</span>
+                      </div>
+                      <p className="text-sm text-neutral-600">От: citizen@example.com, тема: "Проблема с дорогой"</p>
+                    </div>
+                    
+                    <div className="border-l-4 border-orange-500 pl-4 py-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Ошибка авторизации в Telegram</span>
+                        <span className="text-xs text-neutral-500">3 часа назад</span>
+                      </div>
+                      <p className="text-sm text-neutral-600">Неверный API токен или истек срок его действия</p>
+                    </div>
+                    
+                    <div className="border-l-4 border-blue-500 pl-4 py-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Синхронизация выполнена</span>
+                        <span className="text-xs text-neutral-500">5 часов назад</span>
+                      </div>
+                      <p className="text-sm text-neutral-600">Обработано 15 обращений из всех источников</p>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4 justify-center">
+                  <Button variant="outline" size="sm">
+                    Показать все события
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Информация</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p className="text-sm text-neutral-600">
+                      Agent Smith поддерживает получение обращений граждан из нескольких источников:
+                    </p>
+                    <ul className="space-y-1 list-disc list-inside text-sm text-neutral-600">
+                      <li>Telegram-бот для мгновенных обращений</li>
+                      <li>Email для официальных писем</li>
+                      <li>REST API для интеграции с другими системами</li>
+                    </ul>
+                    <p className="text-sm text-neutral-600 mt-4">
+                      Все обращения обрабатываются по единому алгоритму с анализом через AI и фиксацией в блокчейне.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
         
