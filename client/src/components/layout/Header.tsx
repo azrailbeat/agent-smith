@@ -55,26 +55,26 @@ const Header = ({ currentUser }: HeaderProps) => {
       
       {/* Выпадающие уведомления */}
       {notificationsOpen && (
-        <div className="absolute right-4 top-16 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-          <div className="p-3 border-b">
-            <h3 className="text-lg font-medium text-gray-900">Уведомления</h3>
+        <div className="absolute right-4 top-16 mt-2 w-80 rounded-md shadow-lg bg-neutral-800 border border-neutral-700 z-50">
+          <div className="p-3 border-b border-neutral-700">
+            <h3 className="text-lg font-medium text-white">Уведомления</h3>
           </div>
           <div className="max-h-72 overflow-y-auto">
-            <div className="p-4 border-b">
-              <p className="text-sm text-gray-700">Совещание "Внедрение AI в госсектор" начнется через 30 минут</p>
-              <p className="text-xs text-gray-500 mt-1">10 минут назад</p>
+            <div className="p-4 border-b border-neutral-700">
+              <p className="text-sm text-neutral-300">Совещание "Внедрение AI в госсектор" начнется через 30 минут</p>
+              <p className="text-xs text-neutral-500 mt-1">10 минут назад</p>
             </div>
-            <div className="p-4 border-b">
-              <p className="text-sm text-gray-700">Новое обращение гражданина требует вашего внимания</p>
-              <p className="text-xs text-gray-500 mt-1">1 час назад</p>
+            <div className="p-4 border-b border-neutral-700">
+              <p className="text-sm text-neutral-300">Новое обращение гражданина требует вашего внимания</p>
+              <p className="text-xs text-neutral-500 mt-1">1 час назад</p>
             </div>
             <div className="p-4">
-              <p className="text-sm text-gray-700">Задача "Подготовить отчет" выполнена</p>
-              <p className="text-xs text-gray-500 mt-1">вчера</p>
+              <p className="text-sm text-neutral-300">Задача "Подготовить отчет" выполнена</p>
+              <p className="text-xs text-neutral-500 mt-1">вчера</p>
             </div>
           </div>
-          <div className="p-2 border-t text-center">
-            <button className="text-sm text-primary-600 hover:text-primary-500">
+          <div className="p-2 border-t border-neutral-700 text-center">
+            <button className="text-sm text-blue-400 hover:text-blue-300">
               Все уведомления
             </button>
           </div>

@@ -237,7 +237,7 @@ export class DatabaseStorage implements IStorage {
     
     // Create default system statuses
     const defaultStatuses: InsertSystemStatusItem[] = [
-      { serviceName: "RoAI Core", status: 100, details: "Система работает нормально" },
+      { serviceName: "Agent Smith Core", status: 100, details: "Система работает нормально" },
       { serviceName: "GovChain", status: 100, details: "Система работает нормально" },
       { serviceName: "Document Processing", status: 98, details: "Система работает нормально" },
       { serviceName: "AI Translation", status: 100, details: "Система работает нормально" },

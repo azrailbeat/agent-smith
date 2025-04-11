@@ -81,16 +81,16 @@ html {
   
   /* Apple-style индикаторы загрузки */
   .apple-spinner {
-    @apply h-6 w-6 animate-spin rounded-full border-2 border-neutral-200 border-t-primary-500;
+    @apply h-6 w-6 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500;
   }
   
   /* Стили для страницы перевода */
   .translation-card {
-    @apply backdrop-blur-sm bg-white/90 border border-neutral-200 shadow-sm;
+    @apply backdrop-blur-sm bg-neutral-800/90 border border-neutral-700 shadow-md;
   }
   
   /* Стеклянный эффект для некоторых элементов */
   .glassmorphism {
-    @apply backdrop-blur-md bg-white/80 border border-white/20 shadow-sm;
+    @apply backdrop-blur-md bg-neutral-800/50 border border-neutral-700/50 shadow-md;
   }
 }
