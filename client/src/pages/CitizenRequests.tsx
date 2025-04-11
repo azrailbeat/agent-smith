@@ -813,11 +813,25 @@ const CitizenRequests = () => {
                                               )}
                                             </div>
                                             
-                                            {request.blockchainHash && (
-                                              <Badge variant="outline" className="bg-green-50 text-green-700">
-                                                <Check className="h-3 w-3 mr-1" /> GovChain
-                                              </Badge>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                              {request.blockchainHash && (
+                                                <Badge variant="outline" className="bg-green-50 text-green-700">
+                                                  <Check className="h-3 w-3 mr-1" /> GovChain
+                                                </Badge>
+                                              )}
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-8 px-2 text-xs"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedRequest(request);
+                                                  setIsDetailsOpen(true);
+                                                }}
+                                              >
+                                                Подробнее
+                                              </Button>
+                                            </div>
                                           </div>
                                         </div>
                                       </Card>
