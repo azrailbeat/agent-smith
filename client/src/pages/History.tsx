@@ -25,6 +25,7 @@ import {
   Check, 
   ClipboardEdit, 
   FileCheck, 
+  FileText,
   MessageSquare, 
   Calendar,
   User,
@@ -809,7 +810,7 @@ const HistoryPage = () => {
                         </TableCell>
                         <TableCell className="max-w-xs truncate">{record.description}</TableCell>
                         <TableCell>
-                          <span className="font-mono text-xs text-purple-700">{record.blockchainHash.substring(0, 10)}...{record.blockchainHash.substring(record.blockchainHash.length - 10)}</span>
+                          <span className="font-mono text-xs text-purple-700">{record.blockchainHash ? `${record.blockchainHash.substring(0, 10)}...${record.blockchainHash.substring(record.blockchainHash.length - 10)}` : 'Нет хеша'}</span>
                         </TableCell>
                         <TableCell>
                           <Badge className="bg-green-100 text-green-800">
