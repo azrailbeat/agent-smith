@@ -7,7 +7,8 @@ import {
   Activity, InsertActivity,
   SystemStatusItem, InsertSystemStatusItem,
   Integration, InsertIntegration,
-  Agent, InsertAgent
+  Agent, InsertAgent,
+  CitizenRequest, InsertCitizenRequest
 } from "@shared/schema";
 
 // Interface for storage operations
@@ -67,6 +68,13 @@ export interface IStorage {
   createAgent(agent: InsertAgent): Promise<Agent>;
   updateAgent(id: number, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
   deleteAgent(id: number): Promise<boolean>;
+  
+  // Citizen Request operations
+  getCitizenRequests(): Promise<CitizenRequest[]>;
+  getCitizenRequest(id: number): Promise<CitizenRequest | undefined>;
+  createCitizenRequest(request: InsertCitizenRequest): Promise<CitizenRequest>;
+  updateCitizenRequest(id: number, request: Partial<InsertCitizenRequest>): Promise<CitizenRequest | undefined>;
+  processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined>;
 }
 
 // In-memory storage implementation
@@ -80,6 +88,7 @@ export class MemStorage implements IStorage {
   private systemStatuses: Map<string, SystemStatusItem>;
   private integrations: Map<number, Integration>;
   private agents: Map<number, Agent>;
+  private citizenRequests: Map<number, CitizenRequest>;
   
   private userIdCounter: number;
   private taskIdCounter: number;
@@ -91,6 +100,8 @@ export class MemStorage implements IStorage {
   private integrationIdCounter: number;
   private agentIdCounter: number;
 
+  private citizenRequestIdCounter: number;
+  
   constructor() {
     this.users = new Map();
     this.tasks = new Map();
@@ -101,6 +112,7 @@ export class MemStorage implements IStorage {
     this.systemStatuses = new Map();
     this.integrations = new Map();
     this.agents = new Map();
+    this.citizenRequests = new Map();
     
     this.userIdCounter = 1;
     this.taskIdCounter = 1;
@@ -111,6 +123,7 @@ export class MemStorage implements IStorage {
     this.systemStatusIdCounter = 1;
     this.integrationIdCounter = 1;
     this.agentIdCounter = 1;
+    this.citizenRequestIdCounter = 1;
     
     // Initialize with some default data
     this.initializeDefaultData();
@@ -531,6 +544,123 @@ export class MemStorage implements IStorage {
 
   async deleteAgent(id: number): Promise<boolean> {
     return this.agents.delete(id);
+  }
+  
+  // Citizen Request methods
+  async getCitizenRequests(): Promise<CitizenRequest[]> {
+    return Array.from(this.citizenRequests.values());
+  }
+  
+  async getCitizenRequest(id: number): Promise<CitizenRequest | undefined> {
+    return this.citizenRequests.get(id);
+  }
+  
+  async createCitizenRequest(insertRequest: InsertCitizenRequest): Promise<CitizenRequest> {
+    const id = this.citizenRequestIdCounter++;
+    const request: CitizenRequest = {
+      ...insertRequest,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      aiProcessed: false,
+      closedAt: null
+    };
+    this.citizenRequests.set(id, request);
+    return request;
+  }
+  
+  async updateCitizenRequest(id: number, updateData: Partial<InsertCitizenRequest>): Promise<CitizenRequest | undefined> {
+    const request = this.citizenRequests.get(id);
+    if (!request) return undefined;
+    
+    const updatedRequest: CitizenRequest = {
+      ...request,
+      ...updateData,
+      updatedAt: new Date(),
+      closedAt: updateData.status === "closed" ? new Date() : request.closedAt
+    };
+    
+    this.citizenRequests.set(id, updatedRequest);
+    return updatedRequest;
+  }
+  
+  async processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined> {
+    const request = this.citizenRequests.get(id);
+    if (!request) return undefined;
+    
+    // Имитируем обработку AI
+    const citizenRequestAgent = await this.getAgentsByType("citizen_requests").then(agents => agents[0]);
+    
+    if (!citizenRequestAgent || !citizenRequestAgent.isActive) {
+      return request;
+    }
+    
+    // В реальной реализации здесь будет вызов OpenAI API
+    const aiClassification = this.classifyRequest(request);
+    const aiSuggestion = this.generateResponseSuggestion(request);
+    
+    const updatedRequest: CitizenRequest = {
+      ...request,
+      aiProcessed: true,
+      aiClassification,
+      aiSuggestion,
+      updatedAt: new Date()
+    };
+    
+    this.citizenRequests.set(id, updatedRequest);
+    
+    // Создаем запись активности
+    await this.createActivity({
+      actionType: "ai_process",
+      description: `Запрос от ${request.fullName} автоматически обработан AI агентом`,
+      relatedId: id,
+      relatedType: "citizen_request",
+      userId: null
+    });
+    
+    return updatedRequest;
+  }
+  
+  // Вспомогательные методы для AI обработки (имитация)
+  private classifyRequest(request: CitizenRequest): string {
+    const types: { [key: string]: string[] } = {
+      "Обращение по услугам ЖКХ": ["коммунальные", "водоснабжение", "отопление", "квартира", "дом", "жкх", "квитанция", "счет"],
+      "Дорожная инфраструктура": ["дорога", "тротуар", "асфальт", "пешеход", "светофор", "переход", "яма", "ремонт дороги"],
+      "Социальная помощь": ["пособие", "льгота", "инвалид", "пенсия", "малоимущий", "многодетная", "субсидия", "выплата"],
+      "Образование": ["школа", "детский сад", "колледж", "университет", "институт", "образование", "учеба", "учитель"],
+      "Здравоохранение": ["больница", "поликлиника", "врач", "медицинский", "лечение", "прием", "запись", "лекарства"],
+      "Вопросы документов": ["документ", "паспорт", "удостоверение", "свидетельство", "справка", "выписка", "регистрация"]
+    };
+    
+    const text = (request.subject + " " + request.description).toLowerCase();
+    
+    // Находим наиболее подходящую категорию
+    let bestMatch = "Общее обращение";
+    let maxMatches = 0;
+    
+    for (const [category, keywords] of Object.entries(types)) {
+      const matches = keywords.filter(kw => text.includes(kw)).length;
+      if (matches > maxMatches) {
+        maxMatches = matches;
+        bestMatch = category;
+      }
+    }
+    
+    return bestMatch;
+  }
+  
+  private generateResponseSuggestion(request: CitizenRequest): string {
+    const templates = [
+      `Уважаемый(-ая) ${request.fullName}!\n\nБлагодарим Вас за обращение в государственный орган по вопросу "${request.subject}".\n\nВаше обращение принято к рассмотрению и зарегистрировано под номером #${request.id}. Специалисты соответствующего отдела уже приступили к изучению изложенных Вами вопросов.\n\nОтвет по существу Вашего обращения будет предоставлен в установленный законодательством срок.\n\nС уважением,\nАдминистрация`,
+      
+      `Уважаемый(-ая) ${request.fullName}!\n\nМы получили Ваше обращение по вопросу "${request.subject}" и внимательно рассмотрели описанную Вами ситуацию.\n\nИнформируем, что для решения данного вопроса необходимо предоставить дополнительные документы и обратиться в отдел ${this.classifyRequest(request)}. Также Вы можете решить данный вопрос через портал электронных услуг.\n\nС уважением,\nОтдел по работе с обращениями граждан`,
+      
+      `Уважаемый(-ая) ${request.fullName}!\n\nВ ответ на Ваше обращение по вопросу "${request.subject}" сообщаем, что в соответствии с действующим законодательством Республики Казахстан, решение данного вопроса находится в компетенции местных исполнительных органов.\n\nВаше обращение перенаправлено в соответствующий орган для дальнейшего рассмотрения. О результатах Вы будете проинформированы дополнительно.\n\nС уважением,\nАдминистрация`
+    ];
+    
+    // Выбираем случайный шаблон
+    const randomIndex = Math.floor(Math.random() * templates.length);
+    return templates[randomIndex];
   }
 }
 
