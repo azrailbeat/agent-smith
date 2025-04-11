@@ -76,7 +76,7 @@ type FilterOptions = {
   userId: string;
 };
 
-const History = () => {
+const HistoryPage = () => {
   const { toast } = useToast();
   const [showRecordDetails, setShowRecordDetails] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
@@ -482,7 +482,7 @@ const History = () => {
                 </div>
               ) : filteredRecords.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <History className="h-12 w-12 text-neutral-300 mb-4" />
+                  <FileText className="h-12 w-12 text-neutral-300 mb-4" />
                   <h3 className="text-lg font-medium text-neutral-900 mb-2">Нет событий</h3>
                   <p className="text-neutral-500 text-center max-w-md">
                     По указанным критериям не найдено событий. Попробуйте изменить параметры фильтрации.
@@ -965,4 +965,4 @@ const History = () => {
   );
 };
 
-export default History;
+export default HistoryPage;

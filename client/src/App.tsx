@@ -8,7 +8,7 @@ import Footer from "@/components/layout/Footer";
 import Sidebar from "@/components/layout/Sidebar";
 import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
-import DecisionHistory from "@/pages/DecisionHistory";
+import History from "@/pages/History";
 import Analytics from "@/pages/Analytics";
 import Translate from "@/pages/Translate";
 import CitizenRequests from "@/pages/CitizenRequests";
@@ -24,7 +24,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/tasks" component={Tasks} />
-      <Route path="/history" component={DecisionHistory} />
+      <Route path="/history" component={History} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/translate" component={Translate} />
       <Route path="/citizen-requests" component={CitizenRequests} />
