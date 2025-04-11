@@ -10,41 +10,41 @@ const Header = ({ currentUser }: HeaderProps) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   return (
-    <header className="bg-neutral-800 text-white sticky top-0 z-50 shadow-md">
+    <header className="bg-neutral-800/90 backdrop-blur-md text-white sticky top-0 z-50 shadow-lg border-b border-neutral-700/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex-shrink-0 flex items-center">
-            <svg className="h-8 w-8 text-primary-500" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="h-9 w-9 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
             </svg>
-            <span className="ml-2 text-xl font-medium gradient-text">Agent Smith</span>
+            <span className="ml-3 text-xl font-semibold gradient-text">Agent Smith</span>
           </div>
           
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-5">
                 <button 
-                  className="flex items-center justify-center p-2 rounded-full bg-neutral-700 text-white hover:bg-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="flex items-center justify-center p-2 rounded-full bg-neutral-700/50 backdrop-blur-sm text-white hover:bg-neutral-600/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
                 >
-                  <BellIcon className="h-6 w-6" />
+                  <BellIcon className="h-5 w-5" />
                 </button>
-                <div className="relative">
-                  <button className="flex items-center space-x-2 text-sm focus:outline-none">
+                <div className="relative pl-2">
+                  <button className="flex items-center space-x-3 text-sm focus:outline-none">
                     {currentUser.avatarUrl ? (
                       <img
-                        className="h-8 w-8 rounded-full"
+                        className="h-8 w-8 rounded-full border border-neutral-600/50"
                         src={currentUser.avatarUrl}
                         alt={`${currentUser.fullName} profile`}
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary-700 flex items-center justify-center">
+                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center border border-blue-500/20">
                         <span className="text-sm font-medium text-white">
                           {currentUser.fullName.charAt(0)}
                         </span>
                       </div>
                     )}
-                    <span>{currentUser.fullName}</span>
+                    <span className="text-neutral-200">{currentUser.fullName}</span>
                   </button>
                 </div>
               </div>

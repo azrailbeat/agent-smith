@@ -51,7 +51,7 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-neutral-900 text-neutral-100">
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-neutral-900 to-neutral-950 text-neutral-100">
         <Header currentUser={currentUser} />
         <div className="flex flex-1">
           <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />

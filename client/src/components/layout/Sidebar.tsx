@@ -73,13 +73,13 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
   return (
     <div
       className={cn(
-        "fixed left-0 top-14 h-screen bg-neutral-800 border-r border-neutral-700 transition-all duration-300 ease-in-out z-20",
+        "fixed left-0 top-14 h-screen bg-neutral-800/90 backdrop-blur-md border-r border-neutral-700/50 transition-all duration-300 ease-in-out z-20 shadow-lg",
         collapsed ? "w-16" : "w-64"
       )}
     >
       <div className="flex flex-col h-[calc(100vh-3.5rem)] pb-4">
-        <div className="flex-1 py-4">
-          <ul className="space-y-1 px-2">
+        <div className="flex-1 py-5">
+          <ul className="space-y-2 px-3">
             {navItems.map((item) => (
               <li key={item.path}>
                 {collapsed ? (
@@ -93,8 +93,8 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                             className={cn(
                               "w-full justify-center",
                               location === item.path || (item.path === "/" && location === "")
-                                ? "bg-primary-900/50 text-primary-300 hover:bg-primary-900/70 hover:text-primary-200"
-                                : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700"
+                                ? "bg-blue-900/40 text-blue-300 hover:bg-blue-900/50 hover:text-blue-200"
+                                : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700/50"
                             )}
                           >
                             {item.icon}
@@ -109,13 +109,13 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
                     <Button
                       variant={location === item.path || (item.path === "/" && location === "") ? "default" : "ghost"}
                       className={cn(
-                        "w-full justify-start",
+                        "w-full justify-start rounded-lg",
                         location === item.path || (item.path === "/" && location === "")
-                          ? "bg-primary-900/50 text-primary-300 hover:bg-primary-900/70 hover:text-primary-200"
-                          : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700"
+                          ? "bg-blue-900/40 text-blue-300 hover:bg-blue-900/50 hover:text-blue-200"
+                          : "text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700/50"
                       )}
                     >
-                      <span className="mr-2">{item.icon}</span>
+                      <span className="mr-3">{item.icon}</span>
                       {item.name}
                     </Button>
                   </Link>
@@ -125,12 +125,12 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           </ul>
         </div>
         
-        <div className="px-2 mt-auto">
+        <div className="px-3 mt-auto">
           <Button
             variant="ghost"
             size={collapsed ? "icon" : "default"}
             onClick={onToggle}
-            className="w-full justify-center text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700"
+            className="w-full justify-center text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700/50 rounded-lg"
           >
             {collapsed ? <ChevronRight size={20} /> : <><ChevronLeft size={20} className="mr-2" /> Свернуть</>}
           </Button>

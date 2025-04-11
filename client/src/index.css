@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 :root {
-  --scrollbar-thumb: rgb(64, 64, 70);
-  --scrollbar-track: rgb(30, 30, 35);
+  --scrollbar-thumb: rgba(64, 64, 70, 0.8);
+  --scrollbar-track: rgba(30, 30, 35, 0.6);
 }
 
 html {
@@ -42,8 +42,8 @@ html {
   }
 
   body {
-    @apply font-sans antialiased bg-neutral-900 text-neutral-100;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    @apply font-sans antialiased text-neutral-100;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -54,12 +54,12 @@ html {
 @layer components {
   /* Apple-style карточки с легким размытием фона */
   .card {
-    @apply rounded-xl backdrop-blur-sm bg-neutral-800/90 border border-neutral-700 shadow-md;
+    @apply rounded-xl backdrop-blur-sm bg-neutral-800/80 border border-neutral-700/60 shadow-lg;
   }
   
   /* Apple-style градиентные кнопки */
   .apple-button {
-    @apply bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-medium py-2 px-4 rounded-full transition-all;
+    @apply bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-medium py-2 px-5 rounded-full transition-all shadow-md;
   }
   
   /* Apple-style переключатели */
@@ -86,11 +86,11 @@ html {
   
   /* Стили для страницы перевода */
   .translation-card {
-    @apply backdrop-blur-sm bg-neutral-800/90 border border-neutral-700 shadow-md;
+    @apply backdrop-blur-sm bg-neutral-800/80 border border-neutral-700/60 shadow-lg rounded-xl;
   }
   
   /* Стеклянный эффект для некоторых элементов */
   .glassmorphism {
-    @apply backdrop-blur-md bg-neutral-800/50 border border-neutral-700/50 shadow-md;
+    @apply backdrop-blur-md bg-neutral-800/50 border border-neutral-700/40 shadow-lg rounded-xl;
   }
 }
