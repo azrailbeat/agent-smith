@@ -915,7 +915,13 @@ const Meetings = () => {
                                       {...provided.dragHandleProps}
                                       className="mb-3"
                                     >
-                                      <Card className="overflow-hidden shadow-sm">
+                                      <Card 
+                                        className="overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                        onClick={() => {
+                                          setSelectedMeeting(meeting);
+                                          setViewProtocolDialogOpen(true);
+                                        }}
+                                      >
                                         <div className="p-4">
                                           <div>
                                             <h3 className="text-sm font-semibold line-clamp-1">{meeting.title}</h3>
@@ -959,19 +965,34 @@ const Meetings = () => {
                                                 </Badge>
                                               )}
                                               
-                                              {meeting.protocol && (
+                                              <div className="flex gap-1 items-center">
+                                                {meeting.protocol && (
+                                                  <Button 
+                                                    size="sm" 
+                                                    variant="ghost"
+                                                    className="h-6 ml-1 p-0 w-6"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      viewProtocol(meeting);
+                                                    }}
+                                                  >
+                                                    <FileText className="h-4 w-4" />
+                                                  </Button>
+                                                )}
+                                                
                                                 <Button 
                                                   size="sm" 
                                                   variant="ghost"
-                                                  className="h-6 ml-1 p-0 w-6"
+                                                  className="h-6 p-0 w-6"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    viewProtocol(meeting);
+                                                    setSelectedMeeting(meeting);
+                                                    setViewProtocolDialogOpen(true);
                                                   }}
                                                 >
-                                                  <FileText className="h-4 w-4" />
+                                                  <ExternalLink className="h-4 w-4" />
                                                 </Button>
-                                              )}
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
