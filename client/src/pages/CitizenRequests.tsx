@@ -1242,102 +1242,209 @@ const CitizenRequests = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Диалог с информацией о гражданине */}
+      {/* Диалог с детальной информацией по обращению */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Информация о гражданине</DialogTitle>
-            <DialogDescription>
-              Укажите данные гражданина для регистрации обращения
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="citizenName" className="text-right">
-                ФИО
-              </Label>
-              <Input
-                id="citizenName"
-                value={currentRequest.citizenInfo?.name || ''}
-                onChange={(e) => setCurrentRequest({
-                  ...currentRequest, 
-                  citizenInfo: {
-                    ...currentRequest.citizenInfo as any,
-                    name: e.target.value
-                  }
-                })}
-                className="col-span-3"
-                placeholder="Введите ФИО гражданина"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="citizenContact" className="text-right">
-                Контакт
-              </Label>
-              <Input
-                id="citizenContact"
-                value={currentRequest.citizenInfo?.contact || ''}
-                onChange={(e) => setCurrentRequest({
-                  ...currentRequest, 
-                  citizenInfo: {
-                    ...currentRequest.citizenInfo as any,
-                    contact: e.target.value
-                  }
-                })}
-                className="col-span-3"
-                placeholder="Телефон или email"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="citizenAddress" className="text-right">
-                Адрес
-              </Label>
-              <Input
-                id="citizenAddress"
-                value={currentRequest.citizenInfo?.address || ''}
-                onChange={(e) => setCurrentRequest({
-                  ...currentRequest, 
-                  citizenInfo: {
-                    ...currentRequest.citizenInfo as any,
-                    address: e.target.value
-                  }
-                })}
-                className="col-span-3"
-                placeholder="Адрес проживания"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="citizenIIN" className="text-right">
-                ИИН
-              </Label>
-              <Input
-                id="citizenIIN"
-                value={currentRequest.citizenInfo?.iin || ''}
-                onChange={(e) => setCurrentRequest({
-                  ...currentRequest, 
-                  citizenInfo: {
-                    ...currentRequest.citizenInfo as any,
-                    iin: e.target.value
-                  }
-                })}
-                className="col-span-3"
-                placeholder="ИИН (необязательно)"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-              Назад
-            </Button>
-            <Button onClick={handleSaveRequest} disabled={saveRequestMutation.isPending}>
-              {saveRequestMutation.isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Сохранение...
-                </>
-              ) : "Сохранить обращение"}
-            </Button>
-          </DialogFooter>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto">
+          {selectedRequest && (
+            <>
+              <DialogHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <DialogTitle>{selectedRequest.title}</DialogTitle>
+                    <DialogDescription>
+                      Обращение #{selectedRequest.id} | {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}
+                    </DialogDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {renderStatusBadge(selectedRequest.status)}
+                    {renderPriorityBadge(selectedRequest.priority)}
+                    {selectedRequest.blockchainHash && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700">
+                        <Database className="h-3 w-3 mr-1" /> GovChain
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
+                {/* Основная информация */}
+                <div className="md:col-span-2 space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Описание обращения</h3>
+                    <div className="p-3 bg-neutral-50 rounded-md border text-sm">
+                      {selectedRequest.content}
+                    </div>
+                  </div>
+                  
+                  {selectedRequest.summary && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">
+                        <div className="flex items-center">
+                          AI-резюме
+                          <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-700">
+                            <Mic className="h-3 w-3 mr-1" /> AI Agent
+                          </Badge>
+                        </div>
+                      </h3>
+                      <div className="p-3 bg-neutral-50 rounded-md border text-sm">
+                        {selectedRequest.summary}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">История обработки</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
+                        <div className="bg-green-100 p-1 rounded-full mr-2">
+                          <Check className="h-4 w-4 text-green-700" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">Обращение зарегистрировано</div>
+                          <div className="text-xs text-neutral-500">
+                            {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}, 
+                            {new Date(selectedRequest.createdAt).toLocaleTimeString('ru-RU')}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {selectedRequest.assignedTo && (
+                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
+                          <div className="bg-blue-100 p-1 rounded-full mr-2">
+                            <User className="h-4 w-4 text-blue-700" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium">Назначено исполнителю</div>
+                            <div className="text-xs text-neutral-500">
+                              {selectedRequest.assignedTo} | {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedRequest.blockchainHash && (
+                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
+                          <div className="bg-emerald-100 p-1 rounded-full mr-2">
+                            <Database className="h-4 w-4 text-emerald-700" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium">Сохранено в блокчейне (GovChain)</div>
+                            <div className="text-xs text-neutral-500">
+                              Хэш: {selectedRequest.blockchainHash}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedRequest.status === 'completed' && selectedRequest.completedAt && (
+                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
+                          <div className="bg-green-100 p-1 rounded-full mr-2">
+                            <FileCheck className="h-4 w-4 text-green-700" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium">Обращение выполнено</div>
+                            <div className="text-xs text-neutral-500">
+                              {new Date(selectedRequest.completedAt).toLocaleDateString('ru-RU')}, 
+                              {new Date(selectedRequest.completedAt).toLocaleTimeString('ru-RU')}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Боковая панель */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Данные гражданина</h3>
+                    <div className="p-3 bg-neutral-50 rounded-md border">
+                      <div className="space-y-2 text-sm">
+                        {selectedRequest.citizenInfo?.name && (
+                          <div className="flex justify-between">
+                            <span className="text-neutral-500">ФИО:</span>
+                            <span className="font-medium">{selectedRequest.citizenInfo.name}</span>
+                          </div>
+                        )}
+                        {selectedRequest.citizenInfo?.contact && (
+                          <div className="flex justify-between">
+                            <span className="text-neutral-500">Контакт:</span>
+                            <span className="font-medium">{selectedRequest.citizenInfo.contact}</span>
+                          </div>
+                        )}
+                        {selectedRequest.citizenInfo?.address && (
+                          <div className="flex justify-between">
+                            <span className="text-neutral-500">Адрес:</span>
+                            <span className="font-medium">{selectedRequest.citizenInfo.address}</span>
+                          </div>
+                        )}
+                        {selectedRequest.citizenInfo?.iin && (
+                          <div className="flex justify-between">
+                            <span className="text-neutral-500">ИИН:</span>
+                            <span className="font-medium">{selectedRequest.citizenInfo.iin}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">AI-агенты</h3>
+                    <div className="space-y-2">
+                      <Button variant="outline" className="w-full justify-start" size="sm">
+                        <User className="h-4 w-4 mr-2" />
+                        <span>Департамент документов</span>
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" size="sm">
+                        <BarChart2 className="h-4 w-4 mr-2" />
+                        <span>Аналитик данных</span>
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" size="sm">
+                        <ListChecks className="h-4 w-4 mr-2" />
+                        <span>Проверка статуса</span>
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Действия</h3>
+                    <div className="space-y-2">
+                      {!selectedRequest.summary && (
+                        <Button 
+                          className="w-full justify-start" 
+                          size="sm"
+                          onClick={() => generateSummary(selectedRequest)}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          <span>Сгенерировать резюме</span>
+                        </Button>
+                      )}
+                      
+                      {!selectedRequest.blockchainHash && (
+                        <Button 
+                          className="w-full justify-start" 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => saveToBlockchain(selectedRequest.id)}
+                        >
+                          <Database className="h-4 w-4 mr-2" />
+                          <span>Сохранить в блокчейне</span>
+                        </Button>
+                      )}
+                      
+                      {selectedRequest.status !== 'completed' && (
+                        <Button className="w-full justify-start" size="sm" variant="outline">
+                          <Check className="h-4 w-4 mr-2" />
+                          <span>Отметить выполненным</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
       
