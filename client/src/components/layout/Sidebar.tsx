@@ -50,7 +50,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       icon: <Calendar size={20} />
     },
     {
-      name: "История решений",
+      name: "История",
       path: "/history",
       icon: <History size={20} />
     },
