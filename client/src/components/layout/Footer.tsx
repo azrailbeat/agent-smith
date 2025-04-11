@@ -13,19 +13,19 @@ const Footer = () => {
           <div className="mt-4 md:mt-0">
             <div className="flex space-x-6">
               <Link href="/help">
-                <a className="text-neutral-500 hover:text-neutral-700">
+                <span className="text-neutral-500 hover:text-neutral-700 cursor-pointer">
                   <span className="text-sm">Помощь</span>
-                </a>
+                </span>
               </Link>
               <Link href="/legal">
-                <a className="text-neutral-500 hover:text-neutral-700">
+                <span className="text-neutral-500 hover:text-neutral-700 cursor-pointer">
                   <span className="text-sm">Правовая информация</span>
-                </a>
+                </span>
               </Link>
               <Link href="/privacy">
-                <a className="text-neutral-500 hover:text-neutral-700">
+                <span className="text-neutral-500 hover:text-neutral-700 cursor-pointer">
                   <span className="text-sm">Политика конфиденциальности</span>
-                </a>
+                </span>
               </Link>
             </div>
           </div>

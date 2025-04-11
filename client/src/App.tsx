@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import Sidebar from "@/components/layout/Sidebar";
 import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import DecisionHistory from "@/pages/DecisionHistory";
@@ -38,15 +39,24 @@ function App() {
     avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=256&h=256&q=80"
   });
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+  
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen flex flex-col bg-neutral-50 text-neutral-900">
         <Header currentUser={currentUser} />
-        <main className="flex-1 py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Router />
-          </div>
-        </main>
+        <div className="flex flex-1">
+          <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+          <main className="flex-1 py-6 lg:ml-64 transition-all duration-300 ease-in-out">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <Router />
+            </div>
+          </main>
+        </div>
         <Footer />
       </div>
       <Toaster />

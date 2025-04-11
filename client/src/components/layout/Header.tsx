@@ -18,7 +18,7 @@ const Header = ({ currentUser }: HeaderProps) => {
   ];
 
   return (
-    <header className="bg-primary-600 text-white">
+    <header className="bg-primary-600 text-white sticky top-0 z-50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
