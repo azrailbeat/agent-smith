@@ -15,6 +15,7 @@ import CitizenRequests from "@/pages/CitizenRequests";
 import Meetings from "@/pages/Meetings";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
+import AboutSystem from "@/pages/AboutSystem";
 import { useState } from "react";
 import { User } from "./lib/types";
 
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/citizen-requests" component={CitizenRequests} />
       <Route path="/meetings" component={Meetings} />
       <Route path="/settings" component={Settings} />
+      <Route path="/about" component={AboutSystem} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -53,7 +55,7 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-neutral-900 to-neutral-950 text-neutral-100">
+      <div className="min-h-screen flex flex-col bg-white text-slate-800">
         <Header currentUser={currentUser} />
         <div className="flex flex-1">
           <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
