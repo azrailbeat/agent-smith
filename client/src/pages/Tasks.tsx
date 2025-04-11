@@ -19,12 +19,70 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Task, FormattedTask } from "@/lib/types";
-import { CheckCircle, AlertCircle, Clock, Calendar } from "lucide-react";
+import { 
+  CheckCircle, 
+  AlertCircle, 
+  Clock, 
+  Calendar, 
+  FileText, 
+  PlusCircle, 
+  BarChart,
+  MoveHorizontal
+} from "lucide-react";
 import { isPast, isToday } from "date-fns";
+import { useState, useEffect } from "react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+
+// Интерфейс для колонок Канбан-доски
+interface KanbanColumn {
+  id: string;
+  title: string;
+  taskIds: number[];
+}
+
+// Объект, который будет содержать состояние доски
+interface KanbanBoard {
+  columns: {
+    [key: string]: KanbanColumn;
+  };
+  columnOrder: string[];
+}
 
 const Tasks = () => {
   const { data: tasksData, isLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
+  });
+  
+  // Состояние для Канбан-доски
+  const [kanbanBoard, setKanbanBoard] = useState<KanbanBoard>({
+    columns: {
+      pending: {
+        id: "pending",
+        title: "Ожидает",
+        taskIds: []
+      },
+      in_progress: {
+        id: "in_progress",
+        title: "В процессе",
+        taskIds: []
+      },
+      ready_for_review: {
+        id: "ready_for_review",
+        title: "На проверку",
+        taskIds: []
+      },
+      completed: {
+        id: "completed",
+        title: "Завершено",
+        taskIds: []
+      },
+      requires_attention: {
+        id: "requires_attention",
+        title: "Требует внимания",
+        taskIds: []
+      }
+    },
+    columnOrder: ["pending", "in_progress", "ready_for_review", "completed", "requires_attention"]
   });
 
   // Format tasks for display
@@ -113,6 +171,32 @@ const Tasks = () => {
   };
 
   const tasks = isLoading ? [] : formatTasks(tasksData || []);
+  
+  // Заполняем канбан-доску задачами при загрузке данных
+  useEffect(() => {
+    if (!isLoading && tasksData && tasksData.length > 0) {
+      const newBoard = { ...kanbanBoard };
+      
+      // Сбрасываем все текущие задачи в колонках
+      Object.keys(newBoard.columns).forEach((columnId) => {
+        newBoard.columns[columnId].taskIds = [];
+      });
+      
+      // Распределяем задачи по колонкам в соответствии со статусом
+      tasksData.forEach((task) => {
+        const status = task.status || "pending";
+        if (newBoard.columns[status]) {
+          newBoard.columns[status].taskIds.push(task.id);
+        } else {
+          // Если статус не соответствует ни одной колонке, добавляем в "pending"
+          newBoard.columns["pending"].taskIds.push(task.id);
+        }
+      });
+      
+      setKanbanBoard(newBoard);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasksData, isLoading]);
 
   return (
     <>
@@ -136,22 +220,23 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Tasks table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Список задач</CardTitle>
-          <CardDescription>
-            Управление задачами и их статусом
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="animate-pulse space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-12 bg-neutral-100 rounded"></div>
-              ))}
-            </div>
-          ) : tasks.length === 0 ? (
+      {/* Kanban Board View */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold mb-1">Канбан-доска задач</h2>
+        <p className="text-sm text-neutral-500">Перетаскивайте задачи для изменения их статуса</p>
+      </div>
+      
+      {isLoading ? (
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-64 bg-neutral-100 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      ) : tasks.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-12">
               <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
               <h3 className="text-lg font-medium text-neutral-900 mb-2">Нет активных задач</h3>
@@ -159,75 +244,167 @@ const Tasks = () => {
                 У вас нет активных задач в данный момент. Создайте новую задачу, чтобы начать работу.
               </p>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Название</TableHead>
-                  <TableHead>Статус</TableHead>
-                  <TableHead>Приоритет</TableHead>
-                  <TableHead>Срок</TableHead>
-                  <TableHead>Документы</TableHead>
-                  <TableHead>Прогресс</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tasks.map((task) => (
-                  <TableRow key={task.id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => window.location.href = `/tasks/${task.id}`}>
-                    <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>
-                      <Badge className={task.statusBadge.color}>
-                        {task.statusBadge.text}
+          </CardContent>
+        </Card>
+      ) : (
+        <DragDropContext 
+          onDragEnd={(result: DropResult) => {
+            // Обработчик перетаскивания элементов
+            const { destination, source, draggableId } = result;
+            if (!destination) return;
+            
+            if (
+              destination.droppableId === source.droppableId &&
+              destination.index === source.index
+            ) {
+              return;
+            }
+            
+            // Клонируем текущее состояние
+            const newBoard = {...kanbanBoard};
+            const taskId = parseInt(draggableId.replace('task-', ''));
+            
+            // Удаляем из исходной колонки
+            newBoard.columns[source.droppableId].taskIds = 
+              newBoard.columns[source.droppableId].taskIds.filter(id => id !== taskId);
+            
+            // Добавляем в целевую колонку
+            newBoard.columns[destination.droppableId].taskIds.splice(
+              destination.index, 
+              0, 
+              taskId
+            );
+            
+            // Обновляем состояние доски
+            setKanbanBoard(newBoard);
+            
+            // Обновляем статус задачи в базе данных (в реальном приложении)
+            // updateTaskStatus({ id: taskId, status: destination.droppableId });
+            
+            // Обновляем локальное состояние задач
+            const taskToUpdate = tasks.find(t => t.id === taskId);
+            if (taskToUpdate) {
+              taskToUpdate.status = destination.droppableId as any;
+            }
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {kanbanBoard.columnOrder.map((columnId) => {
+              const column = kanbanBoard.columns[columnId];
+              const columnTasks = column.taskIds
+                .map(id => tasks.find(t => t.id === id))
+                .filter(Boolean) as FormattedTask[];
+              
+              let headerColor = "bg-neutral-100";
+              switch (columnId) {
+                case "pending": headerColor = "bg-neutral-100"; break;
+                case "in_progress": headerColor = "bg-yellow-50"; break;
+                case "ready_for_review": headerColor = "bg-green-50"; break;
+                case "completed": headerColor = "bg-blue-50"; break;
+                case "requires_attention": headerColor = "bg-red-50"; break;
+              }
+              
+              return (
+                <div key={columnId} className="flex flex-col">
+                  <div className={`rounded-t-lg px-4 py-3 border-x border-t border-border ${headerColor}`}>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-medium text-foreground">
+                        {column.title}
+                      </h3>
+                      <Badge variant="outline">
+                        {columnTasks.length}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={task.priorityBadge.color}>
-                        {task.priorityBadge.text}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {task.dueDate && (
-                        <div className="flex items-center">
-                          <Calendar className="mr-2 h-4 w-4 text-neutral-500" />
-                          <span className={`${
-                            task.dueDate && isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate)) 
-                              ? 'text-red-500' 
-                              : ''
-                          }`}>
-                            {task.dueDateFormatted}
-                          </span>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {task.documentCount > 0 ? task.documentCount : "Нет"}
-                    </TableCell>
-                    <TableCell>
-                      {task.aiProgress > 0 ? (
-                        <div className="flex items-center">
-                          <span className="mr-2">{task.aiProgress}%</span>
-                          <div className="w-20 bg-neutral-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                task.aiProgress > 90 
-                                  ? 'bg-green-500' 
-                                  : task.aiProgress > 40 
-                                    ? 'bg-yellow-500' 
-                                    : 'bg-red-500'
-                              }`} 
-                              style={{ width: `${task.aiProgress}%` }}
-                            ></div>
+                    </div>
+                  </div>
+                  
+                  <Droppable droppableId={columnId}>
+                    {(provided) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="flex-1 bg-muted/40 rounded-b-lg p-2 min-h-[500px] border border-border"
+                      >
+                        {columnTasks.map((task, index) => (
+                          <Draggable 
+                            key={`task-${task.id}`}
+                            draggableId={`task-${task.id}`} 
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="mb-3"
+                              >
+                                <Card className="overflow-hidden shadow-sm">
+                                  <div className="p-4">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <h3 className="text-sm font-semibold">{task.title}</h3>
+                                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                                          <Badge variant="outline" className={task.priorityBadge.color}>
+                                            {task.priorityBadge.text}
+                                          </Badge>
+                                          {task.dueDate && (
+                                            <Badge variant="outline" className={isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate)) ? "bg-red-50 text-red-700" : ""}>
+                                              <Clock className="h-3 w-3 mr-1" /> {task.dueDateFormatted}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mt-3 flex justify-between items-center">
+                                      <div>
+                                        {task.documentCount > 0 && (
+                                          <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                                            <FileText className="h-3 w-3 mr-1" /> {task.documentCount} док.
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      
+                                      {task.aiProgress > 0 && (
+                                        <div className="flex items-center">
+                                          <span className="text-xs mr-2">{task.aiProgress}%</span>
+                                          <div className="w-16 bg-neutral-200 rounded-full h-1.5">
+                                            <div 
+                                              className={`h-1.5 rounded-full ${
+                                                task.aiProgress > 90 
+                                                  ? 'bg-green-500' 
+                                                  : task.aiProgress > 40 
+                                                    ? 'bg-yellow-500' 
+                                                    : 'bg-red-500'
+                                              }`} 
+                                              style={{ width: `${task.aiProgress}%` }}
+                                            ></div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        
+                        {columnTasks.length === 0 && (
+                          <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border border-dashed border-muted-foreground/30 rounded-md m-4">
+                            <MoveHorizontal className="h-3 w-3 mr-2" />
+                            Перетащите задачи сюда
                           </div>
-                        </div>
-                      ) : "Не начат"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
+      )}
     </>
   );
 };
