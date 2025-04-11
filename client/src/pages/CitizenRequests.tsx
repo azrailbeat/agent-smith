@@ -216,17 +216,10 @@ const CitizenRequests = () => {
   const saveRequestMutation = useMutation({
     mutationFn: async (request: Partial<CitizenRequest>) => {
       try {
-        // Здесь в реальном приложении был бы API-запрос
-        // return apiRequest('POST', '/api/citizen-requests', request);
-        
-        // Для демо просто имитируем сохранение
-        console.log("Saving request:", request);
-        return { 
-          id: Date.now(),
-          status: 'pending',
-          createdAt: new Date(),
-          ...request
-        } as CitizenRequest;
+        // Отправляем запрос на API
+        const response = await apiRequest('POST', '/api/citizen-requests', request);
+        const data = await response.json();
+        return data;
       } catch (error) {
         console.error("Error saving request:", error);
         throw new Error("Не удалось сохранить обращение");
@@ -279,28 +272,19 @@ const CitizenRequests = () => {
     setShowSummaryDialog(true);
     
     try {
-      // Здесь был бы API-запрос для генерации резюме
-      // const response = await apiRequest('POST', `/api/citizen-requests/${request.id}/summary`);
-      // const data = await response.json();
+      // Отправляем на обработку AI
+      const response = await apiRequest('POST', `/api/citizen-requests/${request.id}/process`);
+      const data = await response.json();
       
-      // Для демо просто имитируем задержку и генерацию
-      setTimeout(() => {
-        const summaries = {
-          "documents": "Запрос на получение нового удостоверения личности взамен утерянного. Требуется консультация по срокам и документам, необходимым для оформления.",
-          "infrastructure": "Жалоба на отсутствие уличного освещения на участке улицы Абая (дома 23-27). Проблема существует в течение недели и требует оперативного вмешательства городских служб.",
-          "social": "Запрос на консультацию по оформлению социального пособия для матери-одиночки с двумя детьми. Требуется информация о необходимых документах и порядке оформления."
-        };
-        
-        const updatedRequest = { 
-          ...request, 
-          summary: summaries[request.category as keyof typeof summaries] || "Автоматически сгенерированное резюме обращения гражданина." 
-        };
-        
-        setSelectedRequest(updatedRequest);
-        
-        // В реальном приложении здесь было бы обновление в БД
-        queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
-      }, 1500);
+      setSelectedRequest(data);
+      
+      toast({
+        title: "Обработано AI",
+        description: "Обращение успешно обработано AI-агентом"
+      });
+      
+      // Обновляем кэш данных
+      queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
     } catch (error) {
       toast({
         title: "Ошибка",

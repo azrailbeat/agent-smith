@@ -759,6 +759,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Citizen Request routes
+  app.get('/api/citizen-requests', async (req, res) => {
+    try {
+      const requests = await storage.getCitizenRequests();
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/citizen-requests/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      const request = await storage.getCitizenRequest(id);
+      if (!request) {
+        return res.status(404).json({ error: 'Request not found' });
+      }
+      
+      res.json(request);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/citizen-requests', async (req, res) => {
+    try {
+      const requestData = insertCitizenRequestSchema.parse(req.body);
+      const request = await storage.createCitizenRequest(requestData);
+      
+      // Create activity record
+      await storage.createActivity({
+        actionType: 'citizen_request_created',
+        description: `Обращение от ${request.fullName}`,
+        relatedId: request.id,
+        relatedType: 'citizen_request'
+      });
+      
+      // Auto-process with AI if enabled
+      const agentEnabled = await storage.getAgentsByType("citizen_requests")
+        .then(agents => agents.length > 0 ? agents[0].isActive : false);
+      
+      if (agentEnabled) {
+        // Process with AI asynchronously
+        storage.processCitizenRequestWithAI(request.id);
+      }
+      
+      res.json(request);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/citizen-requests/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      const updateData = insertCitizenRequestSchema.partial().parse(req.body);
+      const request = await storage.updateCitizenRequest(id, updateData);
+      
+      if (!request) {
+        return res.status(404).json({ error: 'Request not found' });
+      }
+      
+      // Create activity for status changes
+      if (updateData.status) {
+        await storage.createActivity({
+          actionType: 'citizen_request_status_changed',
+          description: `Статус обращения изменен на "${updateData.status}"`,
+          relatedId: request.id,
+          relatedType: 'citizen_request'
+        });
+      }
+      
+      res.json(request);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/citizen-requests/:id/process', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      const request = await storage.getCitizenRequest(id);
+      if (!request) {
+        return res.status(404).json({ error: 'Request not found' });
+      }
+      
+      const processedRequest = await storage.processCitizenRequestWithAI(id);
+      res.json(processedRequest);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Documentolog integration route
+  app.post('/api/documents/documentolog', async (req, res) => {
+    try {
+      const { docId, taskId, userId } = req.body;
+      
+      if (!docId) {
+        return res.status(400).json({ error: 'Documentolog document ID is required' });
+      }
+      
+      // В реальной реализации здесь будет запрос к API documentolog.com
+      // Для MVP имитируем получение данных
+      const documentData = {
+        title: `Документ Documentolog #${docId}`,
+        fileType: 'application/pdf', 
+        taskId: taskId ? parseInt(taskId) : null,
+        fileUrl: `https://documentolog.com/api/documents/${docId}`,
+        uploadedBy: userId ? parseInt(userId) : 1,
+        processed: false
+      };
+      
+      const document = await storage.createDocument(documentData);
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: document.uploadedBy,
+        actionType: 'document_imported',
+        description: `Импортирован документ "${document.title}" из Documentolog`,
+        relatedId: document.id,
+        relatedType: 'document'
+      });
+      
+      res.json({
+        success: true,
+        document,
+        message: 'Document imported successfully from Documentolog'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 
