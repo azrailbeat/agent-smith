@@ -336,10 +336,7 @@ const Settings = () => {
   // Integration mutations
   const createIntegrationMutation = useMutation({
     mutationFn: (data: any) => 
-      apiRequest('/api/integrations', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      }),
+      apiRequest('POST', '/api/integrations', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
       setIsIntegrationDialogOpen(false);
@@ -359,10 +356,7 @@ const Settings = () => {
 
   const updateIntegrationMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: any }) => 
-      apiRequest(`/api/integrations/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data)
-      }),
+      apiRequest('PATCH', `/api/integrations/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
       setIsIntegrationDialogOpen(false);
@@ -382,9 +376,7 @@ const Settings = () => {
 
   const deleteIntegrationMutation = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/integrations/${id}`, {
-        method: 'DELETE'
-      }),
+      apiRequest('DELETE', `/api/integrations/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
       toast({
