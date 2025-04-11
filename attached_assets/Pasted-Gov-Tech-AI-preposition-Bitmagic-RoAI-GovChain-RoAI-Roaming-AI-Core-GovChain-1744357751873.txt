@@ -1,0 +1,109 @@
+Gov Tech - AI preposition - Bitmagic
+Концепция «RoAI + GovChain»
+(RoAI — Roaming AI Core; GovChain — слой DAO‑блокчейна для протоколов и решений)
+1. Логика слоёв — что и зачем
+┌─────────────────────────────┐
+│ Channel Adapters │ (Telegram, IVR, Web, GIS, Mobile)
+└──────────────┬──────────────┘
+│gRPC / REST
+┌──────────────▼──────────────┐
+│ RoAI Core (Skills Hub) │ LLM‑Router + Skill Registry
+│ • base_llm (kaz‑ru‑en) │ (Chat, Summarize, STT, OCR, CV)
+│ • vector_search │
+└──────────────┬──────────────┘
+│LangChain Tools
+┌──────────────▼──────────────┐
+│ Shared Tools API │ SAP, SAP‑FI, GIS‑render, Email/SMS,
+│ blockchain_anchor, voice_TTS, doc_validator
+└──────────────┬──────────────┘
+│Events (Kafka) / DAG (Temporal)
+┌──────────────▼──────────────┐
+│ Data Plane │
+│ • Data Lakehouse (Iceberg) │
+│ • Vector DB (Milvus) │
+│ • Metadata (Great Expect.) │
+└──────────────┬──────────────┘
+│hash(tx)
+┌──────────────▼──────────────┐
+│ GovChain DAO Layer │ Besu PoA + OpenZeppelin Governor
+└─────────────────────────────┘
+RoAI Core — один «роевой» LLM‑хост, к которому подключаются все агенты через
+навыки (skills).
+Shared Tools — изолированные микросервисы, которые можно переиспользовать
+(OCR, TTS, SAP‑коннектор).
+2. Технический стек — конкретные технологии
+Слой Технологии Причина выбора
+LLM‑Router vLLM + FastAPI / OpenAI API высокопроизводительный
+инференс, поддержка
+streaming
+Skill Registry LangChain v0.1 + LangServe декларативное
+подключение «навыков»
+Base Models • GPT‑4 Turbo (cloud) для сложных
+задач• KazLM‑13B (on‑prem,
+HF transformers) для каз/ру чатов
+гибрид:
+конфиденциальное →
+on‑prem, остальное →
+SaaS
+STT Whisper‑large‑v3 (CUDA) лучший quality/latency
+open‑source
+CV YOLOv8 / Segment Anything (SAM) быстрый inference, много
+pretrained весов
+Vector DB Milvus 2.3 (GPU) мульти‑тенант, horizontal
+scale
+Data Lakehouse Apache Iceberg на MinIO S3‑совместимо,
+schema‑evolution
+Orchestration Temporal (gRPC) идемпотентные DAGи,
+retry, audit
+Event Bus Kafka 3.x сквозная трассировка,
+back‑pressure
+Tools API gRPC‑микросервисы на Go/Python (SAP,
+GIS, TTS)
+language‑agnostic,
+observability
+GovChain Hyperledger Besu
+(PoA) + OpenZeppelin Governor +
+Hardhat
+EVM‑совместимость,
+on‑prem, дешёвые
+gas‑fees
+Identity / ЭЦП National CA PKI + DID adapter юр. значимая
+подпись + on‑chain verify
+MLOps MLflow 2.x + Argo CD versioning моделей,
+GitOps деплой
+SecOps Keycloak (OIDC) + OPA/Gatekeeper (K8s) RBAC + policy‑as‑code
+Data Plane — lakehouse + vector‑DB с неймспейсами для каждого ведомства.
+GovChain — смарт‑контракты Governor + Registry: хранит хэш протокола, голоса,
+роли. Именно здесь DAO‑принципы из white‑paper GovChain citeturn2file0
+превращаются в код.
+Слой Технологии Причина выбора
+Monitoring Prometheus + Grafana + FinOps‑Exporter тех‑метрики и $‑метрики
+GPU
+Infra Kubernetes v1.29 on «QazCloud» +
+Edge‑GPU nodes
+единый кластер,
+GPU‑pool, мульти‑зона
+3. Как это работает «день из жизни»
+4. Масштабирование и устойчивость
+5. Плюсы такого стека
+Резюме: мы строим «шину» ИИ‑навыков (RoAI) поверх Lakehouse и векторного
+хранилища, а все юридически значимые артефакты «пришпиливаем» к
+GovChain. Стек полностью open‑source + совместим с нац‑инфраструктурой, что даёт
+контроль, прозрачность и быстрое тиражирование на все 30+ кейсов.
+1. Запись совещания загружается → Kafka topic audio.raw .
+2. Temporal запускает transcribe workflow → Whisper GPU‑pod → JSON transcript.
+3. Skill meeting_summary (LLM) генерирует протокол, валидирует шаблон.
+4. Агент отправляет proposal в Governor‑контракт; голоса фиксируются
+(ЭЦП → sig → on‑chain).
+5. Hash протокола + CID (IPFS/MinIO) сохраняется в DocumentRegistry smart‑contract.
+6. Callback триггерит Tool email_notifier → рассылает утверждённый протокол.
+7. Все метрики inference и gas‑cost летят в Grafana FinOps‑борду.
+GPU‑pool делится через K8s Device Plugin, LLM‑pods масштабируются HPA‑по QPS.
+Besu‑кластер 3 мастера + 2 релеевера; ежедневный anchor‑hash в публичный L2
+(Polygon CDK) для внешней проверяемости.
+Disaster Recovery: MinIO replication в DR‑регион, periodic snapshot Besu → S3.
+Повторное использование: один LLM‑хост — десятки агентов.
+Безопасность по умолчанию: все данные внутри кластера, hash → блокчейн.
+Юр. сила: PKI‑подпись + immutable ledger.
+Гибридный ИИ: секретное — on‑prem KazLM, публичное — GPT‑4 API.
+FinOps‑контроль: видно, сколько GPU‑час
