@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import DecisionHistory from "@/pages/DecisionHistory";
 import Analytics from "@/pages/Analytics";
+import Translate from "@/pages/Translate";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 import { User } from "./lib/types";
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/tasks" component={Tasks} />
       <Route path="/history" component={DecisionHistory} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/translate" component={Translate} />
       <Route component={NotFound} />
     </Switch>
   );

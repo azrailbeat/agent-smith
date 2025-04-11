@@ -6,7 +6,8 @@ import {
   BarChart2, 
   Settings, 
   HelpCircle,
-  FileText
+  FileText,
+  Languages
 } from "lucide-react";
 
 interface SidebarProps {
@@ -23,6 +24,7 @@ const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
     { name: "История решений", href: "/history", icon: <History className="h-5 w-5" /> },
     { name: "Аналитика", href: "/analytics", icon: <BarChart2 className="h-5 w-5" /> },
     { name: "Документы", href: "/documents", icon: <FileText className="h-5 w-5" /> },
+    { name: "Переводчик", href: "/translate", icon: <Languages className="h-5 w-5" /> },
   ];
 
   const secondaryNavigation = [
