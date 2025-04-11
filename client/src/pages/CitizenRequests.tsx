@@ -858,6 +858,102 @@ const CitizenRequests = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Documentolog интеграция */}
+                  <div className="space-y-4 border p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-green-100 p-2 rounded-full">
+                          <FileCheck className="h-5 w-5 text-green-700" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">Документолог (documentolog.com)</h3>
+                          <p className="text-sm text-neutral-500">Импорт обращений из СЭД Документолог</p>
+                        </div>
+                      </div>
+                      <Switch checked={true} />
+                    </div>
+                    
+                    <div className="bg-neutral-50 p-4 rounded-lg space-y-4">
+                      <h4 className="font-medium text-sm">Импорт документа из Документолог</h4>
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-5">
+                          <Label htmlFor="docId">ID документа</Label>
+                          <Input 
+                            id="docId" 
+                            placeholder="Введите ID документа" 
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="col-span-5">
+                          <Label htmlFor="docTaskId">Связать с задачей (опционально)</Label>
+                          <Input 
+                            id="docTaskId" 
+                            placeholder="ID задачи" 
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="col-span-2 flex items-end">
+                          <Button className="w-full" onClick={() => {
+                            const docId = (document.getElementById('docId') as HTMLInputElement).value;
+                            const taskId = (document.getElementById('docTaskId') as HTMLInputElement).value;
+                            
+                            if (!docId) {
+                              toast({
+                                title: "Ошибка",
+                                description: "Введите ID документа",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            
+                            // Отправка запроса на API
+                            fetch('/api/documents/documentolog', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                docId,
+                                taskId: taskId || null
+                              })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                              if (data.success) {
+                                toast({
+                                  title: "Документ импортирован",
+                                  description: `Документ ${data.document.title} успешно импортирован`
+                                });
+                                
+                                // Очистить поля
+                                (document.getElementById('docId') as HTMLInputElement).value = '';
+                                (document.getElementById('docTaskId') as HTMLInputElement).value = '';
+                              } else {
+                                throw new Error(data.error || 'Не удалось импортировать документ');
+                              }
+                            })
+                            .catch(error => {
+                              toast({
+                                title: "Ошибка",
+                                description: error.message,
+                                variant: "destructive"
+                              });
+                            });
+                          }}>
+                            Импорт
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-neutral-500 pt-2">
+                        <p>URL интеграции для настройки в Документолог:</p>
+                        <code className="bg-neutral-100 p-1 rounded">
+                          {window.location.origin}/api/webhook/documentolog
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {/* Telegram интеграция */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
