@@ -104,7 +104,7 @@ export class MemStorage implements IStorage {
     
     // Initialize system statuses
     const statuses: InsertSystemStatusItem[] = [
-      { serviceName: "RoAI Core", status: 100, details: "Система работает нормально" },
+      { serviceName: "Agent Smith Core", status: 100, details: "Система работает нормально" },
       { serviceName: "Blockchain Node", status: 100, details: "Система работает нормально" },
       { serviceName: "Speech-to-Text", status: 92, details: "Некоторые задержки при обработке длинных записей" },
       { serviceName: "Document Processing", status: 98, details: "Система работает нормально" }

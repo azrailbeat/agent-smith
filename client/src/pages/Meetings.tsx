@@ -1019,7 +1019,7 @@ const Meetings = () => {
                     <div>
                       <h3 className="font-medium text-primary-900">Автоматический протокол</h3>
                       <p className="text-sm text-neutral-600">
-                        RoAI создаст протокол встречи с решениями и задачами
+                        Agent Smith создаст протокол встречи с решениями и задачами
                       </p>
                     </div>
                   </div>
@@ -1423,7 +1423,7 @@ const Meetings = () => {
                 <div className="h-6 w-6 border-t-2 border-primary-500 rounded-full animate-spin"></div>
                 <span className="mt-3 text-neutral-500">Генерация протокола...</span>
                 <p className="mt-2 text-xs text-neutral-400 text-center max-w-md">
-                  RoAI анализирует содержание встречи и создает официальный протокол с решениями и задачами
+                  Agent Smith анализирует содержание встречи и создает официальный протокол с решениями и задачами
                 </p>
               </div>
             ) : (

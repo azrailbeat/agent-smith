@@ -563,7 +563,7 @@ const CitizenRequests = () => {
                     <div>
                       <h3 className="font-medium text-primary-900">Автоматическое резюме</h3>
                       <p className="text-sm text-neutral-600">
-                        RoAI создаст краткое резюме обращения и выделит ключевые моменты
+                        Agent Smith создаст краткое резюме обращения и выделит ключевые моменты
                       </p>
                     </div>
                   </div>
@@ -1205,7 +1205,7 @@ const CitizenRequests = () => {
                 <div className="h-6 w-6 border-t-2 border-primary-500 rounded-full animate-spin"></div>
                 <span className="mt-3 text-neutral-500">Генерация резюме...</span>
                 <p className="mt-2 text-xs text-neutral-400 text-center max-w-md">
-                  RoAI анализирует содержание обращения и создает краткое резюме с выделением ключевых моментов
+                  Agent Smith анализирует содержание обращения и создает краткое резюме с выделением ключевых моментов
                 </p>
               </div>
             ) : (
