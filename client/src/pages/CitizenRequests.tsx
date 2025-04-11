@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -18,7 +18,9 @@ import {
   BarChart2,
   FileCheck,
   User,
-  Database
+  Database,
+  MoveHorizontal,
+  ListChecks
 } from "lucide-react";
 import { 
   Dialog, 
@@ -33,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 // Интерфейсы для типизации
 interface CitizenRequest {
@@ -92,6 +95,48 @@ const CitizenRequests = () => {
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [activeTab, setActiveTab] = useState("new");
+  
+  // Интерфейс для колонок Канбан-доски
+  interface KanbanColumn {
+    id: string;
+    title: string;
+    requestIds: number[];
+  }
+  
+  // Объект для канбан-доски
+  interface RequestsKanbanBoard {
+    columns: {
+      [key: string]: KanbanColumn;
+    };
+    columnOrder: string[];
+  }
+  
+  // Состояние канбан-доски
+  const [kanbanBoard, setKanbanBoard] = useState<RequestsKanbanBoard>({
+    columns: {
+      pending: {
+        id: "pending",
+        title: "Ожидает",
+        requestIds: []
+      },
+      in_progress: {
+        id: "in_progress",
+        title: "В работе",
+        requestIds: []
+      },
+      completed: {
+        id: "completed",
+        title: "Выполнено",
+        requestIds: []
+      },
+      rejected: {
+        id: "rejected",
+        title: "Отклонено",
+        requestIds: []
+      }
+    },
+    columnOrder: ["pending", "in_progress", "completed", "rejected"]
+  });
   
   const { toast } = useToast();
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -397,6 +442,32 @@ const CitizenRequests = () => {
       <Badge className={priorityInfo.color}>{priorityInfo.text}</Badge>
     );
   };
+  
+  // Заполняем канбан-доску обращениями при загрузке данных
+  useEffect(() => {
+    if (!isLoading && requests && requests.length > 0) {
+      const newBoard = { ...kanbanBoard };
+      
+      // Сбрасываем все текущие обращения в колонках
+      Object.keys(newBoard.columns).forEach((columnId) => {
+        newBoard.columns[columnId].requestIds = [];
+      });
+      
+      // Распределяем обращения по колонкам в соответствии со статусом
+      requests.forEach((request) => {
+        const status = request.status || "pending";
+        if (newBoard.columns[status]) {
+          newBoard.columns[status].requestIds.push(request.id);
+        } else {
+          // Если статус не соответствует ни одной колонке, добавляем в "pending"
+          newBoard.columns["pending"].requestIds.push(request.id);
+        }
+      });
+      
+      setKanbanBoard(newBoard);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requests, isLoading]);
 
   return (
     <>
@@ -600,10 +671,18 @@ const CitizenRequests = () => {
         {/* Вкладка всех обращений */}
         <TabsContent value="all">
           <div className="space-y-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold mb-1">Канбан-доска обращений</h2>
+              <p className="text-sm text-neutral-500">Перетаскивайте обращения для изменения их статуса</p>
+            </div>
+            
             {isLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <div className="h-6 w-6 border-t-2 border-primary-500 rounded-full animate-spin"></div>
-                <span className="ml-2 text-neutral-500">Загрузка обращений...</span>
+              <div className="animate-pulse space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-64 bg-neutral-100 rounded-lg"></div>
+                  ))}
+                </div>
               </div>
             ) : requests.length === 0 ? (
               <div className="text-center py-12">
@@ -615,95 +694,153 @@ const CitizenRequests = () => {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {requests.map(request => (
-                  <Card key={request.id} className="overflow-hidden">
-                    <div className="p-5">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-semibold">{request.title}</h3>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge variant="outline">{CATEGORIES.find(c => c.id === request.category)?.name || request.category}</Badge>
-                            {renderStatusBadge(request.status)}
-                            {renderPriorityBadge(request.priority)}
-                            {request.recordedAudio && (
-                              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                                <Play className="h-3 w-3 mr-1" /> Аудиозапись
-                              </Badge>
-                            )}
+              <DragDropContext 
+                onDragEnd={(result: DropResult) => {
+                  // Обработчик перетаскивания элементов
+                  const { destination, source, draggableId } = result;
+                  if (!destination) return;
+                  
+                  if (
+                    destination.droppableId === source.droppableId &&
+                    destination.index === source.index
+                  ) {
+                    return;
+                  }
+                  
+                  // Клонируем текущее состояние
+                  const newBoard = {...kanbanBoard};
+                  const requestId = parseInt(draggableId.replace('request-', ''));
+                  
+                  // Удаляем из исходной колонки
+                  newBoard.columns[source.droppableId].requestIds = 
+                    newBoard.columns[source.droppableId].requestIds.filter(id => id !== requestId);
+                  
+                  // Добавляем в целевую колонку
+                  newBoard.columns[destination.droppableId].requestIds.splice(
+                    destination.index, 
+                    0, 
+                    requestId
+                  );
+                  
+                  // Обновляем состояние доски
+                  setKanbanBoard(newBoard);
+                  
+                  // Обновляем статус обращения в базе данных (в реальном приложении)
+                  // updateRequestStatus({ id: requestId, status: destination.droppableId });
+                  
+                  // Обновляем локальное состояние обращений
+                  const request = requests.find(r => r.id === requestId);
+                  if (request) {
+                    request.status = destination.droppableId as any;
+                  }
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {kanbanBoard.columnOrder.map((columnId) => {
+                    const column = kanbanBoard.columns[columnId];
+                    const columnRequests = column.requestIds
+                      .map(id => requests.find(r => r.id === id))
+                      .filter(Boolean) as CitizenRequest[];
+                    
+                    let headerColor = "bg-neutral-100";
+                    switch (columnId) {
+                      case "pending": headerColor = "bg-yellow-50"; break;
+                      case "in_progress": headerColor = "bg-blue-50"; break;
+                      case "completed": headerColor = "bg-green-50"; break;
+                      case "rejected": headerColor = "bg-red-50"; break;
+                    }
+                    
+                    return (
+                      <div key={columnId} className="flex flex-col">
+                        <div className={`rounded-t-lg px-4 py-3 border-x border-t border-border ${headerColor}`}>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-medium text-foreground">
+                              {column.title}
+                            </h3>
+                            <Badge variant="outline">
+                              {columnRequests.length}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-neutral-500 mt-2">
-                            {request.citizenInfo?.name} • {new Date(request.createdAt).toLocaleDateString()}
-                          </p>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => generateSummary(request)}
-                            disabled={!!request.summary}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            {request.summary ? "Просмотр резюме" : "Создать резюме"}
-                          </Button>
-                          
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => saveToBlockchain(request.id)}
-                            disabled={!!request.blockchainHash}
-                            className={request.blockchainHash ? "bg-green-50 text-green-700 border-green-200" : ""}
-                          >
-                            {request.blockchainHash ? (
-                              <>
-                                <Check className="h-4 w-4 mr-1" />
-                                В блокчейне
-                              </>
-                            ) : (
-                              <>
-                                <Save className="h-4 w-4 mr-1" />
-                                В блокчейн
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <div className="text-sm text-neutral-700 line-clamp-2">
-                          {request.content}
-                        </div>
-                        {request.summary && (
-                          <div className="mt-3 p-3 bg-neutral-50 rounded-md border border-neutral-200">
-                            <div className="flex items-center text-sm font-medium text-neutral-900 mb-1">
-                              <FileText className="h-4 w-4 mr-1 text-primary-500" />
-                              Резюме AI
-                            </div>
-                            <p className="text-sm text-neutral-700">
-                              {request.summary}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {request.assignedTo && (
-                        <div className="mt-4 flex items-center justify-between">
-                          <div className="flex items-center text-sm text-neutral-500">
-                            <User className="h-4 w-4 mr-1" />
-                            Ответственный: {request.assignedTo}
-                          </div>
-                          {request.completedAt && (
-                            <div className="flex items-center text-sm text-neutral-500">
-                              <Clock className="h-4 w-4 mr-1" />
-                              Завершено: {new Date(request.completedAt).toLocaleDateString()}
+                        
+                        <Droppable droppableId={columnId}>
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className="flex-1 bg-muted/40 rounded-b-lg p-2 min-h-[500px] border border-border"
+                            >
+                              {columnRequests.map((request, index) => (
+                                <Draggable 
+                                  key={`request-${request.id}`}
+                                  draggableId={`request-${request.id}`} 
+                                  index={index}
+                                >
+                                  {(provided) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className="mb-3"
+                                    >
+                                      <Card className="overflow-hidden shadow-sm">
+                                        <div className="p-4">
+                                          <div>
+                                            <h3 className="text-sm font-semibold line-clamp-1">{request.title}</h3>
+                                            <div className="flex items-center flex-wrap gap-2 mt-1">
+                                              <Badge variant="outline">{CATEGORIES.find(c => c.id === request.category)?.name || request.category}</Badge>
+                                              {renderPriorityBadge(request.priority)}
+                                            </div>
+                                            {request.citizenInfo?.name && (
+                                              <div className="mt-2 text-xs text-neutral-500">
+                                                {request.citizenInfo.name}
+                                              </div>
+                                            )}
+                                          </div>
+                                          
+                                          {request.summary && (
+                                            <div className="mt-2 text-xs text-neutral-700 bg-neutral-50 p-2 rounded border border-neutral-200 line-clamp-2">
+                                              {request.summary}
+                                            </div>
+                                          )}
+                                          
+                                          <div className="mt-3 flex justify-between items-center">
+                                            <div>
+                                              {request.recordedAudio && (
+                                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700">
+                                                  <Play className="h-3 w-3 mr-1" /> Аудио
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            
+                                            {request.blockchainHash && (
+                                              <Badge variant="outline" className="bg-green-50 text-green-700">
+                                                <Check className="h-3 w-3 mr-1" /> GovChain
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                              
+                              {columnRequests.length === 0 && (
+                                <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border border-dashed border-muted-foreground/30 rounded-md m-4">
+                                  <MoveHorizontal className="h-3 w-3 mr-2" />
+                                  Перетащите обращения сюда
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                        </Droppable>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DragDropContext>
             )}
           </div>
         </TabsContent>
