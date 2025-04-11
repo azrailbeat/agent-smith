@@ -321,7 +321,7 @@ const Settings = () => {
     isLoading: isLoadingIntegrations 
   } = useQuery({
     queryKey: ['/api/integrations'],
-    queryFn: () => apiRequest('/api/integrations')
+    queryFn: () => apiRequest('GET', '/api/integrations').then(res => res.json())
   });
 
   // Fetch agents
@@ -330,7 +330,7 @@ const Settings = () => {
     isLoading: isLoadingAgents 
   } = useQuery({
     queryKey: ['/api/agents'],
-    queryFn: () => apiRequest('/api/agents')
+    queryFn: () => apiRequest('GET', '/api/agents').then(res => res.json())
   });
 
   // Integration mutations
@@ -404,10 +404,7 @@ const Settings = () => {
   // Agent mutations
   const createAgentMutation = useMutation({
     mutationFn: (data: any) => 
-      apiRequest('/api/agents', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      }),
+      apiRequest('POST', '/api/agents', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
       setIsAgentDialogOpen(false);
@@ -427,10 +424,7 @@ const Settings = () => {
 
   const updateAgentMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: any }) => 
-      apiRequest(`/api/agents/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data)
-      }),
+      apiRequest('PATCH', `/api/agents/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
       setIsAgentDialogOpen(false);
@@ -450,9 +444,7 @@ const Settings = () => {
 
   const deleteAgentMutation = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/agents/${id}`, {
-        method: 'DELETE'
-      }),
+      apiRequest('DELETE', `/api/agents/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
       toast({
