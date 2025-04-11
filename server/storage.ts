@@ -5,7 +5,9 @@ import {
   BlockchainRecord, InsertBlockchainRecord,
   Message, InsertMessage,
   Activity, InsertActivity,
-  SystemStatusItem, InsertSystemStatusItem
+  SystemStatusItem, InsertSystemStatusItem,
+  Integration, InsertIntegration,
+  Agent, InsertAgent
 } from "@shared/schema";
 
 // Interface for storage operations
@@ -49,6 +51,22 @@ export interface IStorage {
   // System status operations
   getSystemStatuses(): Promise<SystemStatusItem[]>;
   updateSystemStatus(serviceName: string, status: InsertSystemStatusItem): Promise<SystemStatusItem | undefined>;
+  
+  // Integration operations
+  getIntegrations(): Promise<Integration[]>;
+  getIntegration(id: number): Promise<Integration | undefined>;
+  getIntegrationsByType(type: string): Promise<Integration[]>;
+  createIntegration(integration: InsertIntegration): Promise<Integration>;
+  updateIntegration(id: number, integration: Partial<InsertIntegration>): Promise<Integration | undefined>;
+  deleteIntegration(id: number): Promise<boolean>;
+  
+  // Agent operations
+  getAgents(): Promise<Agent[]>;
+  getAgent(id: number): Promise<Agent | undefined>;
+  getAgentsByType(type: string): Promise<Agent[]>;
+  createAgent(agent: InsertAgent): Promise<Agent>;
+  updateAgent(id: number, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
+  deleteAgent(id: number): Promise<boolean>;
 }
 
 // In-memory storage implementation
@@ -60,6 +78,8 @@ export class MemStorage implements IStorage {
   private messages: Map<number, Message>;
   private activities: Map<number, Activity>;
   private systemStatuses: Map<string, SystemStatusItem>;
+  private integrations: Map<number, Integration>;
+  private agents: Map<number, Agent>;
   
   private userIdCounter: number;
   private taskIdCounter: number;
@@ -68,6 +88,8 @@ export class MemStorage implements IStorage {
   private messageIdCounter: number;
   private activityIdCounter: number;
   private systemStatusIdCounter: number;
+  private integrationIdCounter: number;
+  private agentIdCounter: number;
 
   constructor() {
     this.users = new Map();

@@ -236,5 +236,68 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
 
+// Модели для интеграций и агентов
+export const integrations = pgTable("integrations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // openproject, planka, telegram, openai, swarm, vllm, ollama
+  apiUrl: text("api_url").notNull(),
+  apiKey: text("api_key"),
+  isActive: boolean("is_active").default(true),
+  config: jsonb("config"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIntegrationSchema = createInsertSchema(integrations).pick({
+  name: true,
+  type: true,
+  apiUrl: true,
+  apiKey: true,
+  isActive: true,
+  config: true,
+});
+
+export const agents = pgTable("agents", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // accounting, project_management, product_management, notification, etc.
+  description: text("description"),
+  modelId: integer("model_id").references(() => integrations.id),
+  isActive: boolean("is_active").default(true),
+  systemPrompt: text("system_prompt"),
+  config: jsonb("config"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAgentSchema = createInsertSchema(agents).pick({
+  name: true,
+  type: true, 
+  description: true,
+  modelId: true,
+  isActive: true,
+  systemPrompt: true,
+  config: true,
+});
+
+// Relations for integrations and agents
+export const integrationsRelations = relations(integrations, ({ many }) => ({
+  agents: many(agents),
+}));
+
+export const agentsRelations = relations(agents, ({ one }) => ({
+  model: one(integrations, {
+    fields: [agents.modelId],
+    references: [integrations.id],
+  }),
+}));
+
 export type SystemStatusItem = typeof systemStatus.$inferSelect;
 export type InsertSystemStatusItem = z.infer<typeof insertSystemStatusSchema>;
+
+export type Integration = typeof integrations.$inferSelect;
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+
+export type Agent = typeof agents.$inferSelect;
+export type InsertAgent = z.infer<typeof insertAgentSchema>;
