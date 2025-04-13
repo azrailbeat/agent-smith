@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers } from "lucide-react";
+import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText } from "lucide-react";
 import { Integration, Agent } from "@shared/schema";
 
 // Integration form for add/edit
@@ -511,9 +511,30 @@ const Settings = () => {
       planka: "Planka",
       openproject: "OpenProject",
       telegram: "Telegram",
+      moralis: "Moralis (Blockchain)",
       custom: "Другой"
     };
     return types[type] || type;
+  };
+  
+  // Helper for getting integration icon based on type
+  const getIntegrationIcon = (type: string) => {
+    switch (type) {
+      case "openai":
+        return <Cloud className="h-5 w-5 text-green-500" />;
+      case "speech":
+        return <Mic className="h-5 w-5 text-blue-500" />;
+      case "planka":
+        return <Layers className="h-5 w-5 text-purple-500" />;
+      case "openproject":
+        return <FileText className="h-5 w-5 text-red-500" />;
+      case "telegram": 
+        return <MessageSquare className="h-5 w-5 text-blue-500" />;
+      case "moralis":
+        return <Database className="h-5 w-5 text-indigo-500" />;
+      default:
+        return <Server className="h-5 w-5 text-gray-500" />;
+    }
   };
 
   // Helper for displaying agent type in a user-friendly way
@@ -573,7 +594,12 @@ const Settings = () => {
                   <TableBody>
                     {integrations.map((integration) => (
                       <TableRow key={integration.id}>
-                        <TableCell className="font-medium">{integration.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {getIntegrationIcon(integration.type)} 
+                            <span className="ml-2 font-medium">{integration.name}</span>
+                          </div>
+                        </TableCell>
                         <TableCell>{getIntegrationType(integration.type)}</TableCell>
                         <TableCell className="max-w-xs truncate">{integration.apiUrl}</TableCell>
                         <TableCell>
