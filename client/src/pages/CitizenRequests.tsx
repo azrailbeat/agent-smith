@@ -96,6 +96,14 @@ const CitizenRequests = () => {
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [activeTab, setActiveTab] = useState("new");
+  const [showAgentSettingsDialog, setShowAgentSettingsDialog] = useState(false);
+  const [agentSettings, setAgentSettings] = useState({
+    enabled: true,
+    autoProcess: true,
+    modelId: 1,
+    temperature: 0.3,
+    systemPrompt: "Вы - помощник для классификации обращений граждан. Ваша задача - определить тип обращения, уровень приоритета и предложить решение."
+  });
   
   // Интерфейс для колонок Канбан-доски
   interface KanbanColumn {
@@ -672,9 +680,17 @@ const CitizenRequests = () => {
         {/* Вкладка всех обращений */}
         <TabsContent value="all">
           <div className="space-y-5">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold mb-1">Канбан-доска обращений</h2>
-              <p className="text-sm text-neutral-500">Перетаскивайте обращения для изменения их статуса</p>
+            <div className="mb-4 flex justify-between items-start">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">Канбан-доска обращений</h2>
+                <p className="text-sm text-neutral-500">Перетаскивайте обращения для изменения их статуса</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button variant="outline" size="sm" className="flex items-center">
+                  <Bot className="h-4 w-4 mr-2 text-primary-600" />
+                  <span>Настройки AI-агента</span>
+                </Button>
+              </div>
             </div>
             
             {isLoading ? (
