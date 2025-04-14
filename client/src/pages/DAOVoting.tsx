@@ -352,10 +352,16 @@ const DAOVoting = () => {
   // Мутация для создания нового предложения
   const createProposalMutation = useMutation({
     mutationFn: async (newProposal: ProposalFormValues) => {
-      return await apiRequest('/api/dao/proposals', {
-        method: 'POST',
-        data: newProposal
-      });
+      try {
+        const response = await apiRequest('/api/dao/proposals', {
+          method: 'POST',
+          data: newProposal
+        } as any);
+        return response;
+      } catch (error) {
+        console.error('Failed to create proposal', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/dao/proposals'] });
@@ -375,10 +381,16 @@ const DAOVoting = () => {
       voteValue: 'for' | 'against' | 'abstain';
       rationale?: string;
     }) => {
-      return await apiRequest(`/api/dao/proposals/${proposalId}/vote`, {
-        method: 'POST',
-        data: { vote: voteValue, rationale }
-      });
+      try {
+        const response = await apiRequest(`/api/dao/proposals/${proposalId}/vote`, {
+          method: 'POST',
+          data: { vote: voteValue, rationale }
+        } as any);
+        return response;
+      } catch (error) {
+        console.error('Failed to send vote', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/dao/proposals'] });
@@ -668,7 +680,7 @@ const DAOVoting = () => {
                   />
                 </div>
                 
-                <Alert variant="outline" className="mt-4">
+                <Alert className="mt-4">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Важно!</AlertTitle>
                   <AlertDescription>
@@ -785,8 +797,7 @@ const DAOVoting = () => {
                     <Progress 
                       value={calculatePercentage(proposal)} 
                       max={100} 
-                      className="h-2"
-                      indicator={{ className: getProgressColor(proposal) }} 
+                      className={`h-2 ${getProgressColor(proposal)}`}
                     />
                     <div className="mt-2 flex justify-between text-xs">
                       <div className="flex items-center">
@@ -817,10 +828,7 @@ const DAOVoting = () => {
                     <Progress 
                       value={calculatePercentage(proposal)} 
                       max={100} 
-                      className="h-2"
-                      indicator={{ 
-                        className: proposal.status === 'completed' ? "bg-green-500" : "bg-red-500"
-                      }} 
+                      className={`h-2 ${proposal.status === 'completed' ? "bg-green-500" : "bg-red-500"}`}
                     />
                     <div className="mt-2 flex justify-between text-xs">
                       <div className="flex items-center">
@@ -979,8 +987,7 @@ const DAOVoting = () => {
                     <Progress 
                       value={calculatePercentage(showProposalDetails)} 
                       max={100} 
-                      className="h-2.5"
-                      indicator={{ className: getProgressColor(showProposalDetails) }} 
+                      className={`h-2.5 ${getProgressColor(showProposalDetails)}`}
                     />
                   </div>
                   
@@ -1058,7 +1065,7 @@ const DAOVoting = () => {
                           onChange={(e) => setVoteRationale(e.target.value)}
                         />
                         
-                        <Alert variant="outline" className="mb-4">
+                        <Alert className="mb-4">
                           <AlertTriangle className="h-4 w-4" />
                           <AlertTitle>Важно!</AlertTitle>
                           <AlertDescription>
