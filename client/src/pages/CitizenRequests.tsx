@@ -40,23 +40,28 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 // Интерфейсы для типизации
 interface CitizenRequest {
   id: number;
-  title: string;
-  content: string;
-  summary?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'rejected';
-  category: string;
+  fullName: string;
+  contactInfo: string;
+  requestType: string;
+  subject: string;
+  description: string;
+  status: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   createdAt: Date;
-  completedAt?: Date;
-  assignedTo?: string;
-  blockchainHash?: string;
+  updatedAt: Date;
+  assignedTo?: number;
+  aiProcessed?: boolean;
+  aiClassification?: string;
+  aiSuggestion?: string;
+  responseText?: string;
+  closedAt?: Date;
+  attachments?: string[];
+  
+  // Дополнительные свойства для совместимости со старым кодом
   recordedAudio?: boolean;
-  citizenInfo?: {
-    name: string;
-    contact: string;
-    address: string;
-    iin?: string;
-  };
+  title?: string;
+  content?: string;
+  category?: string;
 }
 
 interface RequestCategory {
@@ -79,17 +84,13 @@ const CitizenRequests = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [currentRequest, setCurrentRequest] = useState<Partial<CitizenRequest>>({
-    title: "",
-    content: "",
-    category: "",
+    subject: "",
+    description: "",
+    requestType: "",
     priority: "medium",
     status: "pending",
-    citizenInfo: {
-      name: "",
-      contact: "",
-      address: "",
-      iin: ""
-    }
+    fullName: "",
+    contactInfo: "",
   });
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
@@ -361,17 +362,13 @@ const CitizenRequests = () => {
   // Сброс формы
   const resetForm = () => {
     setCurrentRequest({
-      title: "",
-      content: "",
-      category: "",
+      subject: "",
+      description: "",
+      requestType: "",
       priority: "medium",
       status: "pending",
-      citizenInfo: {
-        name: "",
-        contact: "",
-        address: "",
-        iin: ""
-      }
+      fullName: "",
+      contactInfo: ""
     });
     setIsRecording(false);
     setRecordingTime(0);
@@ -383,7 +380,7 @@ const CitizenRequests = () => {
 
   // Обработчик сохранения обращения
   const handleSaveRequest = () => {
-    if (!currentRequest.title || !currentRequest.content || !currentRequest.category) {
+    if (!currentRequest.subject || !currentRequest.description || !currentRequest.requestType || !currentRequest.fullName) {
       toast({
         title: "Ошибка",
         description: "Заполните все обязательные поля",
@@ -495,23 +492,43 @@ const CitizenRequests = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="requestTitle">Тема обращения</Label>
+                    <Label htmlFor="fullName">Ф.И.О. заявителя</Label>
                     <Input 
-                      id="requestTitle" 
-                      placeholder="Введите тему обращения"
-                      value={currentRequest.title}
-                      onChange={(e) => setCurrentRequest({...currentRequest, title: e.target.value})}
+                      id="fullName" 
+                      placeholder="Введите имя заявителя"
+                      value={currentRequest.fullName}
+                      onChange={(e) => setCurrentRequest({...currentRequest, fullName: e.target.value})}
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="category">Категория</Label>
+                    <Label htmlFor="contactInfo">Контактная информация</Label>
+                    <Input 
+                      id="contactInfo" 
+                      placeholder="Номер телефона, email или адрес"
+                      value={currentRequest.contactInfo}
+                      onChange={(e) => setCurrentRequest({...currentRequest, contactInfo: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Тема обращения</Label>
+                    <Input 
+                      id="subject" 
+                      placeholder="Введите тему обращения"
+                      value={currentRequest.subject}
+                      onChange={(e) => setCurrentRequest({...currentRequest, subject: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="requestType">Тип обращения</Label>
                     <Select 
-                      value={currentRequest.category}
-                      onValueChange={(value) => setCurrentRequest({...currentRequest, category: value})}
+                      value={currentRequest.requestType}
+                      onValueChange={(value) => setCurrentRequest({...currentRequest, requestType: value})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите категорию" />
+                        <SelectValue placeholder="Выберите тип обращения" />
                       </SelectTrigger>
                       <SelectContent>
                         {CATEGORIES.map(cat => (
@@ -546,7 +563,7 @@ const CitizenRequests = () => {
                   
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label htmlFor="requestContent">Содержание обращения</Label>
+                      <Label htmlFor="description">Содержание обращения</Label>
                       <div className="flex items-center space-x-1">
                         {isRecording ? (
                           <div className="flex items-center">
@@ -575,11 +592,11 @@ const CitizenRequests = () => {
                       </div>
                     </div>
                     <Textarea 
-                      id="requestContent"
+                      id="description"
                       placeholder="Введите содержание обращения или запишите аудио"
                       rows={8}
-                      value={currentRequest.content}
-                      onChange={(e) => setCurrentRequest({...currentRequest, content: e.target.value})}
+                      value={currentRequest.description}
+                      onChange={(e) => setCurrentRequest({...currentRequest, description: e.target.value})}
                       className="resize-none"
                     />
                   </div>
@@ -1324,6 +1341,67 @@ const CitizenRequests = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Диалог подтверждения нового обращения */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Подтверждение обращения</DialogTitle>
+            <DialogDescription>Проверьте данные перед отправкой</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium text-neutral-700">ФИО заявителя</h3>
+                <p className="text-sm mt-1">{currentRequest.fullName || 'Не указано'}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-neutral-700">Контакты</h3>
+                <p className="text-sm mt-1">{currentRequest.contactInfo || 'Не указаны'}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-neutral-700">Тема</h3>
+                <p className="text-sm mt-1">{currentRequest.subject || 'Не указана'}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-neutral-700">Тип обращения</h3>
+                <p className="text-sm mt-1">{CATEGORIES.find(c => c.id === currentRequest.requestType)?.name || 'Не указан'}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-neutral-700">Приоритет</h3>
+                <p className="text-sm mt-1">{currentRequest.priority === 'low' ? 'Низкий' : 
+                  currentRequest.priority === 'medium' ? 'Средний' : 
+                  currentRequest.priority === 'high' ? 'Высокий' : 
+                  currentRequest.priority === 'urgent' ? 'Срочный' : 'Не указан'}</p>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-sm font-medium text-neutral-700">Содержание обращения</h3>
+              <p className="text-sm mt-1 whitespace-pre-wrap border p-2 rounded-md bg-muted/30">{currentRequest.description || 'Не указано'}</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+              Назад
+            </Button>
+            <Button onClick={handleSaveRequest} disabled={saveRequestMutation.isPending}>
+              {saveRequestMutation.isPending ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Сохранение...
+                </>
+              ) : 'Сохранить'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Диалог с детальной информацией по обращению */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
