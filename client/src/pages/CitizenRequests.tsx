@@ -467,9 +467,6 @@ const CitizenRequests = () => {
           <TabsTrigger value="all" className="data-[state=active]:bg-primary-50 data-[state=active]:text-primary-900">
             Все обращения
           </TabsTrigger>
-          <TabsTrigger value="ai-agent" className="data-[state=active]:bg-primary-50 data-[state=active]:text-primary-900">
-            AI-агент
-          </TabsTrigger>
           <TabsTrigger value="integrations" className="data-[state=active]:bg-primary-50 data-[state=active]:text-primary-900">
             Интеграции
           </TabsTrigger>
