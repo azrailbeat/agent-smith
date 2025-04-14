@@ -131,114 +131,513 @@ export class MemStorage implements IStorage {
 
   // Initialize with default data
   private initializeDefaultData() {
-    // Create default user
+    // Create default users
     const defaultUser: InsertUser = {
       username: "admin",
       password: "admin123",
       fullName: "Айнур Бекова",
       department: "Департамент цифровизации",
-      role: "admin"
+      role: "admin",
+      email: "ainur@gov.kz"
     };
-    this.createUser(defaultUser);
     
-    // Initialize system statuses
-    const statuses: InsertSystemStatusItem[] = [
-      { serviceName: "Agent Smith Core", status: 100, details: "Система работает нормально" },
-      { serviceName: "Blockchain Node", status: 100, details: "Система работает нормально" },
-      { serviceName: "Speech-to-Text", status: 92, details: "Некоторые задержки при обработке длинных записей" },
-      { serviceName: "Document Processing", status: 98, details: "Система работает нормально" }
-    ];
+    const defaultUser2: InsertUser = {
+      username: "operator",
+      password: "operator123",
+      fullName: "Ержан Тулегенов",
+      department: "Обслуживание населения",
+      role: "operator",
+      email: "erzhan@gov.kz"
+    };
     
-    statuses.forEach(status => {
-      this.updateSystemStatus(status.serviceName, status);
-    });
+    const defaultUser3: InsertUser = {
+      username: "manager",
+      password: "manager123",
+      fullName: "Динара Нуржанова",
+      department: "Управление проектами",
+      role: "manager",
+      email: "dinara@gov.kz"
+    };
+    
+    // Создаем пользователей и дальше инициализируем данные
+    this.createUser(defaultUser).then(admin => {
+      this.createUser(defaultUser2).then(operator => {
+        this.createUser(defaultUser3).then(manager => {
+          
+          // Initialize system statuses
+          const statuses: InsertSystemStatusItem[] = [
+            { serviceName: "Agent Smith Core", status: 100, details: "Система работает нормально" },
+            { serviceName: "Blockchain Node", status: 100, details: "Система работает нормально" },
+            { serviceName: "Speech-to-Text", status: 92, details: "Некоторые задержки при обработке длинных записей" },
+            { serviceName: "Document Processing", status: 98, details: "Система работает нормально" }
+          ];
+          
+          statuses.forEach(status => {
+            this.updateSystemStatus(status.serviceName, status);
+          });
 
-    // Initialize default integrations
-    const defaultIntegrations: InsertIntegration[] = [
-      {
-        name: "OpenAI GPT-4o",
-        type: "openai",
-        apiUrl: "https://api.openai.com/v1",
-        apiKey: process.env.OPENAI_API_KEY || "",
-        isActive: true,
-        config: {}
-      },
-      {
-        name: "Yandex Speech Kit",
-        type: "speech",
-        apiUrl: "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize",
-        apiKey: "",
-        isActive: true,
-        config: { 
-          languageCodes: ["ru-RU", "kk-KZ", "en-US"] 
-        }
-      },
-      {
-        name: "Внутренний Planka",
-        type: "planka",
-        apiUrl: "https://planka.gov.kz/api",
-        apiKey: "",
-        isActive: false,
-        config: {}
-      },
-      {
-        name: "OpenProject",
-        type: "openproject",
-        apiUrl: "https://openproject.gov.kz/api/v3",
-        apiKey: "",
-        isActive: false,
-        config: {}
-      }
-    ];
-    
-    defaultIntegrations.forEach(integration => {
-      this.createIntegration(integration);
-    });
-    
-    // Initialize default agents
-    const defaultIntegrationId = 1; // Предполагаем, что OpenAI интеграция будет иметь ID 1
-    
-    const defaultAgents: InsertAgent[] = [
-      {
-        name: "Помощник по запросам граждан",
-        type: "citizen_requests",
-        description: "Обрабатывает и категоризирует запросы от граждан, помогает составить ответы",
-        modelId: defaultIntegrationId,
-        isActive: true,
-        systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - помочь государственным служащим эффективно обрабатывать запросы граждан, категоризировать их и помогать составлять профессиональные и информативные ответы.",
-        config: {
-          temperature: 0.2,
-          maxTokens: 2048
-        }
-      },
-      {
-        name: "Протоколы собраний",
-        type: "meeting_protocols",
-        description: "Анализирует записи и протоколы совещаний, выделяет ключевую информацию",
-        modelId: defaultIntegrationId,
-        isActive: true,
-        systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - выделять ключевую информацию из записей совещаний, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
-        config: {
-          temperature: 0.1,
-          maxTokens: 4096
-        }
-      },
-      {
-        name: "Переводчик",
-        type: "translator",
-        description: "Переводит документы между казахским, русским и английским языками",
-        modelId: defaultIntegrationId,
-        isActive: true,
-        systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов между этими языками.",
-        config: {
-          temperature: 0.3,
-          maxTokens: 8192
-        }
-      }
-    ];
-    
-    defaultAgents.forEach(agent => {
-      this.createAgent(agent);
+          // Initialize default integrations
+          const defaultIntegrations: InsertIntegration[] = [
+            {
+              name: "OpenAI GPT-4o",
+              type: "openai",
+              apiUrl: "https://api.openai.com/v1",
+              apiKey: process.env.OPENAI_API_KEY || "",
+              isActive: true,
+              config: {}
+            },
+            {
+              name: "Yandex Speech Kit",
+              type: "speech",
+              apiUrl: "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize",
+              apiKey: "",
+              isActive: true,
+              config: { 
+                languageCodes: ["ru-RU", "kk-KZ", "en-US"] 
+              }
+            },
+            {
+              name: "Documentolog",
+              type: "documentolog",
+              apiUrl: "https://documentolog.kz/api/v2",
+              apiKey: "",
+              isActive: true,
+              config: {}
+            },
+            {
+              name: "OpenProject",
+              type: "openproject",
+              apiUrl: "https://openproject.gov.kz/api/v3",
+              apiKey: "",
+              isActive: false,
+              config: {}
+            },
+            {
+              name: "Hyperledger Besu",
+              type: "blockchain",
+              apiUrl: "https://besu.gov.kz/api",
+              apiKey: "",
+              isActive: true,
+              config: {
+                chainId: "123456",
+                networkName: "GovChain"
+              }
+            }
+          ];
+          
+          Promise.all(defaultIntegrations.map(integration => 
+            this.createIntegration(integration)
+          )).then(integrations => {
+            // Initialize default agents
+            const openaiIntegration = integrations.find(i => i.type === 'openai');
+            const defaultIntegrationId = openaiIntegration ? openaiIntegration.id : 1;
+            
+            const defaultAgents: InsertAgent[] = [
+              {
+                name: "Помощник по запросам граждан",
+                type: "citizen_requests",
+                description: "Обрабатывает и категоризирует запросы от граждан, помогает составить ответы",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - помочь государственным служащим эффективно обрабатывать запросы граждан, категоризировать их и помогать составлять профессиональные и информативные ответы.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 2048
+                }
+              },
+              {
+                name: "Протоколы собраний",
+                type: "meeting_protocols",
+                description: "Анализирует записи и протоколы совещаний, выделяет ключевую информацию",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - выделять ключевую информацию из записей совещаний, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
+                config: {
+                  temperature: 0.1,
+                  maxTokens: 4096
+                }
+              },
+              {
+                name: "Переводчик",
+                type: "translator",
+                description: "Переводит документы между казахским, русским и английским языками",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов между этими языками.",
+                config: {
+                  temperature: 0.3,
+                  maxTokens: 8192
+                }
+              },
+              {
+                name: "Смарт-контракты",
+                type: "blockchain",
+                description: "Управляет созданием и выполнением смарт-контрактов в Hyperledger Besu",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - эксперт по смарт-контрактам в блокчейне. Ваша задача - помогать создавать, проверять и выполнять смарт-контракты в системе Hyperledger Besu.",
+                config: {
+                  chainId: "123456",
+                  networkName: "GovChain"
+                }
+              }
+            ];
+            
+            Promise.all(defaultAgents.map(agent => this.createAgent(agent))).then(() => {
+              // Создаем тестовые задачи
+              const testTasks: InsertTask[] = [
+                {
+                  title: "Разработка интерфейса Agent Smith",
+                  description: "Разработать пользовательский интерфейс для системы Agent Smith с учетом требований государственных органов. Интерфейс должен быть понятным, удобным и соответствовать стандартам электронного правительства.",
+                  status: "completed",
+                  priority: "high",
+                  createdBy: admin.id,
+                  assignedTo: admin.id,
+                  dueDate: new Date(2025, 3, 30)
+                },
+                {
+                  title: "Интеграция с Documentolog",
+                  description: "Реализовать двустороннюю интеграцию с системой Documentolog для обеспечения автоматического обмена документами. Требуется разработать API для обмена данными и обеспечить защищенное соединение между системами.",
+                  status: "in_progress",
+                  priority: "high",
+                  createdBy: admin.id,
+                  assignedTo: operator.id,
+                  dueDate: new Date(2025, 4, 15)
+                },
+                {
+                  title: "Тестирование блокчейн-интеграции",
+                  description: "Провести тестирование интеграции с Hyperledger Besu и проверить корректность записи всех системных действий в блокчейн. Необходимо протестировать все основные сценарии использования системы и убедиться, что информация корректно записывается и может быть проверена.",
+                  status: "pending",
+                  priority: "medium",
+                  createdBy: manager.id,
+                  assignedTo: admin.id,
+                  dueDate: new Date(2025, 4, 20)
+                },
+                {
+                  title: "Обучение AI на данных госорганов",
+                  description: "Провести тонкую настройку AI-моделей с использованием данных государственных услуг для улучшения качества обработки запросов и документов. Модели должны быть адаптированы к специфике государственной документации и запросов граждан.",
+                  status: "new",
+                  priority: "medium",
+                  createdBy: manager.id,
+                  assignedTo: operator.id,
+                  dueDate: new Date(2025, 5, 10)
+                }
+              ];
+              
+              // Последовательно создаем задачи и связанные сущности
+              Promise.all(testTasks.map(task => this.createTask(task))).then(createdTasks => {
+                // Создаем тестовую активность для задач
+                createdTasks.forEach((task, index) => {
+                  // Логируем создание задачи в активности
+                  this.createActivity({
+                    userId: task.createdBy,
+                    actionType: 'task_created',
+                    description: `Создана задача "${task.title}"`,
+                    relatedId: task.id,
+                    relatedType: 'task',
+                    entityType: 'task',
+                    entityId: task.id,
+                    action: 'create'
+                  });
+                  
+                  // Для первой задачи добавляем историю изменения статусов
+                  if (index === 0) {
+                    const statusHistory = ['new', 'in_progress', 'review', 'completed'];
+                    const today = new Date();
+                    
+                    statusHistory.forEach((status, statusIndex) => {
+                      const statusDate = new Date(today);
+                      statusDate.setDate(today.getDate() - (statusHistory.length - statusIndex) * 3);
+                      
+                      this.createActivity({
+                        userId: admin.id,
+                        actionType: 'task_status_changed',
+                        description: `Статус задачи "${task.title}" изменен на "${status}"`,
+                        relatedId: task.id,
+                        relatedType: 'task',
+                        entityType: 'task',
+                        entityId: task.id,
+                        action: 'update',
+                        metadata: {
+                          oldStatus: statusIndex > 0 ? statusHistory[statusIndex - 1] : 'new',
+                          newStatus: status,
+                          changeDate: statusDate
+                        }
+                      });
+                    });
+                    
+                    // Создаем блокчейн-запись для финального статуса
+                    this.createBlockchainRecord({
+                      recordType: 'task_completed',
+                      title: `Завершение задачи ${task.title}`,
+                      taskId: task.id,
+                      entityType: 'task',
+                      entityId: task.id,
+                      transactionHash: '0x7f8b8d8f0e9c7b6a5d4c3b2a1098f7e6d5c4b3a2d1e0f9c8b7a6d5e4f3c2b1a0',
+                      status: 'confirmed',
+                      metadata: {
+                        action: 'status_update',
+                        newStatus: 'completed',
+                        completedBy: admin.id,
+                        summary: 'Задача успешно выполнена, интерфейс разработан согласно требованиям'
+                      }
+                    });
+                  }
+                  
+                  // Для второй задачи создаем блокчейн-запись об обновлении статуса
+                  if (index === 1) {
+                    this.createBlockchainRecord({
+                      recordType: 'task_update',
+                      title: `Обновление задачи ${task.title}`,
+                      taskId: task.id,
+                      entityType: 'task',
+                      entityId: task.id,
+                      transactionHash: '0x8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b',
+                      status: 'confirmed',
+                      metadata: {
+                        action: 'status_update',
+                        oldStatus: 'new',
+                        newStatus: 'in_progress',
+                        updatedBy: operator.id,
+                        updateDate: new Date(),
+                        comment: 'Работа над интеграцией началась, ожидается доступ к API Documentolog'
+                      }
+                    });
+                    
+                    // Добавляем активность изменения статуса
+                    this.createActivity({
+                      userId: operator.id,
+                      actionType: 'task_status_changed',
+                      description: `Статус задачи "${task.title}" изменен на "in_progress"`,
+                      relatedId: task.id,
+                      relatedType: 'task',
+                      entityType: 'task',
+                      entityId: task.id,
+                      action: 'update',
+                      metadata: {
+                        oldStatus: 'new',
+                        newStatus: 'in_progress',
+                        comment: 'Работа над интеграцией началась, ожидается доступ к API Documentolog'
+                      }
+                    });
+                  }
+                  
+                  // Для третьей задачи создаем сообщения в чате
+                  if (index === 2) {
+                    const chatMessages = [
+                      {
+                        role: 'user',
+                        content: 'Когда планируется начать тестирование?',
+                        userId: manager.id,
+                        taskId: task.id
+                      },
+                      {
+                        role: 'user',
+                        content: 'Планирую начать на следующей неделе, после настройки тестовой среды',
+                        userId: admin.id,
+                        taskId: task.id
+                      },
+                      {
+                        role: 'user',
+                        content: 'Какие сценарии будут тестироваться в первую очередь?',
+                        userId: manager.id,
+                        taskId: task.id
+                      },
+                      {
+                        role: 'user',
+                        content: 'Начнем с базовых операций: создание, обновление и проверка записей в блокчейне',
+                        userId: admin.id,
+                        taskId: task.id
+                      }
+                    ];
+                    
+                    // Последовательно создаем сообщения
+                    Promise.all(chatMessages.map(msg => this.createMessage(msg)));
+                  }
+                });
+                
+                // Создаем тестовые обращения граждан
+                const testRequests: InsertCitizenRequest[] = [
+                  {
+                    fullName: 'Ахметов Ринат',
+                    contactInfo: 'ahmetov@mail.kz',
+                    requestType: 'complaint',
+                    subject: 'Проблема с получением электронной подписи',
+                    description: 'При получении ЭЦП в ЦОНе возникла проблема с верификацией личности. Сотрудники отказались принимать документы, ссылаясь на проблемы в системе.',
+                    status: 'processing',
+                    priority: 'high',
+                    assignedTo: operator.id,
+                    citizenInfo: {
+                      iin: '880101300123',
+                      address: 'г. Астана, ул. Абая, 15, кв. 89',
+                      phoneNumber: '+7 701 123 45 67'
+                    },
+                    summary: 'Проблемы с получением ЭЦП в ЦОНе из-за технических неполадок в системе верификации.'
+                  },
+                  {
+                    fullName: 'Карпова Светлана',
+                    contactInfo: 'karpova@mail.kz',
+                    requestType: 'inquiry',
+                    subject: 'Запрос о сроках рассмотрения заявления',
+                    description: 'Подала заявление на получение социальной помощи 10 дней назад. Хотела бы узнать, когда ожидать ответа и какие сроки установлены законодательством.',
+                    status: 'new',
+                    priority: 'medium',
+                    citizenInfo: {
+                      iin: '900202400456',
+                      address: 'г. Алматы, пр. Достык, 65, кв. 12',
+                      phoneNumber: '+7 702 234 56 78'
+                    },
+                    summary: 'Запрос информации о сроках рассмотрения заявления на получение социальной помощи.'
+                  },
+                  {
+                    fullName: 'Тургунбаев Аскар',
+                    contactInfo: 'askar@gmail.com',
+                    requestType: 'suggestion',
+                    subject: 'Предложение по улучшению работы портала электронного правительства',
+                    description: 'Предлагаю добавить функционал автоматического заполнения форм на основе данных из базы ИИН. Это значительно ускорит процесс заполнения заявлений и сократит количество ошибок.',
+                    status: 'new',
+                    priority: 'low',
+                    citizenInfo: {
+                      iin: '850505300789',
+                      address: 'г. Шымкент, ул. Тауке хана, 45, кв. 12',
+                      phoneNumber: '+7 705 345 67 89'
+                    },
+                    summary: 'Предложение по автоматизации заполнения форм на портале электронного правительства.'
+                  }
+                ];
+                
+                Promise.all(testRequests.map(request => this.createCitizenRequest(request)))
+                  .then(createdRequests => {
+                    // Создаем блокчейн-запись для первого обращения
+                    this.createBlockchainRecord({
+                      recordType: 'citizen_request',
+                      title: `Обращение гражданина: ${createdRequests[0].subject}`,
+                      entityType: 'citizen_request',
+                      entityId: createdRequests[0].id,
+                      transactionHash: '0xe9c7b6a5d4c3b2a1098f7e6d5c4b3a2d1e0f9c8b7a6d5e4f3c2b1a0f9e8d7c6',
+                      status: 'confirmed',
+                      metadata: {
+                        requestType: createdRequests[0].requestType,
+                        createdAt: createdRequests[0].createdAt,
+                        priority: createdRequests[0].priority
+                      }
+                    });
+                    
+                    // Добавляем активность для обращений
+                    createdRequests.forEach(request => {
+                      this.createActivity({
+                        actionType: 'citizen_request_created',
+                        description: `Поступило обращение от ${request.fullName}: ${request.subject}`,
+                        relatedId: request.id,
+                        relatedType: 'citizen_request',
+                        entityType: 'citizen_request',
+                        entityId: request.id,
+                        action: 'create',
+                        metadata: {
+                          requestType: request.requestType,
+                          priority: request.priority
+                        }
+                      });
+                      
+                      // Для первого обращения добавляем историю обработки
+                      if (request.id === createdRequests[0].id) {
+                        this.createActivity({
+                          userId: operator.id,
+                          actionType: 'citizen_request_status_changed',
+                          description: `Статус обращения изменен на "processing"`,
+                          relatedId: request.id,
+                          relatedType: 'citizen_request',
+                          entityType: 'citizen_request',
+                          entityId: request.id,
+                          action: 'update',
+                          metadata: {
+                            oldStatus: 'new',
+                            newStatus: 'processing',
+                            comment: 'Начата обработка обращения, направлен запрос в ЦОН'
+                          }
+                        });
+                      }
+                    });
+                    
+                    // Создаем тестовые документы
+                    const testDocuments: InsertDocument[] = [
+                      {
+                        title: 'Техническое задание - Интеграция с Documentolog',
+                        description: 'Документ с описанием требований к интеграции с системой электронного документооборота',
+                        fileType: 'application/pdf',
+                        fileUrl: '/documents/tech_spec_documentolog.pdf',
+                        taskId: createdTasks[1].id,
+                        uploadedBy: admin.id,
+                        processed: true,
+                        summary: 'Техническое задание содержит требования к API интеграции, форматы обмена данными и требования к безопасности'
+                      },
+                      {
+                        title: 'Протокол совещания по блокчейн-интеграции',
+                        description: 'Протокол обсуждения вопросов интеграции с Hyperledger Besu',
+                        fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        fileUrl: '/documents/meeting_protocol_blockchain.docx',
+                        taskId: createdTasks[2].id,
+                        uploadedBy: manager.id,
+                        processed: true,
+                        summary: 'Протокол содержит описание требований к тестированию, сроки и ответственных лиц'
+                      }
+                    ];
+                    
+                    Promise.all(testDocuments.map(doc => this.createDocument(doc)))
+                      .then(createdDocs => {
+                        // Создаем блокчейн-запись для первого документа
+                        this.createBlockchainRecord({
+                          recordType: 'document_upload',
+                          title: `Загрузка документа: ${createdDocs[0].title}`,
+                          entityType: 'document',
+                          entityId: createdDocs[0].id,
+                          documentId: createdDocs[0].id,
+                          taskId: createdDocs[0].taskId,
+                          transactionHash: '0xd8c7b6a5e4f3c2d1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7',
+                          status: 'confirmed',
+                          metadata: {
+                            documentType: createdDocs[0].fileType,
+                            uploadedBy: createdDocs[0].uploadedBy,
+                            uploadedAt: createdDocs[0].createdAt
+                          }
+                        });
+                        
+                        // Добавляем активность для документов
+                        createdDocs.forEach(doc => {
+                          this.createActivity({
+                            userId: doc.uploadedBy,
+                            actionType: 'document_uploaded',
+                            description: `Загружен документ "${doc.title}"`,
+                            relatedId: doc.id,
+                            relatedType: 'document',
+                            entityType: 'document',
+                            entityId: doc.id,
+                            action: 'create'
+                          });
+                          
+                          if (doc.processed) {
+                            this.createActivity({
+                              userId: admin.id,
+                              actionType: 'document_processed',
+                              description: `Документ "${doc.title}" обработан AI`,
+                              relatedId: doc.id,
+                              relatedType: 'document',
+                              entityType: 'document',
+                              entityId: doc.id,
+                              action: 'update',
+                              metadata: {
+                                summary: doc.summary
+                              }
+                            });
+                          }
+                        });
+                      });
+                  });
+              });
+            });
+          });
+        });
+      });
     });
   }
 

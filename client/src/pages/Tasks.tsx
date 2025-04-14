@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { 
@@ -18,7 +18,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Task, FormattedTask } from "@/lib/types";
+import { Task, FormattedTask, Activity, BlockchainRecord } from "@/lib/types";
 import { 
   CheckCircle, 
   AlertCircle, 
@@ -27,7 +27,11 @@ import {
   FileText, 
   PlusCircle, 
   BarChart,
-  MoveHorizontal
+  MoveHorizontal,
+  History,
+  Link,
+  Shield,
+  MessageSquare
 } from "lucide-react";
 import { isPast, isToday } from "date-fns";
 import { useState, useEffect } from "react";
@@ -43,8 +47,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Интерфейс для колонок Канбан-доски
 interface KanbanColumn {
