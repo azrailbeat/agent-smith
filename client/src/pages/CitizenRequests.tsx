@@ -65,6 +65,17 @@ interface CitizenRequest {
   title?: string;
   content?: string;
   category?: string;
+  
+  // Дополнительные свойства для новой функциональности
+  summary?: string;                    // Резюме обращения, сгенерированное AI
+  blockchainHash?: string;             // Хэш записи в блокчейне
+  completedAt?: Date;                  // Дата завершения обращения
+  citizenInfo?: {                      // Информация о гражданине 
+    name?: string;                     // ФИО
+    contact?: string;                  // Контактная информация
+    address?: string;                  // Адрес
+    iin?: string;                      // ИИН (индивидуальный идентификационный номер)
+  };
 }
 
 interface RequestCategory {
@@ -1449,6 +1460,73 @@ const CitizenRequests = () => {
                 </div>
               </DialogHeader>
               
+              {/* Кнопки AI-ассистента */}
+              <div className="flex gap-2 border-t border-border pt-4 mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center"
+                  onClick={() => {
+                    // Обработка обращения с помощью AI
+                    if (selectedRequest) {
+                      generateSummary(selectedRequest);
+                    }
+                  }}
+                >
+                  <Bot className="h-4 w-4 mr-2 text-primary-600" />
+                  <span>Анализировать AI</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center"
+                  onClick={() => {
+                    // Предложить ответ с помощью AI
+                    toast({
+                      title: "Генерация ответа",
+                      description: "Генерация ответа с использованием AI..."
+                    });
+                    
+                    // Имитация ответа
+                    setTimeout(() => {
+                      if (selectedRequest) {
+                        const updatedRequest = {...selectedRequest};
+                        updatedRequest.aiSuggestion = "Уважаемый заявитель! По вашему обращению сообщаем, что для получения справки о несудимости вам необходимо предоставить удостоверение личности и заполнить заявление установленного образца. Срок выдачи справки составляет 5 рабочих дней. Также вы можете получить справку онлайн через портал электронного правительства egov.kz, используя ЭЦП.";
+                        setSelectedRequest(updatedRequest);
+                        
+                        toast({
+                          title: "Ответ сгенерирован",
+                          description: "AI успешно сгенерировал проект ответа"
+                        });
+                      }
+                    }, 2000);
+                  }}
+                >
+                  <Zap className="h-4 w-4 mr-2 text-amber-500" />
+                  <span>Сгенерировать ответ</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center"
+                  onClick={() => {
+                    if (selectedRequest && !selectedRequest.blockchainHash) {
+                      saveToBlockchain(selectedRequest.id);
+                    } else {
+                      toast({
+                        title: "Уже в блокчейне",
+                        description: "Это обращение уже зафиксировано в GovChain"
+                      });
+                    }
+                  }}
+                >
+                  <Database className="h-4 w-4 mr-2 text-green-600" />
+                  <span>Сохранить в GovChain</span>
+                </Button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
                 {/* Основная информация */}
                 <div className="md:col-span-2 space-y-4">
@@ -1465,12 +1543,44 @@ const CitizenRequests = () => {
                         <div className="flex items-center">
                           AI-резюме
                           <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-700">
-                            <Mic className="h-3 w-3 mr-1" /> AI Agent
+                            <Bot className="h-3 w-3 mr-1" /> AI Agent
                           </Badge>
                         </div>
                       </h3>
                       <div className="p-3 bg-neutral-50 rounded-md border text-sm">
                         {selectedRequest.summary}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedRequest.aiClassification && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">
+                        <div className="flex items-center">
+                          AI-классификация
+                          <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700">
+                            <BarChart2 className="h-3 w-3 mr-1" /> AI Аналитик
+                          </Badge>
+                        </div>
+                      </h3>
+                      <div className="p-3 bg-blue-50 rounded-md border border-blue-200 text-sm">
+                        {selectedRequest.aiClassification}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedRequest.aiSuggestion && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">
+                        <div className="flex items-center">
+                          Предлагаемый ответ
+                          <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700">
+                            <Zap className="h-3 w-3 mr-1" /> AI Assistant
+                          </Badge>
+                        </div>
+                      </h3>
+                      <div className="p-3 bg-amber-50 rounded-md border border-amber-200 text-sm">
+                        {selectedRequest.aiSuggestion}
                       </div>
                     </div>
                   )}
@@ -1574,15 +1684,84 @@ const CitizenRequests = () => {
                   <div>
                     <h3 className="text-sm font-medium mb-2">AI-агенты</h3>
                     <div className="space-y-2">
-                      <Button variant="outline" className="w-full justify-start" size="sm">
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start" 
+                        size="sm"
+                        onClick={() => {
+                          toast({
+                            title: "Запрос к AI-агенту",
+                            description: "Отправка запроса в департамент документов..."
+                          });
+                          
+                          // Имитация ответа
+                          setTimeout(() => {
+                            if (selectedRequest) {
+                              const updatedRequest = {...selectedRequest};
+                              updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
+                              setSelectedRequest(updatedRequest);
+                              
+                              toast({
+                                title: "Ответ от агента",
+                                description: "Получен ответ от департамента документов"
+                              });
+                            }
+                          }, 1500);
+                        }}
+                      >
                         <User className="h-4 w-4 mr-2" />
                         <span>Департамент документов</span>
                       </Button>
-                      <Button variant="outline" className="w-full justify-start" size="sm">
+                      
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start" 
+                        size="sm"
+                        onClick={() => {
+                          toast({
+                            title: "Запрос аналитики",
+                            description: "Формирование аналитического отчета..."
+                          });
+                          
+                          // Имитация ответа
+                          setTimeout(() => {
+                            if (selectedRequest) {
+                              const updatedRequest = {...selectedRequest};
+                              updatedRequest.aiClassification = "Анализ показывает: обращение относится к категории 'Получение документов', подтип 'Справка о несудимости'. Приоритет: средний. Прогнозируемое время обработки: 3-5 рабочих дней.";
+                              setSelectedRequest(updatedRequest);
+                              
+                              toast({
+                                title: "Аналитический отчет",
+                                description: "Аналитический отчет по обращению сформирован"
+                              });
+                            }
+                          }, 2000);
+                        }}
+                      >
                         <BarChart2 className="h-4 w-4 mr-2" />
                         <span>Аналитик данных</span>
                       </Button>
-                      <Button variant="outline" className="w-full justify-start" size="sm">
+                      
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start" 
+                        size="sm"
+                        onClick={() => {
+                          toast({
+                            title: "Проверка статуса",
+                            description: "Проверка статуса обращения в системах..."
+                          });
+                          
+                          // Имитация ответа
+                          setTimeout(() => {
+                            toast({
+                              title: "Результат проверки",
+                              description: "Обращение проверено во всех интегрированных системах",
+                              variant: "default"
+                            });
+                          }, 1000);
+                        }}
+                      >
                         <ListChecks className="h-4 w-4 mr-2" />
                         <span>Проверка статуса</span>
                       </Button>
