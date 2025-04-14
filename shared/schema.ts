@@ -124,6 +124,8 @@ export const blockchainRecords = pgTable("blockchain_records", {
   title: text("title").notNull(),
   taskId: integer("task_id"),
   documentId: integer("document_id"),
+  entityType: text("entity_type"), // Тип сущности (для универсальных запросов)
+  entityId: integer("entity_id"), // ID сущности (для универсальных запросов)
   transactionHash: text("transaction_hash").notNull(),
   status: text("status").default("pending"),
   metadata: jsonb("metadata"),
@@ -136,6 +138,8 @@ export const insertBlockchainRecordSchema = createInsertSchema(blockchainRecords
   title: true,
   taskId: true,
   documentId: true,
+  entityType: true,
+  entityId: true,
   transactionHash: true,
   status: true,
   metadata: true,
@@ -166,6 +170,11 @@ export const activities = pgTable("activities", {
   description: text("description").notNull(),
   relatedId: integer("related_id"),
   relatedType: text("related_type"),
+  // Для совместимости с нашим логером
+  entityType: text("entity_type"),
+  entityId: integer("entity_id"),
+  metadata: jsonb("metadata"),
+  action: text("action"),
   timestamp: timestamp("timestamp").defaultNow(),
   blockchainHash: text("blockchain_hash"),
 });
@@ -177,6 +186,10 @@ export const insertActivitySchema = createInsertSchema(activities).pick({
   relatedId: true,
   relatedType: true,
   blockchainHash: true,
+  entityType: true,
+  entityId: true,
+  metadata: true,
+  action: true,
 });
 
 // System status schema
@@ -363,7 +376,11 @@ export const citizenRequests = pgTable("citizen_requests", {
   aiSuggestion: text("ai_suggestion"),
   responseText: text("response_text"),
   closedAt: timestamp("closed_at"),
+  completedAt: timestamp("completed_at"),
+  blockchainHash: text("blockchain_hash"), // Хэш записи в блокчейне
   attachments: text("attachments").array(),
+  citizenInfo: jsonb("citizen_info"), // Доп. информация о гражданине
+  summary: text("summary"), // Краткое содержание обращения (AI)
 });
 
 export const insertCitizenRequestSchema = createInsertSchema(citizenRequests).pick({
@@ -376,6 +393,9 @@ export const insertCitizenRequestSchema = createInsertSchema(citizenRequests).pi
   priority: true,
   assignedTo: true,
   attachments: true,
+  citizenInfo: true,
+  blockchainHash: true,
+  summary: true,
 });
 
 export const citizenRequestsRelations = relations(citizenRequests, ({ one }) => ({
