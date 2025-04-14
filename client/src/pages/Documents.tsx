@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -740,18 +741,80 @@ const Documents = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="hyperledger-url">URL ноды Hyperledger Besu</Label>
-                  <Input id="hyperledger-url" defaultValue="https://besu.agent-smith.gov.kz:8545" />
+                  <Input 
+                    id="hyperledger-url" 
+                    value={moralisSettings.nodeUrl}
+                    onChange={(e) => setMoralisSettings({...moralisSettings, nodeUrl: e.target.value})}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="contract-address">Адрес смарт-контракта</Label>
-                  <Input id="contract-address" defaultValue="0x7CF1a78E31A5bcc60425C33c8a2D52B86fF1830F" />
+                  <Input 
+                    id="contract-address" 
+                    value={moralisSettings.smartContractAddress}
+                    onChange={(e) => setMoralisSettings({...moralisSettings, smartContractAddress: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="moralis-api-key">API ключ Moralis</Label>
+                  <Input 
+                    id="moralis-api-key" 
+                    type="password"
+                    value={moralisSettings.apiKey}
+                    onChange={(e) => setMoralisSettings({...moralisSettings, apiKey: e.target.value})}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Используется для записи данных в блокчейн через Moralis API
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="network-type">Тип сети блокчейн</Label>
+                  <Select 
+                    value={moralisSettings.networkType}
+                    onValueChange={(value) => setMoralisSettings({
+                      ...moralisSettings, 
+                      networkType: value as "testnet" | "mainnet"
+                    })}
+                  >
+                    <SelectTrigger id="network-type">
+                      <SelectValue placeholder="Выберите тип сети" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="testnet">Тестовая сеть</SelectItem>
+                      <SelectItem value="mainnet">Основная сеть</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
             
             <CardFooter className="border-t px-6 py-4">
-              <Button>Сохранить настройки</Button>
+              <div className="flex justify-between w-full">
+                <div className="flex space-x-2">
+                  <Switch 
+                    id="moralis-active"
+                    checked={moralisSettings.active}
+                    onCheckedChange={(checked) => 
+                      setMoralisSettings({...moralisSettings, active: checked})
+                    }
+                  />
+                  <Label htmlFor="moralis-active" className="flex flex-col space-y-1">
+                    <span>Интеграция с Moralis активна</span>
+                    <span className="font-normal text-xs text-muted-foreground">
+                      Включить или отключить интеграцию с Moralis API
+                    </span>
+                  </Label>
+                </div>
+                <Button 
+                  onClick={handleSaveMoralisSettings}
+                  disabled={saveMoralisSettingsMutation.isPending}
+                >
+                  {saveMoralisSettingsMutation.isPending ? "Сохранение..." : "Сохранить настройки"}
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </TabsContent>
