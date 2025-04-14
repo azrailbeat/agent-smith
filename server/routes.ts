@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -11,7 +11,18 @@ import {
   detectLanguage, 
   translateText 
 } from "./services/openai";
-import { recordToBlockchain, verifyBlockchainRecord } from "./services/blockchain";
+import { 
+  recordToBlockchain, 
+  verifyBlockchainRecord, 
+  getTransactionDetails, 
+  BlockchainRecordType 
+} from "./services/blockchain";
+import { 
+  logActivity, 
+  getRecentActivities, 
+  getEntityActivities, 
+  getUserActivities 
+} from "./activity-logger";
 import { z } from "zod";
 import { 
   insertTaskSchema, 
@@ -405,9 +416,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Blockchain routes
   app.get('/api/blockchain/records', async (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-    const records = await storage.getRecentBlockchainRecords(limit);
-    res.json(records);
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const records = await storage.getRecentBlockchainRecords(limit);
+      
+      // Логируем активность просмотра записей блокчейн
+      await logActivity({
+        action: 'view_list',
+        entityType: 'blockchain_record',
+        userId: req.session?.userId,
+        details: `Просмотр списка записей блокчейн (последние ${limit})`
+      });
+      
+      res.json(records);
+    } catch (error) {
+      console.error('Error getting blockchain records:', error);
+      res.status(500).json({ error: 'Failed to get blockchain records' });
+    }
+  });
+  
+  // Получение записей блокчейна для конкретной сущности
+  app.get('/api/blockchain/records/entity/:type/:id', async (req, res) => {
+    try {
+      const entityType = req.params.type;
+      const entityId = parseInt(req.params.id);
+      
+      if (isNaN(entityId)) {
+        return res.status(400).json({ error: 'Invalid entity ID' });
+      }
+      
+      // Получаем записи, используя новые поля entityType и entityId
+      const allRecords = await storage.getBlockchainRecords();
+      const entityRecords = allRecords.filter(record => 
+        record.entityType === entityType && record.entityId === entityId
+      );
+      
+      // Логируем активность
+      await logActivity({
+        action: 'view_entity_records',
+        entityType: entityType,
+        entityId: entityId,
+        userId: req.session?.userId,
+        details: `Просмотр записей блокчейн для ${entityType} #${entityId}`
+      });
+      
+      res.json(entityRecords);
+    } catch (error) {
+      console.error('Error getting entity blockchain records:', error);
+      res.status(500).json({ error: 'Failed to get entity blockchain records' });
+    }
   });
   
   app.post('/api/blockchain/verify', async (req, res) => {
@@ -419,15 +476,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const verificationResult = await verifyBlockchainRecord(transactionHash);
+      
+      // Логируем активность проверки
+      await logActivity({
+        action: 'blockchain_verify',
+        entityType: 'transaction',
+        userId: req.session?.userId,
+        details: `Проверка транзакции блокчейн: ${transactionHash}`,
+        metadata: {
+          transactionHash,
+          verified: verificationResult.verified
+        }
+      });
+      
       res.json(verificationResult);
     } catch (error) {
+      console.error('Error verifying blockchain record:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get('/api/blockchain/transaction/:hash', async (req, res) => {
+    try {
+      const transactionHash = req.params.hash;
+      
+      if (!transactionHash) {
+        return res.status(400).json({ error: 'Transaction hash is required' });
+      }
+      
+      // Получаем детали транзакции из Moralis API
+      const transactionDetails = await getTransactionDetails(transactionHash);
+      
+      // Логируем активность
+      await logActivity({
+        action: 'blockchain_transaction_view',
+        entityType: 'transaction',
+        userId: req.session?.userId,
+        details: `Просмотр деталей транзакции: ${transactionHash}`
+      });
+      
+      res.json(transactionDetails);
+    } catch (error) {
+      console.error('Error getting transaction details:', error);
+      res.status(500).json({ error: 'Failed to get transaction details' });
     }
   });
   
   app.post('/api/blockchain/record', async (req, res) => {
     try {
-      const { type, title, content, metadata, userId, taskId, documentId } = req.body;
+      const { type, title, content, metadata, userId, taskId, documentId, entityType, entityId } = req.body;
       
       if (!type || !title || !content) {
         return res.status(400).json({ error: 'Type, title and content are required' });
@@ -443,12 +540,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const blockchainResult = await recordToBlockchain(blockchainData);
       
-      // Create blockchain record
+      // Create blockchain record with updated schema
       const blockchainRecord = await storage.createBlockchainRecord({
         recordType: type,
         title,
         taskId: taskId ? parseInt(taskId) : null,
         documentId: documentId ? parseInt(documentId) : null,
+        // Новые поля для универсальности
+        entityType: entityType || type,
+        entityId: entityId ? parseInt(entityId) : null,
         transactionHash: blockchainResult.transactionHash,
         status: blockchainResult.status,
         metadata: {
@@ -457,32 +557,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Create activity
-      if (userId) {
-        await storage.createActivity({
-          userId: parseInt(userId),
-          actionType: 'blockchain_record_created',
-          description: `Created blockchain record "${title}"`,
-          relatedId: blockchainRecord.id,
-          relatedType: 'blockchain_record',
-          blockchainHash: blockchainResult.transactionHash
-        });
-      }
+      // Логируем активность с использованием нового логера
+      await logActivity({
+        action: 'blockchain_record_created',
+        entityType: entityType || type,
+        entityId: entityId ? parseInt(entityId) : blockchainRecord.id,
+        userId: userId ? parseInt(userId) : req.session?.userId,
+        details: `Создана запись в блокчейне: "${title}"`,
+        metadata: {
+          transactionHash: blockchainResult.transactionHash,
+          status: blockchainResult.status,
+          recordId: blockchainRecord.id
+        }
+      });
       
       res.json({
         record: blockchainRecord,
         blockchain: blockchainResult
       });
     } catch (error) {
+      console.error('Error creating blockchain record:', error);
       res.status(500).json({ error: error.message });
     }
   });
 
   // Activity routes
   app.get('/api/activities', async (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-    const activities = await storage.getRecentActivities(limit);
-    res.json(activities);
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const activities = await storage.getRecentActivities(limit);
+      
+      // Логируем просмотр активности (метаданные о просмотре)
+      await logActivity({
+        action: 'view_activities',
+        entityType: 'activity',
+        userId: req.session?.userId,
+        details: `Просмотр журнала активности (${limit} записей)`
+      });
+      
+      res.json(activities);
+    } catch (error) {
+      console.error('Error getting activities:', error);
+      res.status(500).json({ error: 'Failed to get activities' });
+    }
+  });
+  
+  // API для получения активности конкретной сущности
+  app.get('/api/activities/entity/:type/:id', async (req, res) => {
+    try {
+      const entityType = req.params.type;
+      const entityId = parseInt(req.params.id);
+      
+      if (isNaN(entityId)) {
+        return res.status(400).json({ error: 'Invalid entity ID' });
+      }
+      
+      // Получаем активности через функцию из лoггера
+      const activities = await getEntityActivities(entityType, entityId);
+      
+      // Логируем просмотр активности для конкретной сущности
+      await logActivity({
+        action: 'view_entity_activities',
+        entityType: entityType,
+        entityId: entityId,
+        userId: req.session?.userId,
+        details: `Просмотр истории активности для ${entityType} #${entityId}`
+      });
+      
+      res.json(activities);
+    } catch (error) {
+      console.error('Error getting entity activities:', error);
+      res.status(500).json({ error: 'Failed to get entity activities' });
+    }
+  });
+  
+  // API для получения активности пользователя
+  app.get('/api/activities/user/:id', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+      
+      // Получаем активности пользователя
+      const activities = await getUserActivities(userId);
+      
+      // Логируем просмотр активности пользователя
+      await logActivity({
+        action: 'view_user_activities',
+        entityType: 'user',
+        entityId: userId,
+        userId: req.session?.userId,
+        details: `Просмотр активности пользователя #${userId}`
+      });
+      
+      res.json(activities);
+    } catch (error) {
+      console.error('Error getting user activities:', error);
+      res.status(500).json({ error: 'Failed to get user activities' });
+    }
   });
 
   // System status routes
