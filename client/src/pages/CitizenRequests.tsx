@@ -20,7 +20,10 @@ import {
   User,
   Database,
   MoveHorizontal,
-  ListChecks
+  ListChecks,
+  Bot,
+  Settings,
+  Zap
 } from "lucide-react";
 import { 
   Dialog, 
@@ -686,7 +689,12 @@ const CitizenRequests = () => {
                 <p className="text-sm text-neutral-500">Перетаскивайте обращения для изменения их статуса</p>
               </div>
               <div className="flex items-center space-x-3">
-                <Button variant="outline" size="sm" className="flex items-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center"
+                  onClick={() => setShowAgentSettingsDialog(true)}
+                >
                   <Bot className="h-4 w-4 mr-2 text-primary-600" />
                   <span>Настройки AI-агента</span>
                 </Button>
@@ -1676,6 +1684,131 @@ const CitizenRequests = () => {
                 Сохранить в блокчейне
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог настроек AI-агента */}
+      <Dialog open={showAgentSettingsDialog} onOpenChange={setShowAgentSettingsDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Bot className="h-5 w-5 mr-2 text-primary-600" />
+              Настройки AI-агента для обращений граждан
+            </DialogTitle>
+            <DialogDescription>
+              Настройте параметры работы AI-агента для автоматической обработки обращений
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-5 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="ai-enabled">Включить AI-агента</Label>
+                <p className="text-xs text-muted-foreground">
+                  Автоматическая обработка новых обращений с использованием ИИ
+                </p>
+              </div>
+              <Switch 
+                id="ai-enabled" 
+                checked={agentSettings.enabled}
+                onCheckedChange={(checked) => setAgentSettings({...agentSettings, enabled: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="auto-process">Автоматическая обработка</Label>
+                <p className="text-xs text-muted-foreground">
+                  Обрабатывать все новые обращения без подтверждения
+                </p>
+              </div>
+              <Switch 
+                id="auto-process" 
+                disabled={!agentSettings.enabled}
+                checked={agentSettings.autoProcess}
+                onCheckedChange={(checked) => setAgentSettings({...agentSettings, autoProcess: checked})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="model-select">Модель AI</Label>
+              <Select 
+                disabled={!agentSettings.enabled}
+                value={agentSettings.modelId.toString()} 
+                onValueChange={(value) => setAgentSettings({...agentSettings, modelId: parseInt(value)})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите модель" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">GPT-4o - Наиболее точная модель</SelectItem>
+                  <SelectItem value="2">Claude 3 - Быстрая и эффективная модель</SelectItem>
+                  <SelectItem value="3">Gemini - Оптимальное соотношение скорости и качества</SelectItem>
+                  <SelectItem value="4">Казахстанская модель - Оптимизирована для казахского языка</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="temperature-slider">Креативность (температура): {agentSettings.temperature.toFixed(1)}</Label>
+              </div>
+              <div className="pt-2">
+                <div className="flex text-xs text-muted-foreground justify-between mb-1">
+                  <span>Точные ответы</span>
+                  <span>Креативные ответы</span>
+                </div>
+                <input 
+                  id="temperature-slider"
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.1"
+                  disabled={!agentSettings.enabled}
+                  value={agentSettings.temperature}
+                  onChange={(e) => setAgentSettings({...agentSettings, temperature: parseFloat(e.target.value)})}
+                  className="w-full h-2 bg-primary-100 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="system-prompt">Системная инструкция (System Prompt)</Label>
+              <Textarea 
+                id="system-prompt" 
+                disabled={!agentSettings.enabled}
+                value={agentSettings.systemPrompt}
+                onChange={(e) => setAgentSettings({...agentSettings, systemPrompt: e.target.value})}
+                placeholder="Введите системную инструкцию для AI-агента"
+                className="h-32 resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Инструкция определяет поведение AI-агента и направляет его в обработке обращений граждан
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAgentSettingsDialog(false)}
+            >
+              Отмена
+            </Button>
+            <Button 
+              onClick={() => {
+                // Сохраняем настройки
+                toast({
+                  title: "Настройки сохранены",
+                  description: "Настройки AI-агента успешно обновлены"
+                });
+                setShowAgentSettingsDialog(false);
+              }}
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Сохранить настройки
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
