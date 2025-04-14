@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { User as UserType } from "@/lib/types";
 import {
   Mic,
   BarChart2,
@@ -18,16 +19,33 @@ import {
   Settings,
   Bot,
   Building2,
-  Network
+  Network,
+  User,
+  Shield,
+  LogOut
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  currentUser: UserType;
 }
 
-const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
+const Sidebar = ({ collapsed, onToggle, currentUser }: SidebarProps) => {
   const [location] = useLocation();
   
   // Группы для навигации
@@ -177,7 +195,78 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
           )}
         </div>
         
-        <div className="px-3 mt-auto">
+        <div className="px-3 mt-auto space-y-3">
+          {/* Профиль пользователя */}
+          <div className={cn(
+            "border rounded-lg overflow-hidden",
+            collapsed ? "p-2" : "p-3"
+          )}>
+            {collapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex justify-center">
+                      {currentUser.avatarUrl ? (
+                        <img
+                          className="h-8 w-8 rounded-full border border-slate-200"
+                          src={currentUser.avatarUrl}
+                          alt={`${currentUser.fullName} profile`}
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center">
+                          <span className="text-sm font-medium text-white">{currentUser.fullName.charAt(0)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{currentUser.fullName}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center cursor-pointer">
+                    <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-medium text-white">А</span>
+                    </div>
+                    <div className="ml-3 overflow-hidden">
+                      <p className="text-sm font-medium text-slate-800 truncate">Айнур Бекова</p>
+                      <p className="text-xs text-slate-500 truncate">Департамент цифровизации</p>
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Мой аккаунт</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/profile">
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Профиль</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/settings">
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Настройки</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/security">
+                    <DropdownMenuItem>
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Безопасность</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Выйти</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          
+          {/* Кнопка сворачивания */}
           <Button
             variant="ghost"
             size={collapsed ? "icon" : "default"}
