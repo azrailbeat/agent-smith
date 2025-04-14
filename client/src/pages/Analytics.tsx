@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import { Activity, SystemStatus, Task, BlockchainRecord } from "@/lib/types";
-import { AlertCircle, BarChart2, PieChart as PieChartIcon, TrendingUp, Database, File, Users } from "lucide-react";
+import { AlertCircle, BarChart2, PieChart as PieChartIcon, TrendingUp, Database, File, Users, Bot, BrainCircuit } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Analytics = () => {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");

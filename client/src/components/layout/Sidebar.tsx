@@ -85,14 +85,14 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
       title: "Управление",
       items: [
         {
-          name: "ИИ агенты",
-          path: "/ai-agents",
-          icon: <Bot size={20} />
-        },
-        {
           name: "Орг. структура",
           path: "/org-structure",
           icon: <Building2 size={20} />
+        },
+        {
+          name: "ИИ агенты",
+          path: "/ai-agents",
+          icon: <Bot size={20} />
         },
         {
           name: "Документы",

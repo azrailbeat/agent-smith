@@ -522,17 +522,19 @@ const Documents = () => {
                       <TableCell>{log.details}</TableCell>
                       <TableCell>
                         {log.blockchainRecorded ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className="bg-purple-100 text-purple-800 cursor-pointer">
-                                <Database className="h-3 w-3 mr-1" />
-                                Записано
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-mono text-xs">TX: {log.transactionHash}</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge className="bg-purple-100 text-purple-800 cursor-pointer">
+                                  <Database className="h-3 w-3 mr-1" />
+                                  Записано
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-mono text-xs">TX: {log.transactionHash}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : (
                           <Badge variant="outline">Не записано</Badge>
                         )}
