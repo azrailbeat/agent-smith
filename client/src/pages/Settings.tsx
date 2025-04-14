@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText } from "lucide-react";
+import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText, Mic } from "lucide-react";
 import { Integration, Agent } from "@shared/schema";
 
 // Integration form for add/edit
