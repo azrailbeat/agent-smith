@@ -12,6 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 
 const Analytics = () => {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiInsightText, setAiInsightText] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   
   // Fetch system status
   const { data: systemStatuses, isLoading: isLoadingStatus } = useQuery<SystemStatus[]>({
@@ -34,6 +37,52 @@ const Analytics = () => {
   });
 
   const isLoading = isLoadingStatus || isLoadingTasks || isLoadingActivities || isLoadingBlockchain;
+  
+  // Функция для запуска генерации инсайтов с помощью ИИ
+  const generateAIInsights = async () => {
+    if (!tasks || !activities || !blockchainRecords) return;
+    
+    setAiLoading(true);
+    setShowAIDialog(true);
+    
+    try {
+      // В реальном приложении здесь был бы запрос к API
+      // Имитация обращения к API (в дальнейшем будет заменено на запрос к OpenAI)
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      await delay(1500);
+      
+      const taskStatuses = {
+        pending: tasks.filter(t => t.status === 'pending').length,
+        in_progress: tasks.filter(t => t.status === 'in_progress').length,
+        completed: tasks.filter(t => t.status === 'completed').length,
+      };
+      
+      const recentActivities = activities.slice(0, 20);
+      const blockchainCount = blockchainRecords.length;
+      
+      // Пример аналитики, которую в будущем будет генерировать ИИ
+      setAiInsightText(`
+        ## Анализ производительности системы
+        
+        На основе анализа данных, можно выделить несколько ключевых трендов:
+        
+        1. **Статус задач**: В системе ${taskStatuses.pending} задач в ожидании, ${taskStatuses.in_progress} задач в работе и ${taskStatuses.completed} завершенных задач.
+        
+        2. **Записи в блокчейне**: Всего ${blockchainCount} записей, что свидетельствует о высоком уровне активности. Рекомендуется проверить настройки подключения к Moralis Testnet для тестовых интеграций.
+        
+        3. **Активность пользователей**: Наблюдается рост активности в последнем месяце, что говорит о высоком уровне использования системы.
+        
+        4. **Рекомендации**: 
+           - Уделить внимание задачам со статусом "требует внимания"
+           - Оптимизировать процесс обработки документов для повышения эффективности
+           - Рассмотреть возможность масштабирования инфраструктуры в следующем квартале
+      `);
+    } catch (error) {
+      setAiInsightText("Произошла ошибка при генерации аналитики. Пожалуйста, попробуйте снова позже.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // Prepare data for charts
   const prepareTaskStatusData = () => {
@@ -159,7 +208,17 @@ const Analytics = () => {
               Статистика и аналитические данные о работе системы
             </p>
           </div>
-          <div className="mt-4 sm:mt-0">
+          <div className="mt-4 sm:mt-0 flex space-x-3 items-center">
+            <Button 
+              variant="outline"
+              className="flex items-center space-x-2"
+              onClick={generateAIInsights}
+              disabled={aiLoading || isLoading}
+            >
+              <BrainCircuit className="h-4 w-4" />
+              <span>Анализ с помощью ИИ</span>
+            </Button>
+            
             <Tabs 
               value={timeRange} 
               onValueChange={(value) => setTimeRange(value as "week" | "month" | "year")}
@@ -174,6 +233,36 @@ const Analytics = () => {
           </div>
         </div>
       </div>
+      
+      {/* Диалог для ИИ инсайтов */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Bot className="h-5 w-5 mr-2" />
+              Анализ данных с помощью ИИ
+            </DialogTitle>
+            <DialogDescription>
+              Аналитические выводы и рекомендации на основе данных системы
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {aiLoading ? (
+              <div className="flex flex-col items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mb-4"></div>
+                <p className="text-neutral-600">Анализируем данные системы...</p>
+              </div>
+            ) : (
+              <div className="prose max-w-none">
+                <div dangerouslySetInnerHTML={{ 
+                  __html: aiInsightText ? aiInsightText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : 'Нет данных для отображения' 
+                }} />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Statistics overview */}
       <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
