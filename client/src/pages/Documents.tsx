@@ -126,7 +126,7 @@ const Documents = () => {
   
   const [moralisSettings, setMoralisSettings] = useState<MoralisSettings>({
     active: true,
-    apiKey: process.env.MORALIS_API_KEY || "",
+    apiKey: import.meta.env.MORALIS_API_KEY || "api-key-placeholder",
     networkType: "testnet",
     nodeUrl: "https://besu.agent-smith.gov.kz:8545",
     smartContractAddress: "0x7cf7b7834a45bcc60425c33c8a2d52b86ff1830f", 
@@ -215,7 +215,7 @@ const Documents = () => {
     }
   });
   
-  // Mutation for saving settings
+  // Mutation for saving documentolog settings
   const saveSettingsMutation = useMutation({
     mutationFn: async (settings: IntegrationSettings) => {
       return await fetch('/api/integrations/documentolog/settings', {
@@ -242,6 +242,33 @@ const Documents = () => {
     }
   });
   
+  // Mutation for saving Moralis settings
+  const saveMoralisSettingsMutation = useMutation({
+    mutationFn: async (settings: MoralisSettings) => {
+      return await fetch('/api/integrations/moralis/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      }).then(res => res.json());
+    },
+    onSuccess: () => {
+      toast({
+        title: "Настройки блокчейн-интеграции сохранены",
+        description: "Настройки интеграции с Moralis API успешно обновлены",
+      });
+      setShowMoralisSettingsDialog(false);
+    },
+    onError: () => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить настройки Moralis API",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Filter documents based on search term
   const filteredDocuments = documents.filter(doc => 
     doc.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -253,6 +280,10 @@ const Documents = () => {
   
   const handleSaveSettings = () => {
     saveSettingsMutation.mutate(integrationSettings);
+  };
+  
+  const handleSaveMoralisSettings = () => {
+    saveMoralisSettingsMutation.mutate(moralisSettings);
   };
   
   return (
@@ -561,22 +592,70 @@ const Documents = () => {
                   
                   <div className="grid gap-3">
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="record-documents" defaultChecked />
+                      <Checkbox 
+                        id="record-documents" 
+                        checked={moralisSettings.saveTypes.documents}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            saveTypes: {
+                              ...moralisSettings.saveTypes,
+                              documents: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="record-documents">Документы и их метаданные</Label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="record-sync" defaultChecked />
+                      <Checkbox 
+                        id="record-sync" 
+                        checked={moralisSettings.saveTypes.documentSyncEvents}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            saveTypes: {
+                              ...moralisSettings.saveTypes,
+                              documentSyncEvents: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="record-sync">События синхронизации с Документолог</Label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="record-access" defaultChecked />
+                      <Checkbox 
+                        id="record-access" 
+                        checked={moralisSettings.saveTypes.documentAccessEvents}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            saveTypes: {
+                              ...moralisSettings.saveTypes,
+                              documentAccessEvents: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="record-access">События доступа к документам</Label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="record-signing" defaultChecked />
+                      <Checkbox 
+                        id="record-signing" 
+                        checked={moralisSettings.saveTypes.documentSigningEvents}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            saveTypes: {
+                              ...moralisSettings.saveTypes,
+                              documentSigningEvents: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="record-signing">Подписание документов</Label>
                     </div>
                   </div>
@@ -590,22 +669,70 @@ const Documents = () => {
                   
                   <div className="grid gap-3">
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="store-hash" defaultChecked />
+                      <Checkbox 
+                        id="store-hash" 
+                        checked={moralisSettings.dataToSave.docHash}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            dataToSave: {
+                              ...moralisSettings.dataToSave,
+                              docHash: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="store-hash">Хеш документа (SHA-256)</Label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="store-metadata" defaultChecked />
+                      <Checkbox 
+                        id="store-metadata" 
+                        checked={moralisSettings.dataToSave.docMetadata}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            dataToSave: {
+                              ...moralisSettings.dataToSave,
+                              docMetadata: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="store-metadata">Метаданные документа (название, тип, автор)</Label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="store-timestamps" defaultChecked />
+                      <Checkbox 
+                        id="store-timestamps" 
+                        checked={moralisSettings.dataToSave.eventTimestamp}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            dataToSave: {
+                              ...moralisSettings.dataToSave,
+                              eventTimestamp: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="store-timestamps">Временные метки (создания, изменения)</Label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="store-signatures" defaultChecked />
+                      <Checkbox 
+                        id="store-signatures" 
+                        checked={moralisSettings.dataToSave.digitalSignature}
+                        onCheckedChange={(checked) => 
+                          setMoralisSettings({
+                            ...moralisSettings, 
+                            dataToSave: {
+                              ...moralisSettings.dataToSave,
+                              digitalSignature: checked === true
+                            }
+                          })
+                        }
+                      />
                       <Label htmlFor="store-signatures">Цифровые подписи и сертификаты</Label>
                     </div>
                   </div>
