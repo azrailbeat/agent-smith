@@ -45,7 +45,13 @@ interface SidebarProps {
   currentUser: UserType;
 }
 
-const Sidebar = ({ collapsed, onToggle, currentUser }: SidebarProps) => {
+const Sidebar = ({ collapsed, onToggle, currentUser = {
+  id: 1,
+  username: "admin",
+  fullName: "Пользователь",
+  department: "Не указан",
+  role: "user",
+} }: SidebarProps) => {
   const [location] = useLocation();
   
   // Группы для навигации
@@ -133,6 +139,32 @@ const Sidebar = ({ collapsed, onToggle, currentUser }: SidebarProps) => {
       )}
     >
       <div className="flex flex-col h-[calc(100vh-3.5rem)] pb-4">
+        {/* Логотип */}
+        <div className={cn("p-3 border-b border-slate-200", 
+          collapsed ? "flex justify-center" : "px-4"
+        )}>
+          <div className="flex items-center">
+            <div className="text-emerald-600">
+              {collapsed ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              ) : (
+                <div className="flex items-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="ml-2 text-lg font-medium text-emerald-700">Agent Smith</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
         <div className="flex-1 py-5">
           {collapsed ? (
             <ul className="space-y-2 px-3">
@@ -226,12 +258,20 @@ const Sidebar = ({ collapsed, onToggle, currentUser }: SidebarProps) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center cursor-pointer">
-                    <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-medium text-white">А</span>
-                    </div>
+                    {currentUser.avatarUrl ? (
+                      <img
+                        className="h-8 w-8 rounded-full border border-slate-200 flex-shrink-0"
+                        src={currentUser.avatarUrl}
+                        alt={`${currentUser.fullName} profile`}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-medium text-white">{currentUser.fullName.charAt(0)}</span>
+                      </div>
+                    )}
                     <div className="ml-3 overflow-hidden">
-                      <p className="text-sm font-medium text-slate-800 truncate">Айнур Бекова</p>
-                      <p className="text-xs text-slate-500 truncate">Департамент цифровизации</p>
+                      <p className="text-sm font-medium text-slate-800 truncate">{currentUser.fullName}</p>
+                      <p className="text-xs text-slate-500 truncate">{currentUser.department}</p>
                     </div>
                   </div>
                 </DropdownMenuTrigger>
