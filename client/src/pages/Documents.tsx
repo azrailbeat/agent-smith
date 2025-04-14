@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Card, 
@@ -20,7 +20,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { FileCheck, Search, RefreshCw, Database, UploadCloud, FileText, CheckCircle, AlertCircle, Download, Link } from "lucide-react";
+import { 
+  FileCheck, 
+  Search, 
+  RefreshCw, 
+  Database, 
+  UploadCloud, 
+  FileText, 
+  CheckCircle, 
+  AlertCircle, 
+  Download, 
+  Link,
+  Settings,
+  Save,
+  Key,
+  LockKeyhole
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -71,11 +86,32 @@ type IntegrationSettings = {
   lastSyncTime: string | null;
 };
 
+type MoralisSettings = {
+  active: boolean;
+  apiKey: string;
+  networkType: "testnet" | "mainnet";
+  nodeUrl: string;
+  smartContractAddress: string;
+  saveTypes: {
+    documents: boolean;
+    documentSyncEvents: boolean;
+    documentAccessEvents: boolean;
+    documentSigningEvents: boolean;
+  };
+  dataToSave: {
+    docHash: boolean;
+    docMetadata: boolean;
+    eventTimestamp: boolean;
+    digitalSignature: boolean;
+  };
+};
+
 const Documents = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showMoralisSettingsDialog, setShowMoralisSettingsDialog] = useState(false);
   
   const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings>({
     active: true,
@@ -86,6 +122,26 @@ const Documents = () => {
     syncInterval: 15, // in minutes
     recordToBlockchain: true,
     lastSyncTime: new Date().toISOString()
+  });
+  
+  const [moralisSettings, setMoralisSettings] = useState<MoralisSettings>({
+    active: true,
+    apiKey: process.env.MORALIS_API_KEY || "",
+    networkType: "testnet",
+    nodeUrl: "https://besu.agent-smith.gov.kz:8545",
+    smartContractAddress: "0x7cf7b7834a45bcc60425c33c8a2d52b86ff1830f", 
+    saveTypes: {
+      documents: true,
+      documentSyncEvents: true,
+      documentAccessEvents: false,
+      documentSigningEvents: true,
+    },
+    dataToSave: {
+      docHash: true,
+      docMetadata: true,
+      eventTimestamp: true,
+      digitalSignature: true,
+    }
   });
   
   // Mock sync logs
