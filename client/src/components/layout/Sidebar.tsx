@@ -134,11 +134,11 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
   return (
     <div
       className={cn(
-        "fixed left-0 top-14 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-20 shadow-sm",
+        "fixed left-0 top-0 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-20 shadow-sm",
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="flex flex-col h-[calc(100vh-3.5rem)] pb-4">
+      <div className="flex flex-col h-full pb-4">
         {/* Логотип */}
         <div className={cn("p-3 border-b border-slate-200", 
           collapsed ? "flex justify-center" : "px-4"
