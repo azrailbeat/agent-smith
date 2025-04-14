@@ -532,6 +532,8 @@ const Settings = () => {
         return <MessageSquare className="h-5 w-5 text-blue-500" />;
       case "moralis":
         return <Database className="h-5 w-5 text-indigo-500" />;
+      case "blockchain":
+        return <Database className="h-5 w-5 text-indigo-500" />;
       default:
         return <Server className="h-5 w-5 text-gray-500" />;
     }
@@ -568,76 +570,419 @@ const Settings = () => {
             </Button>
           </div>
           
-          <Card>
-            <CardContent className="pt-6">
-              {isLoadingIntegrations ? (
-                <div className="text-center py-4">Загрузка интеграций...</div>
-              ) : integrations.length === 0 ? (
-                <div className="text-center py-4">
-                  <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p>Интеграции не настроены</p>
-                  <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
-                    <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию
-                  </Button>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Название</TableHead>
-                      <TableHead>Тип</TableHead>
-                      <TableHead>URL API</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead className="w-24 text-right">Действия</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {integrations.map((integration) => (
-                      <TableRow key={integration.id}>
-                        <TableCell>
+          <Tabs defaultValue="all">
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">Все интеграции</TabsTrigger>
+              <TabsTrigger value="openai">OpenAI</TabsTrigger>
+              <TabsTrigger value="moralis">Blockchain (Moralis)</TabsTrigger>
+              <TabsTrigger value="speech">Распознавание речи</TabsTrigger>
+              <TabsTrigger value="documentolog">Документолог</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="all">
+              <Card>
+                <CardContent className="pt-6">
+                  {isLoadingIntegrations ? (
+                    <div className="text-center py-4">Загрузка интеграций...</div>
+                  ) : integrations.length === 0 ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p>Интеграции не настроены</p>
+                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию
+                      </Button>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Название</TableHead>
+                          <TableHead>Тип</TableHead>
+                          <TableHead>URL API</TableHead>
+                          <TableHead>Статус</TableHead>
+                          <TableHead className="w-24 text-right">Действия</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {integrations.map((integration) => (
+                          <TableRow key={integration.id}>
+                            <TableCell>
+                              <div className="flex items-center">
+                                {getIntegrationIcon(integration.type)} 
+                                <span className="ml-2 font-medium">{integration.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getIntegrationType(integration.type)}</TableCell>
+                            <TableCell className="max-w-xs truncate">{integration.apiUrl}</TableCell>
+                            <TableCell>
+                              {integration.isActive ? (
+                                <div className="flex items-center">
+                                  <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                                  Активна
+                                </div>
+                              ) : (
+                                <div className="flex items-center">
+                                  <span className="h-2 w-2 rounded-full bg-gray-500 mr-2"></span>
+                                  Отключена
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditIntegration(integration)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteIntegration(integration.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="openai">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Настройки OpenAI</CardTitle>
+                  <CardDescription>
+                    Настройка интеграции с OpenAI API для работы AI агентов
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations.filter(i => i.type === "openai").length === 0 ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p>Интеграция с OpenAI не настроена</p>
+                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию OpenAI
+                      </Button>
+                    </div>
+                  ) : (
+                    integrations.filter(i => i.type === "openai").map(integration => (
+                      <div key={integration.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4">
                           <div className="flex items-center">
-                            {getIntegrationIcon(integration.type)} 
-                            <span className="ml-2 font-medium">{integration.name}</span>
+                            <Cloud className="h-5 w-5 text-green-500 mr-2" />
+                            <h3 className="text-lg font-medium">{integration.name}</h3>
                           </div>
-                        </TableCell>
-                        <TableCell>{getIntegrationType(integration.type)}</TableCell>
-                        <TableCell className="max-w-xs truncate">{integration.apiUrl}</TableCell>
-                        <TableCell>
-                          {integration.isActive ? (
+                          <div className="flex items-center space-x-2">
+                            <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+                              {integration.isActive ? "Активна" : "Отключена"}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditIntegration(integration)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">URL API</Label>
+                            <p className="text-sm font-medium">{integration.apiUrl}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">API Key</Label>
+                            <p className="text-sm font-medium">••••••••••••••••</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+                            {JSON.stringify(integration.config, null, 2)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="moralis">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Настройки Blockchain (Moralis)</CardTitle>
+                  <CardDescription>
+                    Настройка интеграции с Moralis API для работы с блокчейн
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").length === 0 ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p>Интеграция с Moralis не настроена</p>
+                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию с Moralis
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").map(integration => (
+                        <div key={integration.id} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center">
-                              <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                              Активна
+                              <Database className="h-5 w-5 text-indigo-500 mr-2" />
+                              <h3 className="text-lg font-medium">{integration.name}</h3>
                             </div>
-                          ) : (
-                            <div className="flex items-center">
-                              <span className="h-2 w-2 rounded-full bg-gray-500 mr-2"></span>
-                              Отключена
+                            <div className="flex items-center space-x-2">
+                              <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+                                {integration.isActive ? "Активна" : "Отключена"}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditIntegration(integration)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditIntegration(integration)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteIntegration(integration.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">URL Ноды</Label>
+                              <p className="text-sm font-medium">{integration.apiUrl}</p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">API Key</Label>
+                              <p className="text-sm font-medium">••••••••••••••••</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+                            <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+                              {JSON.stringify(integration.config, null, 2)}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t">
+                            <h4 className="font-medium mb-2">Настройки сохранения данных</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h5 className="text-sm font-medium mb-2">Типы данных для блокчейн</h5>
+                                <div className="space-y-2">
+                                  <div className="flex items-center">
+                                    <Switch 
+                                      id="moralis-documents" 
+                                      checked={true}
+                                      disabled
+                                    />
+                                    <Label htmlFor="moralis-documents" className="ml-2">Документы</Label>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Switch 
+                                      id="moralis-sync" 
+                                      checked={true}
+                                      disabled
+                                    />
+                                    <Label htmlFor="moralis-sync" className="ml-2">События синхронизации</Label>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Switch 
+                                      id="moralis-access" 
+                                      checked={true}
+                                      disabled
+                                    />
+                                    <Label htmlFor="moralis-access" className="ml-2">События доступа</Label>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <h5 className="text-sm font-medium mb-2">Данные для сохранения</h5>
+                                <div className="space-y-2">
+                                  <div className="flex items-center">
+                                    <Switch 
+                                      id="moralis-hash" 
+                                      checked={true}
+                                      disabled
+                                    />
+                                    <Label htmlFor="moralis-hash" className="ml-2">Хеш документа</Label>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Switch 
+                                      id="moralis-metadata" 
+                                      checked={true}
+                                      disabled
+                                    />
+                                    <Label htmlFor="moralis-metadata" className="ml-2">Метаданные</Label>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Switch 
+                                      id="moralis-timestamp" 
+                                      checked={true}
+                                      disabled
+                                    />
+                                    <Label htmlFor="moralis-timestamp" className="ml-2">Временная метка</Label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="speech">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Настройки распознавания речи</CardTitle>
+                  <CardDescription>
+                    Настройка интеграции с сервисами распознавания речи
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations.filter(i => i.type === "speech").length === 0 ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p>Интеграция с сервисом распознавания речи не настроена</p>
+                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию
+                      </Button>
+                    </div>
+                  ) : (
+                    integrations.filter(i => i.type === "speech").map(integration => (
+                      <div key={integration.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center">
+                            <Mic className="h-5 w-5 text-blue-500 mr-2" />
+                            <h3 className="text-lg font-medium">{integration.name}</h3>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+                              {integration.isActive ? "Активна" : "Отключена"}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditIntegration(integration)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">URL API</Label>
+                            <p className="text-sm font-medium">{integration.apiUrl}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">API Key</Label>
+                            <p className="text-sm font-medium">••••••••••••••••</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+                            {JSON.stringify(integration.config, null, 2)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="documentolog">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Настройки интеграции с Документолог</CardTitle>
+                  <CardDescription>
+                    Настройка параметров для работы с системой Документолог
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations.filter(i => i.type === "documentolog").length === 0 ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p>Интеграция с Документолог не настроена</p>
+                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию
+                      </Button>
+                    </div>
+                  ) : (
+                    integrations.filter(i => i.type === "documentolog").map(integration => (
+                      <div key={integration.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center">
+                            <FileText className="h-5 w-5 text-blue-500 mr-2" />
+                            <h3 className="text-lg font-medium">{integration.name}</h3>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+                              {integration.isActive ? "Активна" : "Отключена"}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditIntegration(integration)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">URL API</Label>
+                            <p className="text-sm font-medium">{integration.apiUrl}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">API Key</Label>
+                            <p className="text-sm font-medium">••••••••••••••••</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+                            {JSON.stringify(integration.config, null, 2)}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t">
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="font-medium">Авто-синхронизация</span>
+                              <span className="text-xs text-muted-foreground">
+                                Автоматическая синхронизация каждые 15 минут
+                              </span>
+                            </div>
+                            <Switch checked={true} disabled />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
           
           {/* Integration Dialog */}
           <Dialog open={isIntegrationDialogOpen} onOpenChange={setIsIntegrationDialogOpen}>
