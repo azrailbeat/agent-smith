@@ -170,10 +170,43 @@ const Tasks = () => {
     });
   };
   
+  // Запрос активностей, связанных с задачей и блокчейн-записей
+  const { data: activities, isLoading: activitiesLoading } = useQuery<Activity[]>({
+    queryKey: ['/api/activities'],
+    enabled: showTaskHistoryDialog && !!selectedTask
+  });
+  
+  const { data: blockchainRecords, isLoading: blockchainLoading } = useQuery<BlockchainRecord[]>({
+    queryKey: ['/api/blockchain/records'],
+    enabled: showTaskHistoryDialog && !!selectedTask
+  });
+  
   // Открытие диалога с историей изменений
   const openTaskHistory = (task: Task) => {
     setSelectedTask(task);
     setShowTaskHistoryDialog(true);
+  };
+  
+  // Получение активностей, связанных с конкретной задачей
+  const getTaskActivities = () => {
+    if (!selectedTask || !activities) return [];
+    return activities.filter(activity => 
+      activity.entityType === 'task' && 
+      activity.entityId === selectedTask.id
+    ).sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  };
+  
+  // Получение блокчейн-записей, связанных с конкретной задачей
+  const getTaskBlockchainRecords = () => {
+    if (!selectedTask || !blockchainRecords) return [];
+    return blockchainRecords.filter(record => 
+      record.entityType === 'task' && 
+      record.entityId === selectedTask.id
+    ).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   };
   
   // Состояние для Канбан-доски
@@ -427,7 +460,7 @@ const Tasks = () => {
       
       {/* Dialog for task history */}
       <Dialog open={showTaskHistoryDialog} onOpenChange={setShowTaskHistoryDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>История изменений задачи</DialogTitle>
             <DialogDescription>
@@ -435,36 +468,192 @@ const Tasks = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-2">
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              <div className="space-y-4">
-                {/* История изменений - заменить на реальные данные */}
-                <div className="border-l-2 border-green-500 pl-4 pb-4 relative">
-                  <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-0"></div>
-                  <div className="text-xs text-muted-foreground">Сегодня, 14:30</div>
-                  <div className="text-sm mt-1">Задача создана</div>
+          <Tabs defaultValue="activities">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="activities">
+                <History className="w-4 h-4 mr-2" />
+                Активность
+              </TabsTrigger>
+              <TabsTrigger value="blockchain">
+                <Shield className="w-4 h-4 mr-2" />
+                Блокчейн
+              </TabsTrigger>
+              <TabsTrigger value="messages">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Сообщения
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="activities" className="mt-4">
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-4">
+                  {activitiesLoading ? (
+                    <div className="flex justify-center p-4">
+                      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                    </div>
+                  ) : getTaskActivities().length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <History className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>История активности отсутствует</p>
+                    </div>
+                  ) : (
+                    getTaskActivities().map((activity, index) => {
+                      // Определяем цвет и иконку для активности
+                      let borderColor = "border-gray-300";
+                      let bgColor = "bg-gray-300";
+                      
+                      switch (activity.actionType) {
+                        case 'task_created':
+                          borderColor = "border-green-500";
+                          bgColor = "bg-green-500";
+                          break;
+                        case 'task_status_changed':
+                          borderColor = "border-yellow-500";
+                          bgColor = "bg-yellow-500";
+                          break;
+                        case 'task_updated':
+                          borderColor = "border-blue-500";
+                          bgColor = "bg-blue-500";
+                          break;
+                        case 'document_uploaded':
+                        case 'document_processed':
+                          borderColor = "border-purple-500";
+                          bgColor = "bg-purple-500";
+                          break;
+                      }
+                      
+                      // Форматируем дату
+                      const activityDate = activity.timestamp ? 
+                        format(new Date(activity.timestamp), "d MMMM, HH:mm", { locale: ru }) : 
+                        "Дата не указана";
+                        
+                      return (
+                        <div 
+                          key={`activity-${activity.id}`} 
+                          className={`border-l-2 ${borderColor} pl-4 pb-4 relative ${index === getTaskActivities().length - 1 ? 'pb-0' : ''}`}
+                        >
+                          <div className={`absolute w-3 h-3 ${bgColor} rounded-full -left-[7px] top-0`}></div>
+                          <div className="text-xs text-muted-foreground">{activityDate}</div>
+                          <div className="text-sm mt-1">
+                            {activity.description}
+                            
+                            {/* Если это изменение статуса, отображаем детали изменения */}
+                            {activity.actionType === 'task_status_changed' && activity.metadata && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {activity.metadata.oldStatus && activity.metadata.newStatus && (
+                                  <span>
+                                    <span className="font-medium">{activity.metadata.oldStatus}</span> 
+                                    {" → "} 
+                                    <span className="font-medium">{activity.metadata.newStatus}</span>
+                                  </span>
+                                )}
+                                {activity.metadata.comment && (
+                                  <div className="mt-1 italic">"{activity.metadata.comment}"</div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Если есть привязка к блокчейну */}
+                            {activity.blockchainHash && (
+                              <div className="mt-1 flex items-center text-xs text-emerald-600">
+                                <Shield className="w-3 h-3 mr-1" />
+                                <span>Подтверждено в блокчейне</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-                
-                <div className="border-l-2 border-yellow-500 pl-4 pb-4 relative">
-                  <div className="absolute w-3 h-3 bg-yellow-500 rounded-full -left-[7px] top-0"></div>
-                  <div className="text-xs text-muted-foreground">Сегодня, 15:10</div>
-                  <div className="text-sm mt-1">Изменен статус: <span className="font-medium">Ожидает</span> → <span className="font-medium">В процессе</span></div>
+              </ScrollArea>
+            </TabsContent>
+            
+            <TabsContent value="blockchain" className="mt-4">
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-4">
+                  {blockchainLoading ? (
+                    <div className="flex justify-center p-4">
+                      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                    </div>
+                  ) : getTaskBlockchainRecords().length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Shield className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>Блокчейн-записи отсутствуют</p>
+                    </div>
+                  ) : (
+                    getTaskBlockchainRecords().map((record, index) => {
+                      // Форматируем дату
+                      const recordDate = record.createdAt ? 
+                        format(new Date(record.createdAt), "d MMMM, HH:mm", { locale: ru }) : 
+                        "Дата не указана";
+                        
+                      return (
+                        <div 
+                          key={`record-${record.id}`} 
+                          className="border border-emerald-100 bg-emerald-50 rounded-md p-4"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="text-sm font-medium text-emerald-800">{record.title}</div>
+                            <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                              {record.status === 'confirmed' ? 'Подтверждено' : 'Ожидание'}
+                            </Badge>
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground mt-1">{recordDate}</div>
+                          
+                          {record.metadata && (
+                            <div className="mt-3 text-sm">
+                              {record.metadata.action && (
+                                <div className="mb-1">
+                                  <span className="font-medium">Действие: </span> 
+                                  {record.metadata.action}
+                                </div>
+                              )}
+                              
+                              {record.metadata.oldStatus && record.metadata.newStatus && (
+                                <div className="mb-1">
+                                  <span className="font-medium">Изменение статуса: </span>
+                                  <span>{record.metadata.oldStatus}</span> → <span>{record.metadata.newStatus}</span>
+                                </div>
+                              )}
+                              
+                              {record.metadata.comment && (
+                                <div className="mb-1">
+                                  <span className="font-medium">Комментарий: </span>
+                                  <span className="italic">"{record.metadata.comment}"</span>
+                                </div>
+                              )}
+                              
+                              {record.metadata.summary && (
+                                <div className="mb-1">
+                                  <span className="font-medium">Описание: </span>
+                                  <span>{record.metadata.summary}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="mt-3 pt-2 border-t border-emerald-200 flex items-center text-xs text-emerald-700">
+                            <Link className="w-3 h-3 mr-1" />
+                            <span className="font-mono text-xs truncate">{record.transactionHash}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-                
-                <div className="border-l-2 border-blue-500 pl-4 pb-4 relative">
-                  <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[7px] top-0"></div>
-                  <div className="text-xs text-muted-foreground">Сегодня, 16:45</div>
-                  <div className="text-sm mt-1">Добавлен документ: <span className="font-medium">Отчет.pdf</span></div>
-                </div>
-                
-                <div className="border-l-2 border-green-500 pl-4 pb-0 relative">
-                  <div className="absolute w-3 h-3 bg-green-500 rounded-full -left-[7px] top-0"></div>
-                  <div className="text-xs text-muted-foreground">Сегодня, 17:20</div>
-                  <div className="text-sm mt-1">Изменен статус: <span className="font-medium">В процессе</span> → <span className="font-medium">Готово к проверке</span></div>
-                </div>
+              </ScrollArea>
+            </TabsContent>
+            
+            <TabsContent value="messages" className="mt-4">
+              {/* Добавим позже компонент для сообщений */}
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Функциональность сообщений в разработке</p>
               </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
           
           <DialogFooter>
             <Button 

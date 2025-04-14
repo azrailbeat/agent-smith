@@ -47,6 +47,8 @@ export interface BlockchainRecord {
   metadata?: any;
   createdAt: Date;
   confirmedAt?: Date;
+  entityType?: string;
+  entityId?: number;
 }
 
 export interface Message {
@@ -67,6 +69,10 @@ export interface Activity {
   relatedType?: string;
   timestamp: Date;
   blockchainHash?: string;
+  entityType?: string;
+  entityId?: number;
+  action?: string; 
+  metadata?: any;
 }
 
 export interface SystemStatus {
