@@ -22,7 +22,8 @@ import {
   Network,
   User,
   Shield,
-  LogOut
+  LogOut,
+  Vote
 } from "lucide-react";
 import { 
   Tooltip, 
@@ -98,6 +99,11 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           name: "Документы",
           path: "/documents",
           icon: <FileCheck size={20} />
+        },
+        {
+          name: "DAO Голосования",
+          path: "/dao-voting",
+          icon: <Vote size={20} />
         }
       ]
     },

@@ -19,6 +19,7 @@ import AboutSystem from "@/pages/AboutSystem";
 import OrgStructurePage from "@/pages/OrgStructure";
 import Documents from "@/pages/Documents";
 import AIAgents from "@/pages/AIAgents";
+import DAOVoting from "@/pages/DAOVoting";
 import { useState } from "react";
 import { User } from "./lib/types";
 
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/org-structure" component={OrgStructurePage} />
       <Route path="/ai-agents" component={AIAgents} />
       <Route path="/settings" component={Settings} />
+      <Route path="/dao-voting" component={DAOVoting} />
       <Route path="/about" component={AboutSystem} />
       <Route component={NotFound} />
     </Switch>
