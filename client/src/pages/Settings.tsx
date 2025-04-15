@@ -505,30 +505,33 @@ const Settings = () => {
 
   // Test connection for integrations
   const testConnectionMutation = useMutation({
-    mutationFn: ({ id, type, apiKey, apiUrl }: { id: number, type: string, apiKey: string, apiUrl: string }) => 
-      apiRequest('POST', `/api/integrations/test`, { type, apiKey, apiUrl }),
-    onSuccess: () => {
+    mutationFn: async (integration: Integration) => {
+      return await apiRequest("/api/integrations/test", {
+        method: "POST",
+        data: {
+          type: integration.type,
+          apiKey: integration.apiKey
+        }
+      });
+    },
+    onSuccess: (data: any) => {
       toast({
-        title: "Соединение успешно",
-        description: "API соединение работает корректно",
+        title: data.success ? "Успех" : "Ошибка",
+        description: data.message,
+        variant: data.success ? "default" : "destructive",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Ошибка соединения",
-        description: error.message || "Не удалось установить соединение с API",
+        title: "Ошибка",
+        description: error.message || "Не удалось протестировать соединение",
         variant: "destructive",
       });
     }
   });
 
   const handleTestConnection = (integration: Integration) => {
-    testConnectionMutation.mutate({ 
-      id: integration.id, 
-      type: integration.type,
-      apiKey: integration.apiKey,
-      apiUrl: integration.apiUrl
-    });
+    testConnectionMutation.mutate(integration);
   };
 
   // Helper for displaying integration type in a user-friendly way
