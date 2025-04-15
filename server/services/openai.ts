@@ -4,6 +4,29 @@ import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-demo-key" });
 
 /**
+ * Test OpenAI API connection with provided API key
+ * @param apiKey Optional API key to test instead of the environment variable
+ */
+export async function testOpenAIConnection(apiKey?: string): Promise<boolean> {
+  try {
+    const testClient = apiKey 
+      ? new OpenAI({ apiKey }) 
+      : openai;
+      
+    const response = await testClient.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: "Connection test" }],
+      max_tokens: 5
+    });
+    
+    return !!response.choices && response.choices.length > 0;
+  } catch (error) {
+    console.error("OpenAI API connection test failed:", error);
+    return false;
+  }
+}
+
+/**
  * Process document text and generate a summary
  */
 export async function summarizeDocument(text: string, language: "ru" | "kz" | "en" = "ru"): Promise<string> {

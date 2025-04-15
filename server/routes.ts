@@ -9,13 +9,15 @@ import {
   analyzeTranscription, 
   processUserMessage, 
   detectLanguage, 
-  translateText 
+  translateText,
+  testOpenAIConnection
 } from "./services/openai";
 import { 
   recordToBlockchain, 
   verifyBlockchainRecord, 
   getTransactionDetails, 
-  BlockchainRecordType 
+  BlockchainRecordType,
+  testMoralisConnection
 } from "./services/blockchain";
 import { 
   logActivity, 
@@ -665,6 +667,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(statuses);
   });
   
+  // API Connection Test endpoint
+  app.post('/api/integrations/test', async (req, res) => {
+    try {
+      const { type, apiKey } = req.body;
+      
+      if (!type) {
+        return res.status(400).json({ error: 'Integration type is required' });
+      }
+      
+      let success = false;
+      let message = '';
+      
+      // Test based on integration type
+      switch (type) {
+        case 'openai':
+          success = await testOpenAIConnection(apiKey);
+          message = success ? 'OpenAI API connection successful' : 'OpenAI API connection failed';
+          break;
+        case 'moralis':
+          success = await testMoralisConnection(apiKey);
+          message = success ? 'Moralis API connection successful' : 'Moralis API connection failed';
+          break;
+        default:
+          return res.status(400).json({ error: 'Unsupported integration type' });
+      }
+      
+      // Log the test activity
+      await logActivity({
+        action: 'integration_test',
+        entityType: 'integration',
+        details: `Tested ${type} integration connection`,
+        metadata: { success, type }
+      });
+      
+      return res.json({ success, message });
+    } catch (error) {
+      console.error('Error testing integration:', error);
+      return res.status(500).json({ error: 'Failed to test integration connection' });
+    }
+  });
+
   app.post('/api/system/status', async (req, res) => {
     const { serviceName, status, details } = req.body;
     

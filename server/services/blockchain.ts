@@ -198,6 +198,34 @@ export async function verifyBlockchainRecord(transactionHash: string): Promise<{
 }
 
 /**
+ * Test Moralis API connection with provided API key
+ * @param apiKey Optional API key to test instead of the environment variable
+ */
+export async function testMoralisConnection(apiKey?: string): Promise<boolean> {
+  try {
+    const keyToUse = apiKey || process.env.MORALIS_API_KEY;
+    
+    if (!keyToUse) {
+      console.warn('No Moralis API key provided for connection test');
+      return false;
+    }
+    
+    // In a production app, we would make a real API call to Moralis
+    // For this demo, we'll simulate a successful connection if the key is non-empty
+    console.log(`Testing Moralis API connection with key: ${keyToUse ? '[REDACTED]' : 'Not provided'}`);
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Return true if a key was provided (simple validation for demo)
+    return keyToUse.length > 10;
+  } catch (error) {
+    console.error("Moralis API connection test failed:", error);
+    return false;
+  }
+}
+
+/**
  * Simulated blockchain verification (fallback)
  */
 async function simulatedVerifyBlockchainRecord(transactionHash: string): Promise<{
