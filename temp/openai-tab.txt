@@ -1,0 +1,81 @@
+686:            <TabsContent value="openai">
+687-              <Card>
+688-                <CardHeader>
+689-                  <CardTitle>Настройки OpenAI</CardTitle>
+690-                  <CardDescription>
+691-                    Настройка интеграции с OpenAI API для работы AI агентов
+692-                  </CardDescription>
+693-                </CardHeader>
+694-                <CardContent className="space-y-4">
+695-                  {integrations.filter(i => i.type === "openai").length === 0 ? (
+696-                    <div className="text-center py-4">
+697-                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+698-                      <p>Интеграция с OpenAI не настроена</p>
+699-                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+700-                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию OpenAI
+701-                      </Button>
+702-                    </div>
+703-                  ) : (
+704-                    integrations.filter(i => i.type === "openai").map(integration => (
+705-                      <div key={integration.id} className="border rounded-lg p-4">
+706-                        <div className="flex justify-between items-center mb-4">
+707-                          <div className="flex items-center">
+708-                            <Cloud className="h-5 w-5 text-green-500 mr-2" />
+709-                            <h3 className="text-lg font-medium">{integration.name}</h3>
+710-                          </div>
+711-                          <div className="flex items-center space-x-2">
+712-                            <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+713-                              {integration.isActive ? "Активна" : "Отключена"}
+714-                            </span>
+715-                            <Button
+716-                              variant="ghost"
+717-                              size="sm"
+718-                              onClick={() => handleEditIntegration(integration)}
+719-                            >
+720-                              <Pencil className="h-4 w-4" />
+721-                            </Button>
+722-                          </div>
+723-                        </div>
+724-                        
+725-                        <div className="grid grid-cols-2 gap-4 mt-2">
+726-                          <div>
+727-                            <Label className="text-xs text-muted-foreground">URL API</Label>
+728-                            <p className="text-sm font-medium">{integration.apiUrl}</p>
+729-                          </div>
+730-                          <div>
+731-                            <Label className="text-xs text-muted-foreground">API Key</Label>
+732-                            <p className="text-sm font-medium">••••••••••••••••</p>
+733-                          </div>
+734-                        </div>
+735-                        
+736-                        <div className="mt-4">
+737-                          <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+738-                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+739-                            {JSON.stringify(integration.config, null, 2)}
+740-                          </div>
+741-                        </div>
+742-                      </div>
+743-                    ))
+744-                  )}
+745-                </CardContent>
+746-              </Card>
+747-            </TabsContent>
+748-            
+749-            <TabsContent value="moralis">
+750-              <Card>
+751-                <CardHeader>
+752-                  <CardTitle>Настройки Blockchain (Moralis)</CardTitle>
+753-                  <CardDescription>
+754-                    Настройка интеграции с Moralis API для работы с блокчейн
+755-                  </CardDescription>
+756-                </CardHeader>
+757-                <CardContent className="space-y-4">
+758-                  {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").length === 0 ? (
+759-                    <div className="text-center py-4">
+760-                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+761-                      <p>Интеграция с Moralis не настроена</p>
+762-                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+763-                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию с Moralis
+764-                      </Button>
+765-                    </div>
+766-                  ) : (

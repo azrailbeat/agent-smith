@@ -1,0 +1,81 @@
+749:            <TabsContent value="moralis">
+750-              <Card>
+751-                <CardHeader>
+752-                  <CardTitle>Настройки Blockchain (Moralis)</CardTitle>
+753-                  <CardDescription>
+754-                    Настройка интеграции с Moralis API для работы с блокчейн
+755-                  </CardDescription>
+756-                </CardHeader>
+757-                <CardContent className="space-y-4">
+758-                  {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").length === 0 ? (
+759-                    <div className="text-center py-4">
+760-                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+761-                      <p>Интеграция с Moralis не настроена</p>
+762-                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+763-                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию с Moralis
+764-                      </Button>
+765-                    </div>
+766-                  ) : (
+767-                    <>
+768-                      {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").map(integration => (
+769-                        <div key={integration.id} className="border rounded-lg p-4">
+770-                          <div className="flex justify-between items-center mb-4">
+771-                            <div className="flex items-center">
+772-                              <Database className="h-5 w-5 text-indigo-500 mr-2" />
+773-                              <h3 className="text-lg font-medium">{integration.name}</h3>
+774-                            </div>
+775-                            <div className="flex items-center space-x-2">
+776-                              <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+777-                                {integration.isActive ? "Активна" : "Отключена"}
+778-                              </span>
+779-                              <Button
+780-                                variant="ghost"
+781-                                size="sm"
+782-                                onClick={() => handleEditIntegration(integration)}
+783-                              >
+784-                                <Pencil className="h-4 w-4" />
+785-                              </Button>
+786-                            </div>
+787-                          </div>
+788-                          
+789-                          <div className="grid grid-cols-2 gap-4 mt-2">
+790-                            <div>
+791-                              <Label className="text-xs text-muted-foreground">URL Ноды</Label>
+792-                              <p className="text-sm font-medium">{integration.apiUrl}</p>
+793-                            </div>
+794-                            <div>
+795-                              <Label className="text-xs text-muted-foreground">API Key</Label>
+796-                              <p className="text-sm font-medium">••••••••••••••••</p>
+797-                            </div>
+798-                          </div>
+799-                          
+800-                          <div className="mt-4">
+801-                            <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+802-                            <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+803-                              {JSON.stringify(integration.config, null, 2)}
+804-                            </div>
+805-                          </div>
+806-                          
+807-                          <div className="mt-4 pt-4 border-t">
+808-                            <h4 className="font-medium mb-2">Настройки сохранения данных</h4>
+809-                            <div className="grid grid-cols-2 gap-4">
+810-                              <div>
+811-                                <h5 className="text-sm font-medium mb-2">Типы данных для блокчейн</h5>
+812-                                <div className="space-y-2">
+813-                                  <div className="flex items-center">
+814-                                    <Switch 
+815-                                      id="moralis-documents" 
+816-                                      checked={true}
+817-                                      disabled
+818-                                    />
+819-                                    <Label htmlFor="moralis-documents" className="ml-2">Документы</Label>
+820-                                  </div>
+821-                                  <div className="flex items-center">
+822-                                    <Switch 
+823-                                      id="moralis-sync" 
+824-                                      checked={true}
+825-                                      disabled
+826-                                    />
+827-                                    <Label htmlFor="moralis-sync" className="ml-2">События синхронизации</Label>
+828-                                  </div>
+829-                                  <div className="flex items-center">

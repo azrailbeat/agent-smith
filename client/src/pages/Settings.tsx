@@ -739,6 +739,20 @@ const Settings = () => {
                             {JSON.stringify(integration.config, null, 2)}
                           </div>
                         </div>
+                        
+                        <div className="mt-4 pt-4 border-t flex justify-end">
+                          <Button 
+                            onClick={() => handleTestConnection(integration)}
+                            size="sm"
+                            disabled={testConnectionMutation.isPending}
+                          >
+                            {testConnectionMutation.isPending ? (
+                              <>Проверка...</>
+                            ) : (
+                              <>Проверить соединение</>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -804,68 +818,84 @@ const Settings = () => {
                             </div>
                           </div>
                           
-                          <div className="mt-4 pt-4 border-t">
-                            <h4 className="font-medium mb-2">Настройки сохранения данных</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <h5 className="text-sm font-medium mb-2">Типы данных для блокчейн</h5>
-                                <div className="space-y-2">
-                                  <div className="flex items-center">
-                                    <Switch 
-                                      id="moralis-documents" 
-                                      checked={true}
-                                      disabled
-                                    />
-                                    <Label htmlFor="moralis-documents" className="ml-2">Документы</Label>
+                          <div className="mt-4 pt-4 border-t flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium mb-2">Настройки сохранения данных</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <h5 className="text-sm font-medium mb-2">Типы данных для блокчейн</h5>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-documents" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-documents" className="ml-2">Документы</Label>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-sync" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-sync" className="ml-2">События синхронизации</Label>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-access" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-access" className="ml-2">События доступа</Label>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center">
-                                    <Switch 
-                                      id="moralis-sync" 
-                                      checked={true}
-                                      disabled
-                                    />
-                                    <Label htmlFor="moralis-sync" className="ml-2">События синхронизации</Label>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Switch 
-                                      id="moralis-access" 
-                                      checked={true}
-                                      disabled
-                                    />
-                                    <Label htmlFor="moralis-access" className="ml-2">События доступа</Label>
+                                </div>
+                                
+                                <div>
+                                  <h5 className="text-sm font-medium mb-2">Данные для сохранения</h5>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-hash" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-hash" className="ml-2">Хеш документа</Label>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-metadata" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-metadata" className="ml-2">Метаданные</Label>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-timestamp" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-timestamp" className="ml-2">Временная метка</Label>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                              
-                              <div>
-                                <h5 className="text-sm font-medium mb-2">Данные для сохранения</h5>
-                                <div className="space-y-2">
-                                  <div className="flex items-center">
-                                    <Switch 
-                                      id="moralis-hash" 
-                                      checked={true}
-                                      disabled
-                                    />
-                                    <Label htmlFor="moralis-hash" className="ml-2">Хеш документа</Label>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Switch 
-                                      id="moralis-metadata" 
-                                      checked={true}
-                                      disabled
-                                    />
-                                    <Label htmlFor="moralis-metadata" className="ml-2">Метаданные</Label>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Switch 
-                                      id="moralis-timestamp" 
-                                      checked={true}
-                                      disabled
-                                    />
-                                    <Label htmlFor="moralis-timestamp" className="ml-2">Временная метка</Label>
-                                  </div>
-                                </div>
-                              </div>
+                            </div>
+                            
+                            <div>
+                              <Button 
+                                onClick={() => handleTestConnection(integration)}
+                                size="sm"
+                                disabled={testConnectionMutation.isPending}
+                              >
+                                {testConnectionMutation.isPending ? (
+                                  <>Проверка...</>
+                                ) : (
+                                  <>Проверить соединение</>
+                                )}
+                              </Button>
                             </div>
                           </div>
                         </div>

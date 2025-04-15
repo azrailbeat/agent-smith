@@ -1,0 +1,107 @@
+            <TabsContent value="moralis">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Настройки Blockchain (Moralis)</CardTitle>
+                  <CardDescription>
+                    Настройка интеграции с Moralis API для работы с блокчейн
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").length === 0 ? (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p>Интеграция с Moralis не настроена</p>
+                      <Button onClick={handleAddIntegration} variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Добавить интеграцию с Moralis
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {integrations.filter(i => i.type === "moralis" || i.type === "blockchain").map(integration => (
+                        <div key={integration.id} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center">
+                              <Database className="h-5 w-5 text-indigo-500 mr-2" />
+                              <h3 className="text-lg font-medium">{integration.name}</h3>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className={integration.isActive ? "text-green-500" : "text-gray-500"}>
+                                {integration.isActive ? "Активна" : "Отключена"}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditIntegration(integration)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">URL Ноды</Label>
+                              <p className="text-sm font-medium">{integration.apiUrl}</p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">API Key</Label>
+                              <p className="text-sm font-medium">••••••••••••••••</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <Label className="text-xs text-muted-foreground">Конфигурация</Label>
+                            <div className="mt-1 p-2 bg-gray-50 rounded text-xs font-mono whitespace-pre overflow-auto max-h-32">
+                              {JSON.stringify(integration.config, null, 2)}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium mb-2">Настройки сохранения данных</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <h5 className="text-sm font-medium mb-2">Типы данных для блокчейн</h5>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-documents" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-documents" className="ml-2">Документы</Label>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Switch 
+                                        id="moralis-sync" 
+                                        checked={true}
+                                        disabled
+                                      />
+                                      <Label htmlFor="moralis-sync" className="ml-2">События синхронизации</Label>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <Button 
+                                onClick={() => handleTestConnection(integration)}
+                                size="sm"
+                                disabled={testConnectionMutation.isPending}
+                              >
+                                {testConnectionMutation.isPending ? (
+                                  <>Проверка...</>
+                                ) : (
+                                  <>Проверить соединение</>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
