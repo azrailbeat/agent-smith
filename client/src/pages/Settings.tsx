@@ -503,6 +503,34 @@ const Settings = () => {
     }
   };
 
+  // Test connection for integrations
+  const testConnectionMutation = useMutation({
+    mutationFn: ({ id, type, apiKey, apiUrl }: { id: number, type: string, apiKey: string, apiUrl: string }) => 
+      apiRequest('POST', `/api/integrations/test`, { type, apiKey, apiUrl }),
+    onSuccess: () => {
+      toast({
+        title: "Соединение успешно",
+        description: "API соединение работает корректно",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка соединения",
+        description: error.message || "Не удалось установить соединение с API",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleTestConnection = (integration: Integration) => {
+    testConnectionMutation.mutate({ 
+      id: integration.id, 
+      type: integration.type,
+      apiKey: integration.apiKey,
+      apiUrl: integration.apiUrl
+    });
+  };
+
   // Helper for displaying integration type in a user-friendly way
   const getIntegrationType = (type: string) => {
     const types: Record<string, string> = {
