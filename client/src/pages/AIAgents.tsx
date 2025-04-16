@@ -318,14 +318,14 @@ const AIAgentsPage = () => {
   const demoAgents: Agent[] = [
     {
       id: 1,
-      name: "Консультант по правовым вопросам",
-      type: "legal_consultant",
+      name: "ЛегалАдвайзер",
+      type: "legal",
       ministryId: 1,
       typeId: 1,
       description: "Обработка обращений граждан по правовым вопросам",
       modelId: 1,
       isActive: true,
-      systemPrompt: "Вы - помощник для классификации обращений граждан. Ваша задача - определить тип обращения, уровень приоритета и предложить решение.",
+      systemPrompt: "Вы - помощник по правовым вопросам Министерства юстиции. Ваша задача - определить тип обращения, уровень приоритета и предложить решение в соответствии с законодательством РК.",
       config: { temperature: 0.3, max_tokens: 1000 },
       stats: { 
         processedRequests: 100000, 
@@ -336,13 +336,184 @@ const AIAgentsPage = () => {
       completedTasks: 119
     },
     {
-      id: 11,
-      name: "Agent Smith для е-Отиниш",
-      type: "citizen_requests",
-      description: "Центральный агент для обработки обращений граждан в системе е-Отиниш",
+      id: 2,
+      name: "НормотворчествоАИ",
+      type: "legal",
+      ministryId: 1,
+      typeId: 2,
+      description: "Анализ нормативно-правовых актов и выявление ошибок",
       modelId: 1,
       isActive: true,
-      systemPrompt: "Вы - центральный агент государственного портала е-Отиниш. Ваша задача - обрабатывать и классифицировать обращения граждан, направлять их в соответствующие ведомства и формировать автоматические ответы на типовые запросы.",
+      systemPrompt: "Вы - эксперт по юридическому анализу. Ваша задача - анализировать нормативно-правовые акты, выявлять противоречия и предлагать улучшения.",
+      config: { temperature: 0.2, max_tokens: 2000 },
+      stats: { 
+        processedDocuments: 6000, 
+        errorsFound: 347,
+        timeReduction: "87%"
+      },
+      totalTasks: 52,
+      completedTasks: 48
+    },
+    {
+      id: 3,
+      name: "ЕНТ-Консультант",
+      type: "education",
+      ministryId: 2,
+      typeId: 3,
+      description: "Консультация абитуриентов по вопросам ЕНТ и правилам поступления",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - консультант по вопросам ЕНТ и поступления в вузы Казахстана. Ваша задача - предоставлять точную информацию о правилах, требованиях и процедурах.",
+      config: { temperature: 0.1, max_tokens: 1500 },
+      stats: { 
+        consultationsProvided: 49876, 
+        satisfactionRate: 94,
+        responseTime: "2.1 мин"
+      },
+      totalTasks: 208,
+      completedTasks: 195
+    },
+    {
+      id: 4,
+      name: "Қазақ тілі көмекшісі",
+      type: "education",
+      ministryId: 2,
+      typeId: 4,
+      description: "Проверка и коррекция текстов на казахском языке",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - эксперт по казахскому языку. Ваша задача - проверять грамматику, орфографию и стилистику текстов на казахском языке, предлагать исправления.",
+      config: { temperature: 0.3, max_tokens: 1000 },
+      stats: { 
+        textsAnalyzed: 25000, 
+        averageErrors: 12.7,
+        satisfactionRate: 91
+      },
+      totalTasks: 77,
+      completedTasks: 74
+    },
+    {
+      id: 5,
+      name: "МедЭксперт",
+      type: "medical",
+      ministryId: 11,
+      typeId: 5,
+      description: "Обработка медицинской документации и классификация диагнозов",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - медицинский эксперт. Ваша задача - анализировать медицинские документы, классифицировать диагнозы и предлагать оптимальные варианты лечения.",
+      config: { temperature: 0.1, max_tokens: 1500 },
+      stats: { 
+        documentsProcessed: 32467, 
+        accuracyRate: 96.8,
+        processingTime: "3.2 мин"
+      },
+      totalTasks: 142,
+      completedTasks: 139
+    },
+    {
+      id: 6,
+      name: "ТрудЭксперт",
+      type: "labor",
+      ministryId: 3,
+      typeId: 6,
+      description: "Консультации по трудовому законодательству и анализ рынка труда",
+      modelId: 3,
+      isActive: true,
+      systemPrompt: "Вы - эксперт по трудовому законодательству и аналитик рынка труда. Ваша задача - консультировать по вопросам трудовых отношений и анализировать тенденции рынка труда.",
+      config: { temperature: 0.2, max_tokens: 2000 },
+      stats: { 
+        consultationsProvided: 28754, 
+        satisfactionRate: 89.5,
+        reportsGenerated: 187
+      },
+      totalTasks: 124,
+      completedTasks: 118
+    },
+    {
+      id: 7,
+      name: "ТранспортАналитик",
+      type: "transport",
+      ministryId: 4,
+      typeId: 7,
+      description: "Аналитика транспортных потоков и оптимизация маршрутов",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - эксперт по транспортной аналитике. Ваша задача - анализировать транспортные потоки, предлагать оптимальные маршруты и рекомендации по развитию транспортной инфраструктуры.",
+      config: { temperature: 0.2, max_tokens: 1500 },
+      stats: { 
+        routesOptimized: 1254, 
+        fuelSavings: "18.7%",
+        congestionReduction: "23.5%"
+      },
+      totalTasks: 76,
+      completedTasks: 72
+    },
+    {
+      id: 8,
+      name: "СубсидияЗаполнитель",
+      type: "agriculture",
+      ministryId: 9,
+      typeId: 8,
+      description: "Помощник по заполнению заявок на сельскохозяйственные субсидии",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - специалист по сельскохозяйственным субсидиям. Ваша задача - помогать заполнять заявки на получение субсидий, проверять правильность оформления документов и консультировать по программам поддержки.",
+      config: { temperature: 0.2, max_tokens: 1500 },
+      stats: { 
+        applicationsProcessed: 8754, 
+        errorReduction: "76%",
+        processingTime: "15 мин"
+      },
+      totalTasks: 94,
+      completedTasks: 89
+    },
+    {
+      id: 9,
+      name: "КамераАИ",
+      type: "mvd",
+      ministryId: 5,
+      typeId: 9,
+      description: "Распознавание лиц и обнаружение нарушений правопорядка",
+      modelId: 2,
+      isActive: true,
+      systemPrompt: "Вы - система компьютерного зрения для обеспечения правопорядка. Ваша задача - анализировать видеопоток с камер наблюдения, распознавать лица и обнаруживать подозрительное поведение.",
+      config: { temperature: 0.1, max_tokens: 1000 },
+      stats: { 
+        camerasConnected: 4578, 
+        eventsDetected: 62451,
+        responseTime: "1.2 сек"
+      },
+      totalTasks: 104,
+      completedTasks: 102
+    },
+    {
+      id: 10,
+      name: "ПДДМонитор",
+      type: "mvd",
+      ministryId: 5,
+      typeId: 10,
+      description: "Выявление нарушений ПДД по фото и видео",
+      modelId: 2,
+      isActive: true,
+      systemPrompt: "Вы - эксперт по правилам дорожного движения. Ваша задача - анализировать фото и видео для выявления нарушений ПДД и определения штрафных санкций.",
+      config: { temperature: 0.2, max_tokens: 1500 },
+      stats: { 
+        violationsDetected: 214792, 
+        processingTime: "4.7 сек",
+        accuracyRate: 98.2
+      },
+      totalTasks: 352,
+      completedTasks: 349
+    },
+    {
+      id: 11,
+      name: "ОбращенияТрекер",
+      type: "citizen_requests",
+      description: "Центральный агент для обработки обращений граждан",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - центральный агент для обработки обращений граждан. Ваша задача - классифицировать обращения, направлять их в соответствующие ведомства и формировать автоматические ответы на типовые запросы.",
       config: { temperature: 0.2, max_tokens: 2500 },
       stats: { 
         requestsProcessed: 145692, 
@@ -354,7 +525,7 @@ const AIAgentsPage = () => {
     },
     {
       id: 12,
-      name: "Блокчейн-агент Hyperledger Besu",
+      name: "БлокчейнРекордер",
       type: "blockchain",
       description: "Агент для записи и верификации транзакций в блокчейне",
       modelId: 4,
@@ -373,175 +544,74 @@ const AIAgentsPage = () => {
       completedTasks: 187
     },
     {
-      id: 2,
-      name: "ИИ в законотворчестве",
-      type: "legislation_assistant",
-      ministryId: 1,
-      typeId: 2,
-      description: "Анализ нормативно-правовых актов и выявление ошибок",
-      modelId: 1,
-      isActive: true,
-      systemPrompt: "Вы - эксперт по юридическому анализу. Ваша задача - анализировать нормативно-правовые акты, выявлять противоречия и предлагать улучшения.",
-      config: { temperature: 0.2, max_tokens: 2000 },
-      stats: { 
-        processedDocuments: 6000, 
-        errorsFound: 347,
-        timeReduction: "87%"
-      },
-      totalTasks: 52,
-      completedTasks: 48
-    },
-    {
-      id: 3,
-      name: "Консультант по ЕНТ",
-      type: "education_consultant",
-      ministryId: 2,
-      typeId: 3,
-      description: "Консультация абитуриентов по вопросам ЕНТ и правилам поступления",
-      modelId: 1,
-      isActive: true,
-      systemPrompt: "Вы - консультант по вопросам ЕНТ и поступления в вузы Казахстана. Ваша задача - предоставлять точную информацию о правилах, требованиях и процедурах.",
-      config: { temperature: 0.1, max_tokens: 1500 },
-      stats: { 
-        consultationsProvided: 49876, 
-        satisfactionRate: 94,
-        responseTime: "2.1 мин"
-      },
-      totalTasks: 208,
-      completedTasks: 195
-    },
-    {
-      id: 4,
-      name: "Ассистент по казахской грамматике",
-      type: "language_assistant",
-      ministryId: 2,
-      typeId: 4,
-      description: "Проверка и коррекция текстов на казахском языке",
-      modelId: 1,
-      isActive: true,
-      systemPrompt: "Вы - эксперт по казахскому языку. Ваша задача - проверять грамматику, орфографию и стилистику текстов на казахском языке, предлагать исправления.",
-      config: { temperature: 0.3, max_tokens: 1000 },
-      stats: { 
-        textsAnalyzed: 25000, 
-        averageErrors: 12.7,
-        satisfactionRate: 91
-      },
-      totalTasks: 77,
-      completedTasks: 74
-    },
-    {
-      id: 5,
-      name: "Определение инвалидности",
-      type: "disability_verification",
-      ministryId: 3,
-      typeId: 5,
-      description: "Автоматическое определение инвалидности по документам",
-      modelId: 1,
-      isActive: true,
-      systemPrompt: "Вы - специалист по медицинской экспертизе. Ваша задача - анализировать медицинские документы и определять группу инвалидности в соответствии с законодательством.",
-      config: { temperature: 0.1, max_tokens: 1000 },
-      stats: { 
-        documentsProcessed: 79542, 
-        processingTime: "10 мин",
-        accuracyRate: 97.5
-      },
-      totalTasks: 304,
-      completedTasks: 304
-    },
-    {
-      id: 6,
-      name: "Управление трудовыми ресурсами",
-      type: "hr_management",
-      ministryId: 3,
-      typeId: 6,
-      description: "Прогноз кадровых потребностей и анализ рынка труда",
+      id: 13,
+      name: "ЭнергоЭффективность",
+      type: "energy",
+      ministryId: 6,
+      description: "Анализ энергоэффективности зданий и инфраструктуры",
       modelId: 3,
       isActive: true,
-      systemPrompt: "Вы - аналитик рынка труда. Ваша задача - анализировать данные о занятости, вакансиях, образовании и предсказывать будущие потребности в кадрах.",
+      systemPrompt: "Вы - эксперт по энергоэффективности. Ваша задача - анализировать данные о энергопотреблении, предлагать меры по повышению энергоэффективности и рассчитывать экономический эффект от внедрения этих мер.",
       config: { temperature: 0.2, max_tokens: 2000 },
       stats: { 
-        reportsGenerated: 124, 
-        predictionAccuracy: 86,
-        regionsAnalyzed: 17
+        buildingsAnalyzed: 3456, 
+        energySavings: "24.7%",
+        recommendationsImplemented: 1872
       },
-      totalTasks: 45,
-      completedTasks: 42
+      totalTasks: 98,
+      completedTasks: 92
     },
     {
-      id: 7,
-      name: "Транспортный консультант",
-      type: "transport_consultant",
-      ministryId: 4,
-      typeId: 7,
-      description: "Консультации по вопросам транспорта и грузоперевозок",
+      id: 14,
+      name: "ТорговыйАналист",
+      type: "trade",
+      ministryId: 8,
+      description: "Анализ товарооборота и торговых отношений",
+      modelId: 3,
+      isActive: true,
+      systemPrompt: "Вы - эксперт по торговой аналитике. Ваша задача - анализировать данные о товарообороте, выявлять тенденции торговых отношений и предлагать меры по их оптимизации.",
+      config: { temperature: 0.2, max_tokens: 2000 },
+      stats: { 
+        reportsGenerated: 245, 
+        dataProcessed: "17.8 ТБ",
+        insightsIdentified: 879
+      },
+      totalTasks: 62,
+      completedTasks: 59
+    },
+    {
+      id: 15,
+      name: "МультиязычныйПереводчик",
+      type: "translator",
+      description: "Перевод документов между казахским, русским и английским языками",
       modelId: 1,
       isActive: true,
-      systemPrompt: "Вы - эксперт по транспортной логистике. Ваша задача - консультировать по вопросам перевозок, оптимальных маршрутов и требований к документации.",
-      config: { temperature: 0.2, max_tokens: 1500 },
+      systemPrompt: "Вы - профессиональный переводчик между казахским, русским и английским языками. Ваша задача - обеспечивать точный и контекстуально правильный перевод документов с сохранением терминологии и стиля.",
+      config: { temperature: 0.2, max_tokens: 2000 },
       stats: { 
-        queriesHandled: 15420, 
-        averageResponseTime: "3.4 мин",
-        costReduction: "24%"
+        pagesTranslated: 45780, 
+        languagePairs: 3,
+        accuracyRate: 97.2
       },
-      totalTasks: 56,
-      completedTasks: 51
+      totalTasks: 214,
+      completedTasks: 208
     },
     {
-      id: 8,
-      name: "ЖД-анализ (Pangu)",
-      type: "railway_analysis",
-      ministryId: 4,
-      typeId: 8,
-      description: "Анализ состояния железнодорожной инфраструктуры",
-      modelId: 2,
+      id: 16,
+      name: "МетоПрот",
+      type: "meeting_protocols",
+      description: "Агент для расшифровки и составления протоколов совещаний",
+      modelId: 1,
       isActive: true,
-      systemPrompt: "Вы - специалист по железнодорожной инфраструктуре. Ваша задача - анализировать данные о состоянии путей, предсказывать возможные проблемы и планировать ремонты.",
-      config: { temperature: 0.1, max_tokens: 2000 },
+      systemPrompt: "Вы - специалист по составлению протоколов совещаний. Ваша задача - расшифровывать аудиозаписи совещаний, структурировать информацию, выделять ключевые решения и задачи, формировать протоколы.",
+      config: { temperature: 0.1, max_tokens: 3000 },
       stats: { 
-        trackAnalyzed: 16000, 
-        issuesPredicted: 427,
-        maintenanceSavings: "34.7%"
+        meetingsProcessed: 2345, 
+        averageProcessingTime: "12.4 мин",
+        accuracyRate: 98.7
       },
-      totalTasks: 78,
-      completedTasks: 76
-    },
-    {
-      id: 9,
-      name: "Видеомониторинг",
-      type: "video_monitoring",
-      ministryId: 5,
-      typeId: 9,
-      description: "Распознавание лиц и обнаружение нарушений",
-      modelId: 2,
-      isActive: true,
-      systemPrompt: "Вы - система компьютерного зрения. Ваша задача - анализировать видеопоток с камер наблюдения, распознавать лица и обнаруживать подозрительное поведение.",
-      config: { temperature: 0.1, max_tokens: 1000 },
-      stats: { 
-        camerasConnected: 4578, 
-        eventsDetected: 62451,
-        responseTime: "1.2 сек"
-      },
-      totalTasks: 104,
-      completedTasks: 102
-    },
-    {
-      id: 10,
-      name: "Приложение 'Қорғау'",
-      type: "traffic_rules",
-      ministryId: 5,
-      typeId: 10,
-      description: "Выявление нарушений ПДД по фото и видео",
-      modelId: 2,
-      isActive: true,
-      systemPrompt: "Вы - эксперт по правилам дорожного движения. Ваша задача - анализировать фото и видео для выявления нарушений ПДД и определения штрафных санкций.",
-      config: { temperature: 0.2, max_tokens: 1500 },
-      stats: { 
-        violationsDetected: 214792, 
-        processingTime: "4.7 сек",
-        accuracyRate: 98.2
-      },
-      totalTasks: 352,
-      completedTasks: 349
+      totalTasks: 156,
+      completedTasks: 154
     }
   ];
   
