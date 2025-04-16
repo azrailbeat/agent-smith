@@ -24,7 +24,17 @@ import {
   Bot,
   Settings,
   Zap,
-  Send
+  Send,
+  Briefcase,
+  Camera,
+  GraduationCap,
+  Flame,
+  Truck,
+  BookOpen,
+  ScrollText,
+  Stethoscope,
+  Globe,
+  Building
 } from "lucide-react";
 import { 
   Dialog, 
@@ -1708,8 +1718,18 @@ const CitizenRequests = () => {
                                   >
                                     {agent.type === 'citizen_requests' && <User className="h-4 w-4 mr-2" />}
                                     {agent.type === 'meeting_protocols' && <FileCheck className="h-4 w-4 mr-2" />}
-                                    {agent.type === 'translator' && <BarChart2 className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'translator' && <Globe className="h-4 w-4 mr-2" />}
                                     {agent.type === 'blockchain' && <Database className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'legal' && <ScrollText className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'medical' && <Stethoscope className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'labor' && <Briefcase className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'mvd' && <Camera className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'education' && <GraduationCap className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'energy' && <Flame className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'trade' && <BarChart2 className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'document' && <FileText className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'transport' && <Truck className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'agriculture' && <BookOpen className="h-4 w-4 mr-2" />}
                                     <span>{agent.type === 'citizen_requests' ? 'Анализ обращений' : 
                                       agent.type === 'meeting_protocols' ? 'Протоколы' : 
                                       agent.type === 'translator' ? 'Переводчик' : 
