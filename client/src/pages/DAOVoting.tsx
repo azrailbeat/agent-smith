@@ -139,8 +139,8 @@ const DAOVoting = () => {
     queryKey: ['/api/dao/proposals'],
     queryFn: async () => {
       try {
-        const response = await apiRequest('/api/dao/proposals');
-        return response as Proposal[];
+        const response = await apiRequest('GET', '/api/dao/proposals');
+        return await response.json();
       } catch (error) {
         console.error('Failed to fetch proposals, using demo data', error);
         
@@ -353,10 +353,7 @@ const DAOVoting = () => {
   const createProposalMutation = useMutation({
     mutationFn: async (newProposal: ProposalFormValues) => {
       try {
-        const response = await apiRequest('/api/dao/proposals', {
-          method: 'POST',
-          data: newProposal
-        } as any);
+        const response = await apiRequest('POST', '/api/dao/proposals', newProposal);
         return response;
       } catch (error) {
         console.error('Failed to create proposal', error);
@@ -382,10 +379,7 @@ const DAOVoting = () => {
       rationale?: string;
     }) => {
       try {
-        const response = await apiRequest(`/api/dao/proposals/${proposalId}/vote`, {
-          method: 'POST',
-          data: { vote: voteValue, rationale }
-        } as any);
+        const response = await apiRequest('POST', `/api/dao/proposals/${proposalId}/vote`, { vote: voteValue, rationale });
         return response;
       } catch (error) {
         console.error('Failed to send vote', error);
