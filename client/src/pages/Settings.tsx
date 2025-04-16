@@ -503,16 +503,29 @@ const Settings = () => {
     }
   };
 
+  // State for test connection results
+  const [testResults, setTestResults] = useState<{
+    success?: boolean;
+    message?: string;
+    transactionHash?: string;
+  } | null>(null);
+
   // Test connection for integrations
   const testConnectionMutation = useMutation({
     mutationFn: async (integration: Integration) => {
-      return await apiRequest("/api/integrations/test", {
-        method: "POST",
-        data: {
-          type: integration.type,
-          apiKey: integration.apiKey
-        }
+      toast({
+        title: "Проверка соединения...",
+        description: `Тестирование соединения с ${getIntegrationType(integration.type)}`
       });
+      
+      // Используем GET запрос с query params вместо POST с телом
+      const response = await fetch(`/api/integrations/test?type=${integration.type}&apiKey=${integration.apiKey || ''}`);
+      const data = await response.json();
+      
+      // Сохраняем результаты теста
+      setTestResults(data);
+      
+      return data;
     },
     onSuccess: (data: any) => {
       toast({
@@ -522,6 +535,8 @@ const Settings = () => {
       });
     },
     onError: (error: any) => {
+      setTestResults({ success: false, message: error.message || "Неизвестная ошибка" });
+      
       toast({
         title: "Ошибка",
         description: error.message || "Не удалось протестировать соединение",
@@ -531,6 +546,7 @@ const Settings = () => {
   });
 
   const handleTestConnection = (integration: Integration) => {
+    setTestResults(null); // Сбрасываем предыдущие результаты теста
     testConnectionMutation.mutate(integration);
   };
 
@@ -849,6 +865,58 @@ const Settings = () => {
                                       />
                                       <Label htmlFor="moralis-access" className="ml-2">События доступа</Label>
                                     </div>
+                                    
+                                    <div className="mt-4">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={async () => {
+                                          try {
+                                            toast({
+                                              title: "Создание тестовой записи...",
+                                              description: "Отправка тестовых данных в блокчейн"
+                                            });
+                                            
+                                            const response = await apiRequest('POST', '/api/blockchain/test-record', {
+                                              testData: {
+                                                type: 'system_event',
+                                                title: 'Тестовая запись для проверки',
+                                                content: `Тестовые данные, созданные ${new Date().toLocaleString('ru')}`,
+                                                metadata: {
+                                                  isTest: true,
+                                                  source: 'Страница настроек',
+                                                  user: 'Администратор'
+                                                }
+                                              }
+                                            });
+                                            
+                                            const result = await response.json();
+                                            
+                                            if (result.success) {
+                                              toast({
+                                                title: "Успех!",
+                                                description: `Тестовая запись создана с хэшем: ${result.blockchain.transactionHash.substring(0, 10)}...`,
+                                              });
+                                              
+                                              // Обновляем список записей
+                                              queryClient.invalidateQueries({ queryKey: ['/api/blockchain/records'] });
+                                            } else {
+                                              throw new Error(result.message || 'Неизвестная ошибка');
+                                            }
+                                          } catch (error) {
+                                            console.error('Ошибка при создании тестовой записи:', error);
+                                            toast({
+                                              title: "Ошибка",
+                                              description: error.message || 'Не удалось создать тестовую запись',
+                                              variant: "destructive"
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Записать тестовые данные
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                                 
@@ -885,17 +953,40 @@ const Settings = () => {
                             </div>
                             
                             <div>
-                              <Button 
-                                onClick={() => handleTestConnection(integration)}
-                                size="sm"
-                                disabled={testConnectionMutation.isPending}
-                              >
-                                {testConnectionMutation.isPending ? (
-                                  <>Проверка...</>
-                                ) : (
-                                  <>Проверить соединение</>
+                              <div className="flex flex-col items-end">
+                                <Button 
+                                  onClick={() => handleTestConnection(integration)}
+                                  size="sm"
+                                  disabled={testConnectionMutation.isPending}
+                                >
+                                  {testConnectionMutation.isPending ? (
+                                    <>Проверка...</>
+                                  ) : (
+                                    <>Проверить соединение</>
+                                  )}
+                                </Button>
+                                
+                                {/* Результаты теста подключения */}
+                                {testResults && (
+                                  <div className={`mt-4 p-3 rounded-md text-sm w-full ${
+                                    testResults.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                  }`}>
+                                    <div className="flex items-center">
+                                      {testResults.success ? (
+                                        <Check className="h-4 w-4 mr-2" />
+                                      ) : (
+                                        <AlertCircle className="h-4 w-4 mr-2" />
+                                      )}
+                                      <span className="font-medium">{testResults.message}</span>
+                                    </div>
+                                    {testResults.transactionHash && (
+                                      <div className="mt-2 text-xs">
+                                        <span className="font-semibold">Transaction Hash:</span> {testResults.transactionHash}
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
-                              </Button>
+                              </div>
                             </div>
                           </div>
                         </div>

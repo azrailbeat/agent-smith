@@ -1122,6 +1122,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Тестовые эндпоинты для интеграций
+  app.get('/api/integrations/test', async (req, res) => {
+    const type = req.query.type as string;
+    const apiKey = req.query.apiKey as string;
+    
+    if (!type) {
+      return res.status(400).json({ error: 'Integration type is required' });
+    }
+    
+    try {
+      if (type === 'moralis' || type === 'blockchain') {
+        // Тестируем Moralis API
+        const isConnected = await testMoralisConnection(apiKey);
+        
+        return res.json({
+          success: isConnected,
+          message: isConnected 
+            ? 'Successfully connected to Moralis API' 
+            : 'Failed to connect to Moralis API'
+        });
+      } else if (type === 'openai') {
+        // Тестируем OpenAI API
+        const isConnected = await testOpenAIConnection(apiKey);
+        
+        return res.json({
+          success: isConnected,
+          message: isConnected 
+            ? 'Successfully connected to OpenAI API' 
+            : 'Failed to connect to OpenAI API'
+        });
+      } else {
+        return res.status(400).json({ 
+          error: 'Unsupported integration type',
+          message: `Integration type '${type}' is not supported for testing`
+        });
+      }
+    } catch (error) {
+      console.error(`Error testing ${type} integration:`, error);
+      return res.status(500).json({ 
+        error: 'Integration test failed',
+        message: error.message 
+      });
+    }
+  });
+  
+  // Тестовая запись в блокчейн через Moralis API
+  app.post('/api/blockchain/test-record', async (req, res) => {
+    try {
+      // Получаем API ключ из запроса или из окружения
+      const { apiKey, testData } = req.body;
+      
+      // Генерируем тестовые данные, если не предоставлены
+      const data = testData || {
+        type: BlockchainRecordType.SYSTEM_EVENT,
+        title: 'Test Blockchain Record',
+        content: `Test record created at ${new Date().toISOString()}`,
+        metadata: {
+          isTest: true,
+          timestamp: Date.now(),
+          source: 'API Test'
+        }
+      };
+      
+      console.log('Attempting to create test blockchain record:', data);
+      
+      // Записываем данные в блокчейн
+      const blockchainResult = await recordToBlockchain(data);
+      
+      // Создаем запись в локальном хранилище
+      const blockchainRecord = await storage.createBlockchainRecord({
+        recordType: data.type,
+        title: data.title,
+        entityType: 'test',
+        transactionHash: blockchainResult.transactionHash,
+        status: blockchainResult.status,
+        metadata: {
+          content: data.content,
+          ...data.metadata
+        }
+      });
+      
+      // Логируем активность
+      await logActivity({
+        action: 'blockchain_test_record',
+        entityType: 'test',
+        entityId: blockchainRecord.id,
+        userId: req.session?.userId || 1,
+        details: 'Created test blockchain record',
+        metadata: {
+          transactionHash: blockchainResult.transactionHash,
+          status: blockchainResult.status
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: 'Test record successfully created in blockchain',
+        record: blockchainRecord,
+        blockchain: blockchainResult
+      });
+    } catch (error) {
+      console.error('Error creating test blockchain record:', error);
+      res.status(500).json({ 
+        error: 'Failed to create test record',
+        message: error.message 
+      });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 
