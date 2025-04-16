@@ -97,6 +97,7 @@ const CATEGORIES: RequestCategory[] = [
 const CitizenRequests = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [isAIProcessingEnabled, setIsAIProcessingEnabled] = useState(true);
   const [currentRequest, setCurrentRequest] = useState<Partial<CitizenRequest>>({
     subject: "",
     description: "",
@@ -700,6 +701,22 @@ const CitizenRequests = () => {
                 <p className="text-sm text-neutral-500">Перетаскивайте обращения для изменения их статуса</p>
               </div>
               <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 mr-4">
+                  <span className="text-sm">Автоматическая обработка</span>
+                  <Switch 
+                    checked={isAIProcessingEnabled}
+                    onCheckedChange={setIsAIProcessingEnabled}
+                  />
+                </div>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="flex items-center"
+                  disabled={!selectedRequest}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  <span>Отправить ответ</span>
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
