@@ -594,6 +594,8 @@ const AIAgentsPage = () => {
       name: "",
       type: "citizen_requests",
       description: "",
+      ministryId: demoMinistries[0]?.id,  // Добавляем defaultное министерство
+      typeId: demoAgentTypes[0]?.id,      // Добавляем defaultный тип агента
       modelId: integrations[0]?.id || 0,
       isActive: true,
       systemPrompt: "",
@@ -1234,6 +1236,44 @@ const AIAgentsPage = () => {
                     <SelectItem value="documents">Документы</SelectItem>
                     <SelectItem value="task_management">Управление задачами</SelectItem>
                     <SelectItem value="blockchain">Блокчейн</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="agent-ministry">Министерство</Label>
+                <Select 
+                  value={editingAgent.ministryId?.toString() || ""}
+                  onValueChange={(value) => setEditingAgent({...editingAgent, ministryId: parseInt(value)})}
+                >
+                  <SelectTrigger id="agent-ministry">
+                    <SelectValue placeholder="Выберите министерство" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {demoMinistries.map(ministry => (
+                      <SelectItem key={ministry.id} value={ministry.id.toString()}>
+                        {ministry.icon ? `${ministry.icon} ` : ""}{ministry.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="agent-type-id">Тип агента (классификация)</Label>
+                <Select 
+                  value={editingAgent.typeId?.toString() || ""}
+                  onValueChange={(value) => setEditingAgent({...editingAgent, typeId: parseInt(value)})}
+                >
+                  <SelectTrigger id="agent-type-id">
+                    <SelectValue placeholder="Выберите классификацию агента" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {demoAgentTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
