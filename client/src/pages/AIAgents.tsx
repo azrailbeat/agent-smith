@@ -483,17 +483,17 @@ const AIAgentsPage = () => {
   // Запросы к API
   const { data: agents = demoAgents, isLoading: isAgentsLoading } = useQuery<Agent[]>({
     queryKey: ['/api/agents'],
-    enabled: false, // Отключаем, пока не реализовано API
+    enabled: true, // Используем API
   });
   
   const { data: integrations = demoIntegrations, isLoading: isIntegrationsLoading } = useQuery<Integration[]>({
     queryKey: ['/api/integrations'],
-    enabled: false,
+    enabled: true,
   });
   
   const { data: tasks = demoTasks, isLoading: isTasksLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
-    enabled: false,
+    enabled: true,
   });
   
   // Мутации для сохранения данных
