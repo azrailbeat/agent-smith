@@ -25,6 +25,8 @@ import {
   getEntityActivities, 
   getUserActivities 
 } from "./activity-logger";
+import { registerSystemRoutes } from "./system-api";
+import { initializeSettings } from "./services/system-settings";
 import { z } from "zod";
 import { 
   insertTaskSchema, 
