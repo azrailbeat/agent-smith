@@ -1,7 +1,17 @@
 import OpenAI from "openai";
 
+// Вывод информации для отладки
+console.log("OPENAI API KEY доступен:", !!process.env.OPENAI_API_KEY);
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-demo-key" });
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY || "sk-demo-key"
+});
+
+// Проверяем наличие API ключа при запуске сервиса
+if (!process.env.OPENAI_API_KEY) {
+  console.warn("ПРЕДУПРЕЖДЕНИЕ: Переменная окружения OPENAI_API_KEY не установлена. Модули AI могут работать некорректно.");
+}
 
 /**
  * Test OpenAI API connection with provided API key
