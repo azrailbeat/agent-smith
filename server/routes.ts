@@ -1069,15 +1069,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      // Загрузка всех API-модулей
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Получаем обращение гражданина
       const request = await storage.getCitizenRequest(id);
       if (!request) {
         return res.status(404).json({ error: 'Request not found' });
       }
       
-      const processedRequest = await storage.processCitizenRequestWithAI(id);
-      res.json(processedRequest);
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Формируем содержимое для обработки
+      const content = `Тема: ${request.subject || request.title || ''}
+      
+      Описание:
+      ${request.description || request.content || ''}
+      
+      Контактная информация:
+      ФИО: ${request.fullName}
+      Контакты: ${request.contactInfo}`;
+      
+      // Обрабатываем запрос с помощью AI-агента - сначала классификация
+      const classificationResult = await agentService.processRequest({
+        taskType: AgentTaskType.CLASSIFICATION,
+        entityType: AgentEntityType.CITIZEN_REQUEST,
+        entityId: request.id,
+        content,
+        userId: req.session?.userId || request.assignedTo || 1
+      });
+      
+      // Затем генерация ответа с учетом результата классификации
+      const responseResult = await agentService.processRequest({
+        taskType: AgentTaskType.RESPONSE_GENERATION,
+        entityType: AgentEntityType.CITIZEN_REQUEST,
+        entityId: request.id,
+        content,
+        metadata: {
+          classification: classificationResult.classification
+        },
+        userId: req.session?.userId || request.assignedTo || 1
+      });
+      
+      // Обновляем обращение в хранилище с результатами обработки
+      const updatedRequest = await storage.updateCitizenRequest(id, {
+        aiProcessed: true,
+        aiClassification: classificationResult.classification,
+        aiSuggestion: responseResult.output,
+        summary: classificationResult.output
+      });
+      
+      // Create activity record
+      await storage.createActivity({
+        userId: req.session?.userId || 1,
+        actionType: 'ai_process',
+        description: `Запрос гражданина обработан AI-агентом`,
+        relatedId: request.id,
+        relatedType: 'citizen_request',
+        metadata: {
+          classification: classificationResult.classification,
+          transactionHash: responseResult.transactionHash
+        }
+      });
+      
+      res.json(updatedRequest);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error("Error processing citizen request with AI:", error);
+      res.status(500).json({ error: error.message || "Ошибка обработки запроса" });
     }
   });
 
@@ -1167,6 +1228,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Обработка протоколов встреч через AI-агентов
+  app.post('/api/protocols/:id/process', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid protocol ID' });
+    }
+    
+    try {
+      // Загружаем сервис AI-агентов
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Получаем протокол из базы
+      const protocol = await storage.getProtocol(id);
+      if (!protocol) {
+        return res.status(404).json({ error: 'Protocol not found' });
+      }
+      
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Формируем содержимое для обработки
+      const content = `Протокол совещания: ${protocol.title}
+      
+      Дата: ${new Date(protocol.date).toLocaleDateString('ru-RU')}
+      Участники: ${protocol.participants}
+      
+      Содержание:
+      ${protocol.content}`;
+      
+      // Анализируем протокол совещания
+      const analysisResult = await agentService.processRequest({
+        taskType: AgentTaskType.DOCUMENT_ANALYSIS,
+        entityType: AgentEntityType.PROTOCOL,
+        entityId: protocol.id,
+        content,
+        userId: req.session?.userId || protocol.createdBy || 1
+      });
+      
+      // Создаем краткое содержание
+      const summaryResult = await agentService.processRequest({
+        taskType: AgentTaskType.SUMMARIZATION,
+        entityType: AgentEntityType.PROTOCOL,
+        entityId: protocol.id,
+        content,
+        userId: req.session?.userId || protocol.createdBy || 1
+      });
+      
+      // Обновляем протокол в базе данных
+      const updatedProtocol = await storage.updateProtocol(id, {
+        aiProcessed: true,
+        summary: summaryResult.summary,
+        analysis: JSON.stringify(analysisResult.analysis || {}),
+        tasks: [], // Здесь можно добавить извлеченные задачи
+        decisions: [] // И решения
+      });
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        userId: req.session?.userId || protocol.createdBy || 1,
+        actionType: 'ai_process',
+        description: `Протокол "${protocol.title}" обработан AI-агентом`,
+        relatedId: protocol.id,
+        relatedType: 'protocol',
+        metadata: {
+          transactionHash: analysisResult.transactionHash || summaryResult.transactionHash
+        }
+      });
+      
+      res.json({
+        success: true,
+        protocol: updatedProtocol,
+        summary: summaryResult.summary,
+        analysis: analysisResult.analysis,
+        transactionHash: analysisResult.transactionHash || summaryResult.transactionHash
+      });
+    } catch (error) {
+      console.error("Error processing protocol with AI:", error);
+      res.status(500).json({ 
+        error: 'Protocol processing failed',
+        message: error.message || "Ошибка при обработке протокола"
+      });
+    }
+  });
+  
   // Тестовая запись в блокчейн через Moralis API
   app.post('/api/blockchain/test-record', async (req, res) => {
     try {
@@ -1231,6 +1378,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Обработка документов через AI-агенты
+  app.post('/api/documents/:id/process', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid document ID' });
+    }
+    
+    try {
+      // Загружаем сервис AI-агентов
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Получаем документ из базы
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+      
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Формируем содержимое для обработки - в реальной системе здесь будет
+      // извлечение текста из файла, загрузка содержимого и т.д.
+      const content = `Документ: ${document.title}
+      
+      Тип файла: ${document.fileType}
+      Описание: ${document.description || 'Нет описания'}
+      
+      Содержание:
+      ${document.content || 'Содержимое документа не доступно в текстовом виде'}`;
+      
+      // Анализируем документ
+      const analysisResult = await agentService.processRequest({
+        taskType: AgentTaskType.DOCUMENT_ANALYSIS,
+        entityType: AgentEntityType.DOCUMENT,
+        entityId: document.id,
+        content,
+        userId: req.session?.userId || document.uploadedBy || 1
+      });
+      
+      // Обновляем документ в базе данных
+      const updatedDocument = await storage.updateDocument(id, {
+        processed: true,
+        analysis: JSON.stringify(analysisResult.analysis || {}),
+        summary: analysisResult.summary || ''
+      });
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        userId: req.session?.userId || document.uploadedBy || 1,
+        actionType: 'ai_process',
+        description: `Документ "${document.title}" обработан AI-агентом`,
+        relatedId: document.id,
+        relatedType: 'document',
+        metadata: {
+          transactionHash: analysisResult.transactionHash
+        }
+      });
+      
+      // Запись в блокчейн для ведения аудита
+      const blockchainData = {
+        type: BlockchainRecordType.DOCUMENT,
+        title: `Document Analysis: ${document.title}`,
+        content: JSON.stringify({
+          documentId: document.id,
+          documentTitle: document.title,
+          analysis: analysisResult.analysis,
+          summary: analysisResult.summary
+        }),
+        metadata: {
+          timestamp: new Date().toISOString(),
+          userId: req.session?.userId || document.uploadedBy || 1,
+          source: 'document_analysis'
+        }
+      };
+      
+      const blockchainResult = await recordToBlockchain(blockchainData);
+      
+      res.json({
+        success: true,
+        document: updatedDocument,
+        analysis: analysisResult.analysis,
+        transactionHash: analysisResult.transactionHash || blockchainResult.transactionHash
+      });
+    } catch (error) {
+      console.error("Error processing document with AI:", error);
+      res.status(500).json({ 
+        error: 'Document processing failed',
+        message: error.message || "Ошибка при обработке документа"
+      });
+    }
+  });
+  
   // Create HTTP server
   const httpServer = createServer(app);
 
