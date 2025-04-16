@@ -182,6 +182,11 @@ const CitizenRequests = () => {
         const demoData: CitizenRequest[] = [
           {
             id: 1,
+            fullName: "Асанов Азамат",
+            contactInfo: "+7 701 234 5678",
+            requestType: "Выдача документов",
+            subject: "Получение удостоверения личности",
+            description: "Необходимо получить новое удостоверение личности взамен утерянного. Нужна консультация по срокам и необходимым документам.",
             title: "Получение удостоверения личности",
             content: "Необходимо получить новое удостоверение личности взамен утерянного. Нужна консультация по срокам и необходимым документам.",
             summary: "Запрос на получение удостоверения личности взамен утерянного. Требуется консультация по процедуре и документам.",
@@ -189,8 +194,9 @@ const CitizenRequests = () => {
             category: "documents",
             priority: "medium",
             createdAt: new Date(Date.now() - 86400000 * 3),
+            updatedAt: new Date(Date.now() - 86400000 * 2),
             completedAt: new Date(Date.now() - 86400000),
-            assignedTo: "Марат Сагинтаев",
+            assignedTo: 1,
             blockchainHash: "0x7843bf12a9c4817b3a49d452c7896bdf2d3acf8",
             recordedAudio: true,
             citizenInfo: {
@@ -202,6 +208,11 @@ const CitizenRequests = () => {
           },
           {
             id: 2,
+            fullName: "Бекова Алия",
+            contactInfo: "+7 702 345 6789",
+            requestType: "Коммунальные услуги",
+            subject: "Проблема с уличным освещением",
+            description: "В районе улицы Абая, дома 23-27 не работает уличное освещение уже неделю. Просьба устранить проблему в кратчайшие сроки.",
             title: "Проблема с уличным освещением",
             content: "В районе улицы Абая, дома 23-27 не работает уличное освещение уже неделю. Просьба устранить проблему в кратчайшие сроки.",
             summary: "Жалоба на отсутствие уличного освещения на улице Абая, дома 23-27 в течение недели.",
@@ -209,7 +220,8 @@ const CitizenRequests = () => {
             category: "infrastructure",
             priority: "high",
             createdAt: new Date(Date.now() - 86400000 * 2),
-            assignedTo: "Департамент городского хозяйства",
+            updatedAt: new Date(Date.now() - 86400000),
+            assignedTo: 2,
             citizenInfo: {
               name: "Бекова Алия",
               contact: "+7 702 345 6789",
@@ -218,12 +230,18 @@ const CitizenRequests = () => {
           },
           {
             id: 3,
+            fullName: "Сериккызы Айнур",
+            contactInfo: "+7 777 456 7890",
+            requestType: "Социальная помощь",
+            subject: "Оформление социального пособия",
+            description: "Требуется консультация по оформлению социального пособия для матери-одиночки с двумя детьми. Какие документы необходимы и каков порядок оформления?",
             title: "Оформление социального пособия",
             content: "Требуется консультация по оформлению социального пособия для матери-одиночки с двумя детьми. Какие документы необходимы и каков порядок оформления?",
             status: "pending",
             category: "social",
             priority: "medium",
             createdAt: new Date(),
+            updatedAt: new Date(),
             citizenInfo: {
               name: "Сериккызы Айнур",
               contact: "+7 777 456 7890",
