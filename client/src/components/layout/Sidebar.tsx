@@ -66,7 +66,7 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           icon: <LayoutDashboard size={20} />
         },
         {
-          name: "Помощник по запросам граждан",
+          name: "Обращения граждан",
           path: "/citizen-requests",
           icon: <MessageSquare size={20} />
         },
@@ -96,9 +96,9 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           icon: <Building2 size={20} />
         },
         {
-          name: "Смарт-контракты",
+          name: "ИИ агенты",
           path: "/ai-agents",
-          icon: <Network size={20} />
+          icon: <Bot size={20} />
         },
         {
           name: "Документы",

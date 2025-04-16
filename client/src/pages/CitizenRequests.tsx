@@ -1663,7 +1663,7 @@ const CitizenRequests = () => {
                   </div>
                   
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Доступные помощники</h3>
+                    <h3 className="text-sm font-medium mb-2">ИИ агенты</h3>
                     <div className="space-y-2">
                       {agentSettings.enabled ? (
                         <>
@@ -1679,7 +1679,7 @@ const CitizenRequests = () => {
                                     size="sm"
                                     onClick={() => {
                                       toast({
-                                        title: `Запрос к помощнику`,
+                                        title: `Запрос к ИИ агенту`,
                                         description: `Отправка запроса к "${agent.name}"...`
                                       });
                                       
@@ -1724,19 +1724,19 @@ const CitizenRequests = () => {
                                   onClick={() => setShowAgentSettingsDialog(true)}
                                 >
                                   <Bot className="h-4 w-4 mr-2" />
-                                  <span>Настройки помощника</span>
+                                  <span>Настройки ИИ агентов</span>
                                 </Button>
                               </div>
                             </>
                           ) : (
                             <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
-                              Загрузка помощников...
+                              Загрузка ИИ агентов...
                             </div>
                           )}
                         </>
                       ) : (
                         <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
-                          Помощники не активированы. <Button variant="link" className="p-0 h-auto" onClick={() => setShowAgentSettingsDialog(true)}>Активировать</Button>
+                          ИИ агенты не активированы. <Button variant="link" className="p-0 h-auto" onClick={() => setShowAgentSettingsDialog(true)}>Активировать</Button>
                         </div>
                       )}
                     </div>
@@ -1760,20 +1760,7 @@ const CitizenRequests = () => {
                         <span>Отправить ответ</span>
                       </Button>
                       
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full justify-start"
-                        onClick={() => {
-                          // Обработка обращения с помощью AI
-                          if (selectedRequest) {
-                            generateSummary(selectedRequest);
-                          }
-                        }}
-                      >
-                        <Bot className="h-4 w-4 mr-2 text-primary-600" />
-                        <span>Анализировать AI</span>
-                      </Button>
+
                       
                       <Button 
                         variant="outline" 
