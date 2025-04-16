@@ -1895,17 +1895,17 @@ const CitizenRequests = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Bot className="h-5 w-5 mr-2 text-primary-600" />
-              Настройки AI-агента для обращений граждан
+              Настройки ИИ агентов
             </DialogTitle>
             <DialogDescription>
-              Настройте параметры работы AI-агента для автоматической обработки обращений
+              Настройте параметры работы ИИ агентов для обработки обращений
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-5 py-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="ai-enabled">Включить AI-агента</Label>
+                <Label htmlFor="ai-enabled">Включить ИИ агентов</Label>
                 <p className="text-xs text-muted-foreground">
                   Автоматическая обработка новых обращений с использованием ИИ
                 </p>
@@ -1981,11 +1981,11 @@ const CitizenRequests = () => {
                 disabled={!agentSettings.enabled}
                 value={agentSettings.systemPrompt}
                 onChange={(e) => setAgentSettings({...agentSettings, systemPrompt: e.target.value})}
-                placeholder="Введите системную инструкцию для AI-агента"
+                placeholder="Введите системную инструкцию для ИИ агента"
                 className="h-32 resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                Инструкция определяет поведение AI-агента и направляет его в обработке обращений граждан
+                Инструкция определяет поведение ИИ агента и направляет его в обработке обращений
               </p>
             </div>
           </div>
@@ -2002,7 +2002,7 @@ const CitizenRequests = () => {
                 // Сохраняем настройки
                 toast({
                   title: "Настройки сохранены",
-                  description: "Настройки AI-агента успешно обновлены"
+                  description: "Настройки ИИ агентов успешно обновлены"
                 });
                 setShowAgentSettingsDialog(false);
               }}
