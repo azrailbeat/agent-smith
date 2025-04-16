@@ -1012,7 +1012,7 @@ const AIAgentsPage = () => {
                                           <span className="text-neutral-500 capitalize">
                                             {key.replace(/([A-Z])/g, ' $1').replace(/([A-Z][a-z])/g, ' $1').toLowerCase()}:
                                           </span>
-                                          <span className="font-medium">{value}</span>
+                                          <span className="font-medium">{String(value)}</span>
                                         </div>
                                       ))}
                                     </>
@@ -1032,8 +1032,8 @@ const AIAgentsPage = () => {
                                 </div>
                               </CardContent>
                               <CardFooter className="flex justify-between border-t pt-4 bg-neutral-50">
-                                <Button variant="outline" size="sm" onClick={() => handleViewAgent(agent)}>
-                                  Подробнее
+                                <Button variant="outline" size="sm" onClick={() => handleEditAgent(agent)}>
+                                  Редактировать
                                 </Button>
                                 <div className="flex space-x-2">
                                   <Button variant="ghost" size="sm" onClick={() => handleEditSystemPrompt(agent)}>
@@ -1114,8 +1114,8 @@ const AIAgentsPage = () => {
                                 </div>
                               </CardContent>
                               <CardFooter className="flex justify-between border-t pt-4 bg-neutral-50">
-                                <Button variant="outline" size="sm" onClick={() => handleViewAgent(agent)}>
-                                  Подробнее
+                                <Button variant="outline" size="sm" onClick={() => handleEditAgent(agent)}>
+                                  Редактировать
                                 </Button>
                                 <div className="flex space-x-2">
                                   <Button variant="ghost" size="sm" onClick={() => handleEditSystemPrompt(agent)}>
