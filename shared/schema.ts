@@ -314,15 +314,52 @@ export const insertIntegrationSchema = createInsertSchema(integrations).pick({
   config: true,
 });
 
+export const ministries = pgTable("ministries", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  shortName: text("short_name"),
+  description: text("description"),
+  icon: text("icon"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMinistrySchema = createInsertSchema(ministries).pick({
+  name: true,
+  shortName: true,
+  description: true,
+  icon: true,
+});
+
+export const agentTypes = pgTable("agent_types", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // citizen_requests, document_processing, analytics, etc.
+  description: text("description"),
+  icon: text("icon"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAgentTypeSchema = createInsertSchema(agentTypes).pick({
+  name: true,
+  category: true,
+  description: true,
+  icon: true,
+});
+
 export const agents = pgTable("agents", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(), // accounting, project_management, product_management, notification, etc.
   description: text("description"),
+  ministryId: integer("ministry_id").references(() => ministries.id),
+  typeId: integer("type_id").references(() => agentTypes.id),
   modelId: integer("model_id").references(() => integrations.id),
   isActive: boolean("is_active").default(true),
   systemPrompt: text("system_prompt"),
   config: jsonb("config"),
+  stats: jsonb("stats"), // Статистика использования: количество обращений, экономия времени и т.д.
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -331,13 +368,24 @@ export const insertAgentSchema = createInsertSchema(agents).pick({
   name: true,
   type: true, 
   description: true,
+  ministryId: true,
+  typeId: true,
   modelId: true,
   isActive: true,
   systemPrompt: true,
   config: true,
+  stats: true,
 });
 
-// Relations for integrations and agents
+// Relations for ministries, agent types, integrations and agents
+export const ministriesRelations = relations(ministries, ({ many }) => ({
+  agents: many(agents),
+}));
+
+export const agentTypesRelations = relations(agentTypes, ({ many }) => ({
+  agents: many(agents),
+}));
+
 export const integrationsRelations = relations(integrations, ({ many }) => ({
   agents: many(agents),
 }));
@@ -347,6 +395,14 @@ export const agentsRelations = relations(agents, ({ one }) => ({
     fields: [agents.modelId],
     references: [integrations.id],
   }),
+  ministry: one(ministries, {
+    fields: [agents.ministryId],
+    references: [ministries.id],
+  }),
+  agentType: one(agentTypes, {
+    fields: [agents.typeId],
+    references: [agentTypes.id],
+  }),
 }));
 
 export type SystemStatusItem = typeof systemStatus.$inferSelect;
@@ -354,6 +410,12 @@ export type InsertSystemStatusItem = z.infer<typeof insertSystemStatusSchema>;
 
 export type Integration = typeof integrations.$inferSelect;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+
+export type Ministry = typeof ministries.$inferSelect;
+export type InsertMinistry = z.infer<typeof insertMinistrySchema>;
+
+export type AgentType = typeof agentTypes.$inferSelect;
+export type InsertAgentType = z.infer<typeof insertAgentTypeSchema>;
 
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;

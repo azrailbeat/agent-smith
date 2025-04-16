@@ -56,15 +56,36 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 // Типы данных
+type Ministry = {
+  id: number;
+  name: string;
+  shortName?: string;
+  description?: string;
+  icon?: string;
+};
+
+type AgentType = {
+  id: number;
+  name: string;
+  category: string;
+  description?: string;
+  icon?: string;
+};
+
 type Agent = {
   id: number;
   name: string;
   type: string;
   description?: string;
+  ministryId?: number;
+  ministry?: Ministry;
+  typeId?: number;
+  agentType?: AgentType;
   modelId: number;
   isActive: boolean;
   systemPrompt: string;
   config: any;
+  stats?: any;
   tasks?: Task[];
   totalTasks?: number;
   completedTasks?: number;
@@ -430,6 +451,10 @@ const AIAgentsPage = () => {
           <TabsTrigger value="all" className="flex items-center">
             <Bot className="h-4 w-4 mr-2" />
             Все агенты
+          </TabsTrigger>
+          <TabsTrigger value="ministry" className="flex items-center">
+            <FileStack className="h-4 w-4 mr-2" />
+            По министерствам
           </TabsTrigger>
           <TabsTrigger value="tasks" className="flex items-center">
             <FileCheck className="h-4 w-4 mr-2" />
