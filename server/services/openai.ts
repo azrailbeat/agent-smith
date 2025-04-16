@@ -95,23 +95,56 @@ export async function analyzeTranscription(transcription: string, language: "ru"
 
 /**
  * Process user message and generate AI response
+ * Overloaded function that can accept either a system prompt and user prompt or a chat history
  */
 export async function processUserMessage(
-  userMessage: string, 
-  chatHistory: Array<{ role: string; content: string }>,
+  systemPromptOrUserMessage: string, 
+  userPromptOrChatHistory?: string | Array<{ role: string; content: string }>,
   language: "ru" | "kz" | "en" = "ru"
 ): Promise<string> {
   try {
-    const systemMessage = {
-      role: "system", 
-      content: `Вы - Agent Smith, интеллектуальный помощник для государственных служащих Казахстана. 
-      Вы должны отвечать коротко, точно и по делу. Ваша задача - помогать анализировать документы, 
-      организовывать задачи и предоставлять релевантную информацию.`
-    };
+    let messages = [];
+    
+    // Определяем тип вызова функции
+    if (typeof userPromptOrChatHistory === 'string') {
+      // Первая перегрузка: systemPrompt + userPrompt
+      messages = [
+        { 
+          role: "system", 
+          content: systemPromptOrUserMessage
+        },
+        { 
+          role: "user", 
+          content: userPromptOrChatHistory 
+        }
+      ];
+    } else if (Array.isArray(userPromptOrChatHistory)) {
+      // Вторая перегрузка: userMessage + chatHistory
+      const systemMessage = {
+        role: "system", 
+        content: `Вы - Agent Smith, интеллектуальный помощник для государственных служащих Казахстана. 
+        Вы должны отвечать коротко, точно и по делу. Ваша задача - помогать анализировать документы, 
+        организовывать задачи и предоставлять релевантную информацию.`
+      };
+      
+      messages = [
+        systemMessage, 
+        ...userPromptOrChatHistory, 
+        { role: "user", content: systemPromptOrUserMessage }
+      ];
+    } else {
+      // Простой запрос без истории и системного промпта
+      messages = [
+        { 
+          role: "user", 
+          content: systemPromptOrUserMessage 
+        }
+      ];
+    }
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [systemMessage, ...chatHistory, { role: "user", content: userMessage }],
+      messages: messages,
       temperature: 0.7,
     });
 

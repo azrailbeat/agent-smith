@@ -1472,6 +1472,355 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Обработка задач через AI-агенты
+  app.post('/api/tasks/:id/process', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+    
+    try {
+      // Загружаем сервис AI-агентов
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Получаем задачу из базы данных
+      const task = await storage.getTask(id);
+      if (!task) {
+        return res.status(404).json({ error: 'Task not found' });
+      }
+      
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Формируем содержимое для обработки
+      const content = `Задача: ${task.title}
+      
+      Описание: ${task.description || 'Нет описания'}
+      Приоритет: ${task.priority || 'Средний'}
+      Статус: ${task.status}
+      Срок выполнения: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString('ru-RU') : 'Не указан'}
+      Исполнитель: ${task.assignedTo || 'Не назначен'}
+      
+      Дополнительная информация:
+      ${task.additionalInfo || 'Нет дополнительной информации'}`;
+      
+      // Анализируем задачу
+      const analysisResult = await agentService.processRequest({
+        taskType: AgentTaskType.DOCUMENT_ANALYSIS,
+        entityType: AgentEntityType.TASK,
+        entityId: task.id,
+        content,
+        userId: req.session?.userId || task.createdBy || 1
+      });
+      
+      // Создаем рекомендации
+      const recommendationsResult = await agentService.processRequest({
+        taskType: AgentTaskType.RESPONSE_GENERATION,
+        entityType: AgentEntityType.TASK,
+        entityId: task.id,
+        content,
+        metadata: {
+          analysis: analysisResult.analysis
+        },
+        userId: req.session?.userId || task.createdBy || 1
+      });
+      
+      // Обновляем задачу в базе данных
+      const updatedTask = await storage.updateTask(id, {
+        aiProcessed: true,
+        aiSuggestion: recommendationsResult.output,
+        lastAiProcessing: new Date()
+      });
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        userId: req.session?.userId || task.createdBy || 1,
+        actionType: 'ai_process',
+        description: `Задача "${task.title}" обработана AI-агентом`,
+        relatedId: task.id,
+        relatedType: 'task',
+        metadata: {
+          transactionHash: recommendationsResult.transactionHash
+        }
+      });
+      
+      res.json({
+        success: true,
+        task: updatedTask,
+        recommendations: recommendationsResult.output,
+        analysis: analysisResult.analysis,
+        transactionHash: recommendationsResult.transactionHash
+      });
+    } catch (error) {
+      console.error("Error processing task with AI:", error);
+      res.status(500).json({ 
+        error: 'Task processing failed',
+        message: error.message || "Ошибка при обработке задачи"
+      });
+    }
+  });
+  
+  // Обработка предложений DAO через AI-агенты и запись в блокчейн
+  app.post('/api/dao/proposals/:id/process', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid proposal ID' });
+    }
+    
+    try {
+      // Загружаем сервис AI-агентов
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Получаем предложение DAO из базы данных
+      const proposal = await storage.getDAOProposal(id);
+      if (!proposal) {
+        return res.status(404).json({ error: 'DAO proposal not found' });
+      }
+      
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Формируем содержимое для обработки
+      const content = `Предложение DAO: ${proposal.title}
+      
+      Описание: ${proposal.description}
+      Автор: ${proposal.authorName}
+      Дата создания: ${new Date(proposal.createdAt).toLocaleDateString('ru-RU')}
+      Категория: ${proposal.category}
+      Статус: ${proposal.status}
+      
+      Содержание предложения:
+      ${proposal.content}`;
+      
+      // Анализируем предложение DAO
+      const analysisResult = await agentService.processRequest({
+        taskType: AgentTaskType.DOCUMENT_ANALYSIS,
+        entityType: AgentEntityType.DAO_PROPOSAL,
+        entityId: proposal.id,
+        content,
+        userId: req.session?.userId || proposal.authorId || 1
+      });
+      
+      // Валидируем предложение на соответствие требованиям
+      const validationResult = await agentService.processRequest({
+        taskType: AgentTaskType.VALIDATION,
+        entityType: AgentEntityType.DAO_PROPOSAL,
+        entityId: proposal.id,
+        content,
+        metadata: {
+          analysis: analysisResult.analysis
+        },
+        userId: req.session?.userId || proposal.authorId || 1
+      });
+      
+      // Запись в блокчейн всех деталей предложения и результатов анализа
+      const blockchainData = {
+        type: BlockchainRecordType.SYSTEM_EVENT,
+        title: `DAO Proposal: ${proposal.title}`,
+        content: JSON.stringify({
+          proposalId: proposal.id,
+          proposalTitle: proposal.title,
+          proposalDescription: proposal.description,
+          author: proposal.authorName,
+          createdAt: proposal.createdAt,
+          analysis: analysisResult.analysis,
+          validation: validationResult.output
+        }),
+        metadata: {
+          timestamp: new Date().toISOString(),
+          userId: req.session?.userId || proposal.authorId || 1,
+          source: 'dao_proposal_validation'
+        }
+      };
+      
+      const blockchainResult = await recordToBlockchain(blockchainData);
+      
+      // Обновляем предложение DAO в базе данных
+      const updatedProposal = await storage.updateDAOProposal(id, {
+        validated: true,
+        aiAnalysis: JSON.stringify(analysisResult.analysis || {}),
+        validationResult: validationResult.output,
+        blockchainHash: blockchainResult.transactionHash
+      });
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        userId: req.session?.userId || proposal.authorId || 1,
+        actionType: 'blockchain_record',
+        description: `Предложение DAO "${proposal.title}" валидировано и записано в блокчейн`,
+        relatedId: proposal.id,
+        relatedType: 'dao_proposal',
+        metadata: {
+          transactionHash: blockchainResult.transactionHash
+        }
+      });
+      
+      res.json({
+        success: true,
+        proposal: updatedProposal,
+        analysis: analysisResult.analysis,
+        validation: validationResult.output,
+        blockchain: {
+          transactionHash: blockchainResult.transactionHash,
+          status: blockchainResult.status
+        }
+      });
+    } catch (error) {
+      console.error("Error processing DAO proposal with AI:", error);
+      res.status(500).json({ 
+        error: 'DAO proposal processing failed',
+        message: error.message || "Ошибка при обработке предложения DAO"
+      });
+    }
+  });
+  
+  // Общий эндпоинт для обработки контента через AI-агенты
+  app.post('/api/ai/process', async (req, res) => {
+    const { 
+      taskType, 
+      entityType, 
+      entityId, 
+      content, 
+      metadata, 
+      urgent, 
+      language 
+    } = req.body;
+    
+    if (!taskType || !entityType || !content) {
+      return res.status(400).json({ 
+        error: 'Bad Request',
+        message: 'Required fields missing: taskType, entityType, and content are required' 
+      });
+    }
+    
+    try {
+      // Загружаем сервис AI-агентов
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Проверяем корректность типа задачи
+      if (!Object.values(AgentTaskType).includes(taskType)) {
+        return res.status(400).json({ 
+          error: 'Invalid Task Type',
+          message: `Task type "${taskType}" is not supported`,
+          supportedTypes: Object.values(AgentTaskType)
+        });
+      }
+      
+      // Проверяем корректность типа сущности
+      if (!Object.values(AgentEntityType).includes(entityType)) {
+        return res.status(400).json({ 
+          error: 'Invalid Entity Type',
+          message: `Entity type "${entityType}" is not supported`,
+          supportedTypes: Object.values(AgentEntityType)
+        });
+      }
+      
+      // Формируем запрос к AI-агенту
+      const agentInput = {
+        taskType,
+        entityType,
+        entityId: entityId ? parseInt(entityId) : undefined,
+        content,
+        metadata,
+        userId: req.session?.userId || 1,
+        urgent: !!urgent,
+        language
+      };
+      
+      // Обрабатываем запрос через AI-агента
+      const result = await agentService.processRequest(agentInput);
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        userId: req.session?.userId || 1,
+        actionType: 'ai_process',
+        description: `AI-обработка контента типа ${entityType}`,
+        relatedId: entityId ? parseInt(entityId) : 0,
+        relatedType: entityType,
+        metadata: {
+          taskType,
+          transactionHash: result.transactionHash
+        }
+      });
+      
+      res.json({
+        success: result.success,
+        output: result.output,
+        classification: result.classification,
+        summary: result.summary,
+        analysis: result.analysis,
+        metadata: result.metadata,
+        transactionHash: result.transactionHash,
+        error: result.error
+      });
+    } catch (error) {
+      console.error("Error processing content with AI:", error);
+      res.status(500).json({ 
+        error: 'AI processing failed',
+        message: error.message || "Ошибка при обработке контента"
+      });
+    }
+  });
+  
+  // Тестовый эндпоинт для блокчейн-валидации
+  app.post('/api/blockchain/validate', async (req, res) => {
+    const { content, hash } = req.body;
+    
+    if (!content && !hash) {
+      return res.status(400).json({ 
+        error: 'Bad Request',
+        message: 'Either content or hash must be provided' 
+      });
+    }
+    
+    try {
+      // Загружаем сервис AI-агентов
+      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      
+      // Проверяем инициализацию сервиса агентов
+      if (!agentService.initialized) {
+        await agentService.initialize();
+      }
+      
+      // Формируем содержимое для валидации
+      const validationContent = hash 
+        ? `Транзакция блокчейн с хэшем: ${hash}`
+        : content;
+      
+      // Валидируем через AI-агента
+      const validationResult = await agentService.processRequest({
+        taskType: AgentTaskType.VALIDATION,
+        entityType: AgentEntityType.BLOCKCHAIN_RECORD,
+        content: validationContent,
+        metadata: { hash },
+        userId: req.session?.userId || 1
+      });
+      
+      res.json({
+        success: validationResult.success,
+        result: validationResult.output,
+        transactionHash: validationResult.transactionHash,
+        metadata: validationResult.metadata,
+        error: validationResult.error
+      });
+    } catch (error) {
+      console.error("Error validating blockchain record:", error);
+      res.status(500).json({ 
+        error: 'Blockchain validation failed',
+        message: error.message || "Ошибка при валидации блокчейн-записи"
+      });
+    }
+  });
+  
   // Create HTTP server
   const httpServer = createServer(app);
 
