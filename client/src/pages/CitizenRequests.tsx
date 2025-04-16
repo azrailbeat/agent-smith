@@ -1521,51 +1521,6 @@ const CitizenRequests = () => {
                   <Send className="h-4 w-4 mr-2" />
                   <span>Отправить ответ</span>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center"
-                  onClick={() => {
-                    // Обработка обращения с помощью AI
-                    if (selectedRequest) {
-                      generateSummary(selectedRequest);
-                    }
-                  }}
-                >
-                  <Bot className="h-4 w-4 mr-2 text-primary-600" />
-                  <span>Анализировать AI</span>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center"
-                  onClick={() => {
-                    // Предложить ответ с помощью AI
-                    toast({
-                      title: "Генерация ответа",
-                      description: "Генерация ответа с использованием AI..."
-                    });
-                    
-                    // Имитация ответа
-                    setTimeout(() => {
-                      if (selectedRequest) {
-                        const updatedRequest = {...selectedRequest};
-                        updatedRequest.aiSuggestion = "Уважаемый заявитель! По вашему обращению сообщаем, что для получения справки о несудимости вам необходимо предоставить удостоверение личности и заполнить заявление установленного образца. Срок выдачи справки составляет 5 рабочих дней. Также вы можете получить справку онлайн через портал электронного правительства egov.kz, используя ЭЦП.";
-                        setSelectedRequest(updatedRequest);
-                        
-                        toast({
-                          title: "Ответ сгенерирован",
-                          description: "AI успешно сгенерировал проект ответа"
-                        });
-                      }
-                    }, 2000);
-                  }}
-                >
-                  <Zap className="h-4 w-4 mr-2 text-amber-500" />
-                  <span>Сгенерировать ответ</span>
-                </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
@@ -1805,6 +1760,51 @@ const CitizenRequests = () => {
                   <div>
                     <h3 className="text-sm font-medium mb-2">Действия</h3>
                     <div className="space-y-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full justify-start"
+                        onClick={() => {
+                          // Обработка обращения с помощью AI
+                          if (selectedRequest) {
+                            generateSummary(selectedRequest);
+                          }
+                        }}
+                      >
+                        <Bot className="h-4 w-4 mr-2 text-primary-600" />
+                        <span>Анализировать AI</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full justify-start"
+                        onClick={() => {
+                          // Предложить ответ с помощью AI
+                          toast({
+                            title: "Генерация ответа",
+                            description: "Генерация ответа с использованием AI..."
+                          });
+                          
+                          // Имитация ответа
+                          setTimeout(() => {
+                            if (selectedRequest) {
+                              const updatedRequest = {...selectedRequest};
+                              updatedRequest.aiSuggestion = "Уважаемый заявитель! По вашему обращению сообщаем, что для получения справки о несудимости вам необходимо предоставить удостоверение личности и заполнить заявление установленного образца. Срок выдачи справки составляет 5 рабочих дней. Также вы можете получить справку онлайн через портал электронного правительства egov.kz, используя ЭЦП.";
+                              setSelectedRequest(updatedRequest);
+                              
+                              toast({
+                                title: "Ответ сгенерирован",
+                                description: "AI успешно сгенерировал проект ответа"
+                              });
+                            }
+                          }, 2000);
+                        }}
+                      >
+                        <Zap className="h-4 w-4 mr-2 text-amber-500" />
+                        <span>Сгенерировать ответ</span>
+                      </Button>
+                      
                       {!selectedRequest.summary && (
                         <Button 
                           className="w-full justify-start" 
