@@ -353,7 +353,7 @@ const AIAgentsPage = () => {
       type: "disability_verification",
       ministryId: 3,
       typeId: 5,
-      description: "Автоматическое определение инвалидности по документам (~80тыс. проверено)",
+      description: "Автоматическое определение инвалидности по документам",
       modelId: 1,
       isActive: true,
       systemPrompt: "Вы - специалист по медицинской экспертизе. Ваша задача - анализировать медицинские документы и определять группу инвалидности в соответствии с законодательством.",
@@ -410,7 +410,7 @@ const AIAgentsPage = () => {
       type: "railway_analysis",
       ministryId: 4,
       typeId: 8,
-      description: "Анализ состояния ЖД инфраструктуры (16 тыс. км)",
+      description: "Анализ состояния железнодорожной инфраструктуры",
       modelId: 2,
       isActive: true,
       systemPrompt: "Вы - специалист по железнодорожной инфраструктуре. Ваша задача - анализировать данные о состоянии путей, предсказывать возможные проблемы и планировать ремонты.",
@@ -429,7 +429,7 @@ const AIAgentsPage = () => {
       type: "video_monitoring",
       ministryId: 5,
       typeId: 9,
-      description: "Распознавание лиц и обнаружение нарушений (система 'Сергек')",
+      description: "Распознавание лиц и обнаружение нарушений",
       modelId: 2,
       isActive: true,
       systemPrompt: "Вы - система компьютерного зрения. Ваша задача - анализировать видеопоток с камер наблюдения, распознавать лица и обнаруживать подозрительное поведение.",
@@ -799,8 +799,8 @@ const AIAgentsPage = () => {
                         </div>
                       </CardContent>
                       <CardFooter className="flex justify-between border-t pt-4 bg-neutral-50">
-                        <Button variant="outline" size="sm" onClick={() => handleViewAgent(agent)}>
-                          Подробнее
+                        <Button variant="outline" size="sm" onClick={() => handleEditAgent(agent)}>
+                          Редактировать
                         </Button>
                         <div className="flex space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => handleEditSystemPrompt(agent)}>
