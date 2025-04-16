@@ -35,6 +35,7 @@ function Router() {
       <Route path="/meetings" component={Meetings} />
       <Route path="/documents" component={Documents} />
       <Route path="/org-structure" component={OrgStructurePage} />
+      <Route path="/ai-agents/:id" component={AIAgents} />
       <Route path="/ai-agents" component={AIAgents} />
       <Route path="/settings" component={Settings} />
       <Route path="/dao-voting" component={DAOVoting} />

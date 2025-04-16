@@ -85,6 +85,8 @@ type Task = {
 
 const AIAgentsPage = () => {
   const { toast } = useToast();
+  const [, params] = useLocation();
+  const agentId = params && params.id ? parseInt(params.id) : null;
   
   // Состояния для диалогов
   const [showAgentDialog, setShowAgentDialog] = useState(false);
@@ -312,6 +314,9 @@ const AIAgentsPage = () => {
   
   const handleViewAgent = (agent: Agent) => {
     setViewingAgent(agent);
+    
+    // Переходим к деталям агента
+    window.location.href = `/ai-agents/${agent.id}`;
   };
   
   const handleEditSystemPrompt = (agent: Agent) => {
