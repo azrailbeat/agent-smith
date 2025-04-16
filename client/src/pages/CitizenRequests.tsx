@@ -1710,7 +1710,11 @@ const CitizenRequests = () => {
                                     {agent.type === 'meeting_protocols' && <FileCheck className="h-4 w-4 mr-2" />}
                                     {agent.type === 'translator' && <BarChart2 className="h-4 w-4 mr-2" />}
                                     {agent.type === 'blockchain' && <Database className="h-4 w-4 mr-2" />}
-                                    <span>{agent.name}</span>
+                                    <span>{agent.type === 'citizen_requests' ? 'Анализ обращений' : 
+                                      agent.type === 'meeting_protocols' ? 'Протоколы' : 
+                                      agent.type === 'translator' ? 'Переводчик' : 
+                                      agent.type === 'blockchain' ? 'Смарт-контракты' : 
+                                      agent.name}</span>
                                   </Button>
                                 ))
                               }
