@@ -1945,6 +1945,16 @@ const Meetings = () => {
                     </Card>
                   </div>
                 )}
+                
+                {/* Интеграция компонента AI-агентов для протоколов */}
+                {selectedMeeting?.protocol && (
+                  <MeetingProtocolAgentSection
+                    protocolId={selectedMeeting.id}
+                    protocolText={selectedMeeting.protocol.summary + '\n\nРешения:\n' + selectedMeeting.protocol.decisions.join('\n')}
+                    protocolTitle={selectedMeeting.title}
+                    canEdit={true}
+                  />
+                )}
               </div>
             )}
           </div>
