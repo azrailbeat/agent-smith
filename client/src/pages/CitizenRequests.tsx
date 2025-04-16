@@ -1716,87 +1716,95 @@ const CitizenRequests = () => {
                   <div>
                     <h3 className="text-sm font-medium mb-2">AI-агенты</h3>
                     <div className="space-y-2">
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start" 
-                        size="sm"
-                        onClick={() => {
-                          toast({
-                            title: "Запрос к AI-агенту",
-                            description: "Отправка запроса в департамент документов..."
-                          });
-                          
-                          // Имитация ответа
-                          setTimeout(() => {
-                            if (selectedRequest) {
-                              const updatedRequest = {...selectedRequest};
-                              updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
-                              setSelectedRequest(updatedRequest);
-                              
+                      {agentSettings.enabled ? (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-start" 
+                            size="sm"
+                            onClick={() => {
                               toast({
-                                title: "Ответ от агента",
-                                description: "Получен ответ от департамента документов"
+                                title: "Запрос к AI-агенту",
+                                description: "Отправка запроса в департамент документов..."
                               });
-                            }
-                          }, 1500);
-                        }}
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        <span>Департамент документов</span>
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start" 
-                        size="sm"
-                        onClick={() => {
-                          toast({
-                            title: "Запрос аналитики",
-                            description: "Формирование аналитического отчета..."
-                          });
-                          
-                          // Имитация ответа
-                          setTimeout(() => {
-                            if (selectedRequest) {
-                              const updatedRequest = {...selectedRequest};
-                              updatedRequest.aiClassification = "Анализ показывает: обращение относится к категории 'Получение документов', подтип 'Справка о несудимости'. Приоритет: средний. Прогнозируемое время обработки: 3-5 рабочих дней.";
-                              setSelectedRequest(updatedRequest);
                               
-                              toast({
-                                title: "Аналитический отчет",
-                                description: "Аналитический отчет по обращению сформирован"
-                              });
-                            }
-                          }, 2000);
-                        }}
-                      >
-                        <BarChart2 className="h-4 w-4 mr-2" />
-                        <span>Аналитик данных</span>
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start" 
-                        size="sm"
-                        onClick={() => {
-                          toast({
-                            title: "Проверка статуса",
-                            description: "Проверка статуса обращения в системах..."
-                          });
+                              // Имитация ответа
+                              setTimeout(() => {
+                                if (selectedRequest) {
+                                  const updatedRequest = {...selectedRequest};
+                                  updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
+                                  setSelectedRequest(updatedRequest);
+                                  
+                                  toast({
+                                    title: "Ответ от агента",
+                                    description: "Получен ответ от департамента документов"
+                                  });
+                                }
+                              }, 1500);
+                            }}
+                          >
+                            <User className="h-4 w-4 mr-2" />
+                            <span>Департамент документов</span>
+                          </Button>
                           
-                          // Имитация ответа
-                          setTimeout(() => {
-                            toast({
-                              title: "Результат проверки",
-                              description: "Обращение проверено во всех интегрированных системах",
-                              variant: "default"
-                            });
-                          }, 1000);
-                        }}
-                      >
-                        <ListChecks className="h-4 w-4 mr-2" />
-                        <span>Проверка статуса</span>
-                      </Button>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-start" 
+                            size="sm"
+                            onClick={() => {
+                              toast({
+                                title: "Запрос аналитики",
+                                description: "Формирование аналитического отчета..."
+                              });
+                              
+                              // Имитация ответа
+                              setTimeout(() => {
+                                if (selectedRequest) {
+                                  const updatedRequest = {...selectedRequest};
+                                  updatedRequest.aiClassification = "Анализ показывает: обращение относится к категории 'Получение документов', подтип 'Справка о несудимости'. Приоритет: средний. Прогнозируемое время обработки: 3-5 рабочих дней.";
+                                  setSelectedRequest(updatedRequest);
+                                  
+                                  toast({
+                                    title: "Аналитический отчет",
+                                    description: "Аналитический отчет по обращению сформирован"
+                                  });
+                                }
+                              }, 2000);
+                            }}
+                          >
+                            <BarChart2 className="h-4 w-4 mr-2" />
+                            <span>Аналитик данных</span>
+                          </Button>
+                          
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-start" 
+                            size="sm"
+                            onClick={() => {
+                              toast({
+                                title: "Проверка статуса",
+                                description: "Проверка статуса обращения в системах..."
+                              });
+                              
+                              // Имитация ответа
+                              setTimeout(() => {
+                                toast({
+                                  title: "Результат проверки",
+                                  description: "Обращение проверено во всех интегрированных системах",
+                                  variant: "default"
+                                });
+                              }, 1000);
+                            }}
+                          >
+                            <ListChecks className="h-4 w-4 mr-2" />
+                            <span>Проверка статуса</span>
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
+                          ИИ-агенты не активированы. <Button variant="link" className="p-0 h-auto" onClick={() => setShowAgentSettingsDialog(true)}>Активировать</Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
