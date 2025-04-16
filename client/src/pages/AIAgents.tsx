@@ -675,6 +675,20 @@ const AIAgentsPage = () => {
     setShowAgentDialog(true);
   };
   
+  // Функция для открытия интерфейса PersonaBuilder
+  const handleOpenPersonaBuilder = () => {
+    // Инициализируем персону со значениями по умолчанию
+    setPersonaConfig({
+      name: '',
+      model: 'gpt-4o',
+      prompt: '',
+      knowledge_sources: [],
+      triggers: [],
+      roles: ['internal']
+    });
+    setShowPersonaBuilderDialog(true);
+  };
+  
   const handleEditAgent = (agent: Agent) => {
     setEditingAgent({...agent});
     setShowAgentDialog(true);
@@ -781,10 +795,14 @@ const AIAgentsPage = () => {
               Управление искусственными интеллектуальными агентами для автоматизации процессов
             </p>
           </div>
-          <div className="mt-4 sm:mt-0">
+          <div className="mt-4 sm:mt-0 flex space-x-3">
             <Button onClick={handleAddAgent}>
               <Plus className="h-4 w-4 mr-2" />
               Добавить агента
+            </Button>
+            <Button onClick={handleOpenPersonaBuilder} variant="outline">
+              <Sparkles className="h-4 w-4 mr-2" />
+              PersonaBuilder
             </Button>
           </div>
         </div>
