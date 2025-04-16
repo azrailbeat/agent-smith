@@ -1496,8 +1496,23 @@ const CitizenRequests = () => {
                 </div>
               </DialogHeader>
               
-              {/* Кнопки AI-ассистента */}
+              {/* Кнопки действий для этого диалога */}
               <div className="flex gap-2 border-t border-border pt-4 mt-4">
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="flex items-center"
+                  onClick={() => {
+                    toast({
+                      title: "Отправка ответа",
+                      description: "Ответ отправлен гражданину"
+                    });
+                  }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  <span>Отправить ответ</span>
+                </Button>
+                
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -1541,25 +1556,6 @@ const CitizenRequests = () => {
                 >
                   <Zap className="h-4 w-4 mr-2 text-amber-500" />
                   <span>Сгенерировать ответ</span>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center"
-                  onClick={() => {
-                    if (selectedRequest && !selectedRequest.blockchainHash) {
-                      saveToBlockchain(selectedRequest.id);
-                    } else {
-                      toast({
-                        title: "Уже в блокчейне",
-                        description: "Это обращение уже зафиксировано в GovChain"
-                      });
-                    }
-                  }}
-                >
-                  <Database className="h-4 w-4 mr-2 text-green-600" />
-                  <span>Сохранить в GovChain</span>
                 </Button>
               </div>
 
