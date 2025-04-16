@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { queryClient } from "@/lib/queryClient";
+
+// Определение типа для параметров URL
+type AIAgentParams = {
+  id?: string;
+};
 import { 
   Card, 
   CardContent, 
@@ -86,7 +91,7 @@ type Task = {
 
 const AIAgentsPage = () => {
   const { toast } = useToast();
-  const [, params] = useLocation();
+  const params = useParams<AIAgentParams>();
   const agentId = params && params.id ? parseInt(params.id) : null;
   
   // Состояния для диалогов
@@ -377,6 +382,23 @@ const AIAgentsPage = () => {
         return <Server className="h-5 w-5 text-purple-500" />;
       default:
         return <Brain className="h-5 w-5 text-gray-500" />;
+    }
+  };
+  
+  const getAgentTypeColor = (type: string): string => {
+    switch (type) {
+      case "citizen_requests":
+        return "#3b82f6"; // blue-500
+      case "meetings":
+        return "#8b5cf6"; // purple-500
+      case "documents":
+        return "#f59e0b"; // amber-500
+      case "task_management":
+        return "#10b981"; // green-500
+      case "blockchain":
+        return "#ef4444"; // red-500
+      default:
+        return "#6b7280"; // gray-500
     }
   };
   
