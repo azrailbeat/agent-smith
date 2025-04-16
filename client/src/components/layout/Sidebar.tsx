@@ -66,19 +66,24 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           icon: <LayoutDashboard size={20} />
         },
         {
-          name: "Задачи",
-          path: "/tasks",
-          icon: <ListChecks size={20} />
-        },
-        {
           name: "Обращения граждан",
           path: "/citizen-requests",
           icon: <MessageSquare size={20} />
         },
         {
+          name: "Перевод",
+          path: "/translate",
+          icon: <Mic size={20} />
+        },
+        {
           name: "Протоколы встреч",
           path: "/meetings",
           icon: <Calendar size={20} />
+        },
+        {
+          name: "Задачи",
+          path: "/tasks",
+          icon: <ListChecks size={20} />
         }
       ]
     },
@@ -119,11 +124,6 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           name: "Аналитика",
           path: "/analytics",
           icon: <BarChart2 size={20} />
-        },
-        {
-          name: "Перевод",
-          path: "/translate",
-          icon: <Mic size={20} />
         },
         {
           name: "Настройки",
