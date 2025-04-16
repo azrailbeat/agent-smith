@@ -1505,23 +1505,8 @@ const CitizenRequests = () => {
                 </div>
               </DialogHeader>
               
-              {/* Кнопки действий для этого диалога */}
-              <div className="flex gap-2 border-t border-border pt-4 mt-4">
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="flex items-center"
-                  onClick={() => {
-                    toast({
-                      title: "Отправка ответа",
-                      description: "Ответ отправлен гражданину"
-                    });
-                  }}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  <span>Отправить ответ</span>
-                </Button>
-              </div>
+              {/* Пустой отступ вместо кнопок */}
+              <div className="border-t border-border pt-4 mt-4"></div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
                 {/* Основная информация */}
@@ -1678,7 +1663,7 @@ const CitizenRequests = () => {
                   </div>
                   
                   <div>
-                    <h3 className="text-sm font-medium mb-2">AI-агенты</h3>
+                    <h3 className="text-sm font-medium mb-2">Доступные помощники</h3>
                     <div className="space-y-2">
                       {agentSettings.enabled ? (
                         <>
@@ -1694,8 +1679,8 @@ const CitizenRequests = () => {
                                     size="sm"
                                     onClick={() => {
                                       toast({
-                                        title: `Запрос к AI-агенту`,
-                                        description: `Отправка запроса к агенту "${agent.name}"...`
+                                        title: `Запрос к помощнику`,
+                                        description: `Отправка запроса к "${agent.name}"...`
                                       });
                                       
                                       // Имитация ответа
@@ -1714,8 +1699,8 @@ const CitizenRequests = () => {
                                           setSelectedRequest(updatedRequest);
                                           
                                           toast({
-                                            title: "Ответ от агента",
-                                            description: `Получен ответ от агента "${agent.name}"`
+                                            title: "Ответ получен",
+                                            description: `Получен ответ от "${agent.name}"`
                                           });
                                         }
                                       }, 1500);
@@ -1730,7 +1715,7 @@ const CitizenRequests = () => {
                                 ))
                               }
                               
-                              {/* Кнопка настроек AI-агента в нижней части панели */}
+                              {/* Кнопка настроек в нижней части панели */}
                               <div className="pt-2 mt-2 border-t border-neutral-200">
                                 <Button 
                                   variant="ghost" 
@@ -1739,19 +1724,19 @@ const CitizenRequests = () => {
                                   onClick={() => setShowAgentSettingsDialog(true)}
                                 >
                                   <Bot className="h-4 w-4 mr-2" />
-                                  <span>Настройки AI-агента</span>
+                                  <span>Настройки помощника</span>
                                 </Button>
                               </div>
                             </>
                           ) : (
                             <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
-                              Загрузка агентов...
+                              Загрузка помощников...
                             </div>
                           )}
                         </>
                       ) : (
                         <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
-                          ИИ-агенты не активированы. <Button variant="link" className="p-0 h-auto" onClick={() => setShowAgentSettingsDialog(true)}>Активировать</Button>
+                          Помощники не активированы. <Button variant="link" className="p-0 h-auto" onClick={() => setShowAgentSettingsDialog(true)}>Активировать</Button>
                         </div>
                       )}
                     </div>
@@ -1760,6 +1745,21 @@ const CitizenRequests = () => {
                   <div>
                     <h3 className="text-sm font-medium mb-2">Действия</h3>
                     <div className="space-y-2">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="w-full justify-start bg-green-600 hover:bg-green-700"
+                        onClick={() => {
+                          toast({
+                            title: "Отправка ответа",
+                            description: "Ответ отправлен гражданину"
+                          });
+                        }}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        <span>Отправить ответ</span>
+                      </Button>
+                      
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -1809,6 +1809,7 @@ const CitizenRequests = () => {
                         <Button 
                           className="w-full justify-start" 
                           size="sm"
+                          variant="outline"
                           onClick={() => generateSummary(selectedRequest)}
                         >
                           <FileText className="h-4 w-4 mr-2" />

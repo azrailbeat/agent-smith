@@ -66,17 +66,17 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           icon: <LayoutDashboard size={20} />
         },
         {
-          name: "Обращения граждан",
+          name: "Помощник по запросам граждан",
           path: "/citizen-requests",
           icon: <MessageSquare size={20} />
         },
         {
-          name: "Перевод",
+          name: "Переводчик",
           path: "/translate",
           icon: <Mic size={20} />
         },
         {
-          name: "Протоколы встреч",
+          name: "Протоколы собраний",
           path: "/meetings",
           icon: <Calendar size={20} />
         },
@@ -96,9 +96,9 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
           icon: <Building2 size={20} />
         },
         {
-          name: "ИИ агенты",
+          name: "Смарт-контракты",
           path: "/ai-agents",
-          icon: <Bot size={20} />
+          icon: <Network size={20} />
         },
         {
           name: "Документы",
