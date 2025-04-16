@@ -291,6 +291,43 @@ const AIAgentsPage = () => {
       completedTasks: 119
     },
     {
+      id: 11,
+      name: "Agent Smith для е-Отиниш",
+      type: "citizen_requests",
+      description: "Центральный агент для обработки обращений граждан в системе е-Отиниш",
+      modelId: 1,
+      isActive: true,
+      systemPrompt: "Вы - центральный агент государственного портала е-Отиниш. Ваша задача - обрабатывать и классифицировать обращения граждан, направлять их в соответствующие ведомства и формировать автоматические ответы на типовые запросы.",
+      config: { temperature: 0.2, max_tokens: 2500 },
+      stats: { 
+        requestsProcessed: 145692, 
+        averageProcessingTime: "1.8 мин",
+        automaticResponseRate: 78.3
+      },
+      totalTasks: 523,
+      completedTasks: 512
+    },
+    {
+      id: 12,
+      name: "Блокчейн-агент Hyperledger Besu",
+      type: "blockchain",
+      description: "Агент для записи и верификации транзакций в блокчейне",
+      modelId: 4,
+      isActive: true,
+      systemPrompt: "Вы - агент для работы с блокчейном Hyperledger Besu. Ваша задача - обеспечивать запись важных транзакций в блокчейн, верифицировать целостность данных и предоставлять доказательства неизменности информации.",
+      config: { 
+        chainId: "besu-gov", 
+        nodeEndpoint: "https://besu-node.gov.kz" 
+      },
+      stats: { 
+        transactionsRecorded: 38945, 
+        verificationSuccessRate: 100,
+        averageConfirmationTime: "4.2 сек"
+      },
+      totalTasks: 187,
+      completedTasks: 187
+    },
+    {
       id: 2,
       name: "ИИ в законотворчестве",
       type: "legislation_assistant",
