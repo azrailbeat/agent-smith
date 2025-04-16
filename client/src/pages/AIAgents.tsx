@@ -51,7 +51,17 @@ import {
   Sparkles,
   RotateCw,
   SearchCode,
-  UserCog
+  UserCog,
+  Globe,
+  ScrollText,
+  Stethoscope,
+  Briefcase,
+  Camera,
+  GraduationCap,
+  Flame,
+  BarChart2,
+  Truck,
+  Database
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -724,14 +734,34 @@ const AIAgentsPage = () => {
     switch (type) {
       case "citizen_requests":
         return <MessageSquare className="h-5 w-5 text-blue-500" />;
-      case "meetings":
-        return <BookOpen className="h-5 w-5 text-purple-500" />;
+      case "meeting_protocols":
+        return <FileCheck className="h-5 w-5 text-purple-500" />;
       case "documents":
         return <FileStack className="h-5 w-5 text-amber-500" />;
       case "task_management":
         return <LayoutDashboard className="h-5 w-5 text-green-500" />;
       case "blockchain":
-        return <FileCheck className="h-5 w-5 text-red-500" />;
+        return <Database className="h-5 w-5 text-red-500" />;
+      case "translator":
+        return <Globe className="h-5 w-5 text-teal-500" />;
+      case "legal":
+        return <ScrollText className="h-5 w-5 text-indigo-500" />;
+      case "medical":
+        return <Stethoscope className="h-5 w-5 text-pink-500" />;
+      case "labor":
+        return <Briefcase className="h-5 w-5 text-yellow-500" />;
+      case "mvd":
+        return <Camera className="h-5 w-5 text-slate-500" />;
+      case "education":
+        return <GraduationCap className="h-5 w-5 text-cyan-500" />;
+      case "energy":
+        return <Flame className="h-5 w-5 text-orange-500" />;
+      case "trade":
+        return <BarChart2 className="h-5 w-5 text-violet-500" />;
+      case "transport":
+        return <Truck className="h-5 w-5 text-lime-500" />;
+      case "agriculture":
+        return <BookOpen className="h-5 w-5 text-emerald-500" />;
       default:
         return <Bot className="h-5 w-5 text-gray-500" />;
     }
@@ -741,7 +771,7 @@ const AIAgentsPage = () => {
     switch (type) {
       case "citizen_requests":
         return "Обращения граждан";
-      case "meetings":
+      case "meeting_protocols":
         return "Протоколы совещаний";
       case "documents":
         return "Документы";
@@ -749,6 +779,26 @@ const AIAgentsPage = () => {
         return "Управление задачами";
       case "blockchain":
         return "Блокчейн";
+      case "translator":
+        return "Переводчик";
+      case "legal":
+        return "Юридический консультант";
+      case "medical":
+        return "Медицинский консультант";
+      case "labor":
+        return "Трудовые вопросы";
+      case "mvd":
+        return "МВД";
+      case "education":
+        return "Образование";
+      case "energy":
+        return "Энергетика";
+      case "trade":
+        return "Торговля";
+      case "transport":
+        return "Транспорт";
+      case "agriculture":
+        return "Сельское хозяйство";
       default:
         return "Общий";
     }
@@ -773,7 +823,7 @@ const AIAgentsPage = () => {
     switch (type) {
       case "citizen_requests":
         return "#3b82f6"; // blue-500
-      case "meetings":
+      case "meeting_protocols":
         return "#8b5cf6"; // purple-500
       case "documents":
         return "#f59e0b"; // amber-500
@@ -781,6 +831,26 @@ const AIAgentsPage = () => {
         return "#10b981"; // green-500
       case "blockchain":
         return "#ef4444"; // red-500
+      case "translator":
+        return "#14b8a6"; // teal-500
+      case "legal":
+        return "#6366f1"; // indigo-500
+      case "medical":
+        return "#ec4899"; // pink-500
+      case "labor":
+        return "#facc15"; // yellow-500
+      case "mvd":
+        return "#64748b"; // slate-500
+      case "education":
+        return "#06b6d4"; // cyan-500
+      case "energy":
+        return "#f97316"; // orange-500
+      case "trade":
+        return "#8b5cf6"; // violet-500
+      case "transport":
+        return "#84cc16"; // lime-500
+      case "agriculture":
+        return "#10b981"; // emerald-500
       default:
         return "#6b7280"; // gray-500
     }
