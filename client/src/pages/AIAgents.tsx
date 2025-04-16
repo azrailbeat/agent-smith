@@ -119,10 +119,44 @@ const AIAgentsPage = () => {
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showPromptDialog, setShowPromptDialog] = useState(false);
+  const [showPersonaBuilderDialog, setShowPersonaBuilderDialog] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [viewingAgent, setViewingAgent] = useState<Agent | null>(null);
   const [assigningTask, setAssigningTask] = useState<Task | null>(null);
   const [editingSystemPrompt, setEditingSystemPrompt] = useState<string>("");
+  
+  // Расширенная структура для конфигурации агента в PersonaBuilder
+  interface KnowledgeSource {
+    id: string;
+    type: 'pinecone' | 'google_drive' | 'postgresql' | 'file';
+    name: string;
+    config: Record<string, any>;
+  }
+  
+  interface AgentTrigger {
+    id: string;
+    type: 'event' | 'data' | 'cron';
+    name: string;
+    config: Record<string, any>;
+  }
+  
+  interface PersonaBuilderConfig {
+    name: string;
+    model: string;
+    prompt: string;
+    knowledge_sources: KnowledgeSource[];
+    triggers: AgentTrigger[];
+    roles: ('public' | 'internal' | 'admin')[];
+  }
+  
+  const [personaConfig, setPersonaConfig] = useState<PersonaBuilderConfig>({
+    name: '',
+    model: 'gpt-4o',
+    prompt: '',
+    knowledge_sources: [],
+    triggers: [],
+    roles: ['internal']
+  });
   
   // Демо данные для министерств
   const demoMinistries: Ministry[] = [
