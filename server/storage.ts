@@ -222,6 +222,29 @@ export class MemStorage implements IStorage {
                 chainId: "123456",
                 networkName: "GovChain"
               }
+            },
+            {
+              name: "Milvus Vector DB",
+              type: "vectordb",
+              apiUrl: "http://milvus-server:19530",
+              apiKey: "",
+              isActive: true,
+              config: {
+                collectionName: "gov_documents",
+                dimensions: 1536,
+                indexType: "IVF_FLAT",
+                metricType: "L2"
+              }
+            },
+            {
+              name: "Anthropic Claude",
+              type: "anthropic",
+              apiUrl: "https://api.anthropic.com/v1",
+              apiKey: process.env.ANTHROPIC_API_KEY || "",
+              isActive: false,
+              config: {
+                defaultModel: "claude-3-7-sonnet-20250219"
+              }
             }
           ];
           
@@ -233,52 +256,364 @@ export class MemStorage implements IStorage {
             const defaultIntegrationId = openaiIntegration ? openaiIntegration.id : 1;
             
             const defaultAgents: InsertAgent[] = [
+              // Кросс-институциональные агенты
               {
-                name: "Помощник по запросам граждан",
+                name: "AgentSmith",
                 type: "citizen_requests",
                 description: "Обрабатывает и категоризирует запросы от граждан, помогает составить ответы",
                 modelId: defaultIntegrationId,
                 isActive: true,
-                systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - помочь государственным служащим эффективно обрабатывать запросы граждан, категоризировать их и помогать составлять профессиональные и информативные ответы.",
+                systemPrompt: "Вы - специалист по работе с обращениями граждан. Ваша задача - классифицировать, определять приоритеты и маршрутизировать запросы граждан, а также помогать составлять профессиональные и информативные ответы.",
                 config: {
                   temperature: 0.2,
                   maxTokens: 2048
+                },
+                stats: {
+                  processedRequests: 1287,
+                  avgResponseTime: 4.3,
+                  accuracyRate: 0.94,
+                  timeReduction: "68%"
                 }
               },
               {
-                name: "Протоколы собраний",
-                type: "meeting_protocols",
-                description: "Анализирует записи и протоколы совещаний, выделяет ключевую информацию",
+                name: "DocumentAI",
+                type: "document_processing",
+                description: "Анализирует и структурирует документы",
                 modelId: defaultIntegrationId,
                 isActive: true,
-                systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - выделять ключевую информацию из записей совещаний, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
+                systemPrompt: "Вы - эксперт по анализу и обработке документов. Ваша задача - анализировать структуру и юридическую корректность документов, извлекать важную информацию и готовить краткие резюме.",
                 config: {
                   temperature: 0.1,
                   maxTokens: 4096
+                },
+                stats: {
+                  processedDocuments: 3462,
+                  avgAnalysisTime: 8.2,
+                  accuracyRate: 0.96,
+                  timeReduction: "73%"
                 }
               },
               {
-                name: "Переводчик",
-                type: "translator",
-                description: "Переводит документы между казахским, русским и английским языками",
-                modelId: defaultIntegrationId,
-                isActive: true,
-                systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов между этими языками.",
-                config: {
-                  temperature: 0.3,
-                  maxTokens: 8192
-                }
-              },
-              {
-                name: "Смарт-контракты",
+                name: "BlockchainValidator",
                 type: "blockchain",
-                description: "Управляет созданием и выполнением смарт-контрактов в Hyperledger Besu",
+                description: "Прозрачная регистрация событий в блокчейне",
                 modelId: defaultIntegrationId,
                 isActive: true,
-                systemPrompt: "Вы - эксперт по смарт-контрактам в блокчейне. Ваша задача - помогать создавать, проверять и выполнять смарт-контракты в системе Hyperledger Besu.",
+                systemPrompt: "Вы - эксперт по работе с блокчейн-системами. Ваша задача - хешировать и записывать действия в блокчейн, обеспечивая прозрачность и неизменность данных.",
                 config: {
                   chainId: "123456",
                   networkName: "GovChain"
+                },
+                stats: {
+                  processedTransactions: 25892,
+                  avgProcessingTime: 1.8,
+                  successRate: 0.99,
+                  timeReduction: "65%"
+                }
+              },
+              {
+                name: "ProtocolMaster",
+                type: "meeting_protocols",
+                description: "Анализирует записи и протоколы совещаний, расшифровывает и извлекает решения",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - эксперт по анализу записей совещаний и создания протоколов. Ваша задача - расшифровывать и анализировать записи совещаний, выделять ключевую информацию, формировать списки задач и решений, а также создавать краткие и информативные протоколы.",
+                config: {
+                  temperature: 0.1,
+                  maxTokens: 4096
+                },
+                stats: {
+                  processedMeetings: 586,
+                  avgTranscriptionTime: 15.4,
+                  accuracyRate: 0.93,
+                  timeReduction: "79%"
+                }
+              },
+              {
+                name: "TranslatorAI",
+                type: "translator",
+                description: "Переводит голос и текст в реальном времени (KK/RU/EN)",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - профессиональный переводчик с глубоким знанием казахского, русского и английского языков, а также юридической и государственной терминологии. Ваша задача - обеспечивать точный и контекстуально правильный перевод официальных документов и речи между этими языками в реальном времени.",
+                config: {
+                  temperature: 0.3,
+                  maxTokens: 8192,
+                  languageCodes: ["ru-RU", "kk-KZ", "en-US"]
+                },
+                stats: {
+                  translatedPages: 12458,
+                  avgTranslationTime: 2.3,
+                  accuracyRate: 0.95,
+                  timeReduction: "82%"
+                }
+              },
+              {
+                name: "RAGAgent",
+                type: "knowledge_base",
+                description: "Интеллектуальный помощник с доступом к базам знаний через RAG",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - интеллектуальный помощник с доступом к базам знаний через систему Retrieval Augmented Generation. Ваша задача - отвечать на вопросы, используя актуальную информацию из баз знаний, документов и справочников, с указанием источников.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 4096,
+                  vectorDbIntegrationId: integrations.find(i => i.type === 'vectordb')?.id || 1,
+                  retrievalStrategy: "hybrid",
+                  retrievalTopK: 5
+                },
+                stats: {
+                  processedQueries: 7856,
+                  avgResponseTime: 3.2,
+                  userSatisfaction: 0.97,
+                  timeReduction: "85%"
+                }
+              },
+              {
+                name: "AppealTracker",
+                type: "citizen_requests",
+                description: "Отслеживание жалоб и уведомления",
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - специалист по отслеживанию и эскалации нерешенных жалоб граждан. Ваша задача - мониторить статусы обращений, отправлять уведомления о просроченных обращениях и эскалировать нерешенные жалобы на соответствующий уровень.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 2048
+                },
+                stats: {
+                  trackedAppeals: 5234,
+                  avgResolutionTime: 12.8,
+                  escalationRate: 0.14,
+                  timeReduction: "62%"
+                }
+              },
+              // Профильные агенты по министерствам
+              {
+                name: "ЛегалАдвайзер",
+                type: "legal",
+                description: "Проверка НПА и юридическая техника",
+                ministryId: 1, // Минюст
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - юридический эксперт Министерства юстиции. Ваша задача - проверять нормативно-правовые акты на соответствие законодательству, оценивать юридическую технику и давать рекомендации по улучшению документов.",
+                config: {
+                  temperature: 0.1,
+                  maxTokens: 4096
+                },
+                stats: {
+                  processedDocuments: 1248,
+                  avgAnalysisTime: 10.5,
+                  complianceScore: 0.97,
+                  timeReduction: "71%"
+                }
+              },
+              {
+                name: "ЕНТКонсультант",
+                type: "education",
+                description: "Помощник по ЕНТ и поступлению",
+                ministryId: 2, // МОН
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - консультант по Единому национальному тестированию и поступлению в вузы Казахстана. Ваша задача - отвечать на вопросы абитуриентов о процедуре ЕНТ, грантах, заявлениях и поступлении в учебные заведения.",
+                config: {
+                  temperature: 0.3,
+                  maxTokens: 2048
+                },
+                stats: {
+                  answeredQuestions: 8795,
+                  avgResponseTime: 1.8,
+                  userSatisfaction: 0.96,
+                  timeReduction: "89%"
+                }
+              },
+              {
+                name: "КазГрамматика",
+                type: "education",
+                description: "Проверка текста на казахском языке",
+                ministryId: 2, // МОН
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - эксперт по казахскому языку и грамматике. Ваша задача - проверять и исправлять грамматические, стилистические и пунктуационные ошибки в текстах на казахском языке, а также давать рекомендации по улучшению стиля.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 3072
+                },
+                stats: {
+                  processedTexts: 4562,
+                  avgCheckTime: 3.2,
+                  accuracyRate: 0.98,
+                  timeReduction: "76%"
+                }
+              },
+              {
+                name: "МедЭксперт",
+                type: "healthcare",
+                description: "Помощь врачу в анализе симптомов",
+                ministryId: 3, // МЗ
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - медицинский консультант для врачей. Ваша задача - помогать в анализе симптомов, предлагать возможные диагнозы на основе симптомов и медицинской истории, а также рекомендовать дополнительные исследования для подтверждения диагноза.",
+                config: {
+                  temperature: 0.1,
+                  maxTokens: 4096
+                },
+                stats: {
+                  processedCases: 2735,
+                  avgAnalysisTime: 5.6,
+                  accuracyRate: 0.92,
+                  timeReduction: "67%"
+                }
+              },
+              {
+                name: "НефтеТрекер",
+                type: "energy",
+                description: "Контроль поставок нефти",
+                ministryId: 4, // Минэнерго
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - аналитик по нефтяным поставкам Министерства энергетики. Ваша задача - оптимизировать планы распределения нефти, отслеживать поставки, анализировать отклонения от плана и предлагать решения по оптимизации логистики.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 2048
+                },
+                stats: {
+                  monitoredDeliveries: 1892,
+                  avgProcessingTime: 8.4,
+                  optimizationRate: 0.18,
+                  timeReduction: "54%"
+                }
+              },
+              {
+                name: "СтройАналитик",
+                type: "construction",
+                description: "Проверка градостроительных документов",
+                ministryId: 5, // Минстрой
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - эксперт по градостроительным документам и геоинформационным системам. Ваша задача - сравнивать слои ГИС для городских проектов, проверять соответствие градостроительных документов нормативам и выявлять возможные проблемы.",
+                config: {
+                  temperature: 0.1,
+                  maxTokens: 3072
+                },
+                stats: {
+                  analyzedProjects: 845,
+                  avgAnalysisTime: 12.7,
+                  issueDetectionRate: 0.22,
+                  timeReduction: "63%"
+                }
+              },
+              {
+                name: "ПотребЗащита",
+                type: "trade",
+                description: "Помощь гражданам в защите прав потребителей",
+                ministryId: 6, // Минторг
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - консультант по защите прав потребителей. Ваша задача - помогать гражданам в составлении жалоб на нарушение прав потребителей, разъяснять их права и обязанности продавцов/поставщиков услуг, а также рекомендовать дальнейшие действия.",
+                config: {
+                  temperature: 0.3,
+                  maxTokens: 2048
+                },
+                stats: {
+                  assistedComplaints: 3872,
+                  avgResponseTime: 3.9,
+                  resolutionRate: 0.76,
+                  timeReduction: "81%"
+                }
+              },
+              {
+                name: "АгроСубсидия",
+                type: "agriculture",
+                description: "Автоматизация субсидий для фермеров",
+                ministryId: 7, // Минсельхоз
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - специалист по сельскохозяйственным субсидиям. Ваша задача - автоматически заполнять заявки на субсидии на основе данных фермеров, проверять корректность информации и рекомендовать оптимальные программы субсидирования.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 2048
+                },
+                stats: {
+                  processedApplications: 2156,
+                  avgProcessingTime: 7.3,
+                  approvalRate: 0.88,
+                  timeReduction: "78%"
+                }
+              },
+              {
+                name: "ДипломатАссистент",
+                type: "foreign_affairs",
+                description: "Подготовка брифингов и справок",
+                ministryId: 8, // МИД
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - аналитик Министерства иностранных дел. Ваша задача - составлять краткие аналитические брифинги по международной политике для министра, обобщать ключевые события и их потенциальное влияние на внешнюю политику Казахстана.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 4096
+                },
+                stats: {
+                  preparedBriefings: 834,
+                  avgPreparationTime: 14.7,
+                  qualityScore: 0.96,
+                  timeReduction: "72%"
+                }
+              },
+              {
+                name: "ТрудАналитик",
+                type: "labor",
+                description: "Прогноз кадров на основе проектов",
+                ministryId: 9, // Минтруда
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - специалист по прогнозированию потребностей в кадрах. Ваша задача - анализировать данные о планируемых государственных и частных проектах для прогнозирования потребностей в различных специалистах по секторам экономики.",
+                config: {
+                  temperature: 0.2,
+                  maxTokens: 2048
+                },
+                stats: {
+                  generatedForecasts: 567,
+                  avgProcessingTime: 18.5,
+                  accuracyRate: 0.85,
+                  timeReduction: "68%"
+                }
+              },
+              {
+                name: "ТранспортАналитик",
+                type: "transport",
+                description: "Консультант по логистике и госуслугам",
+                ministryId: 10, // Минтранс
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - консультант по транспорту и логистике. Ваша задача - консультировать пользователей по вопросам транспорта, логистики и связанных государственных услуг, помогать оптимизировать маршруты и выбирать оптимальные транспортные решения.",
+                config: {
+                  temperature: 0.3,
+                  maxTokens: 2048
+                },
+                stats: {
+                  answeredQueries: 3245,
+                  avgResponseTime: 4.2,
+                  optimizationRate: 0.34,
+                  timeReduction: "59%"
+                }
+              },
+              {
+                name: "ДорожныйИнспектор",
+                type: "internal_affairs",
+                description: "Определение нарушителей ПДД",
+                ministryId: 11, // МВД
+                modelId: defaultIntegrationId,
+                isActive: true,
+                systemPrompt: "Вы - аналитик дорожной безопасности. Ваша задача - анализировать видеоматериалы для выявления нарушений правил дорожного движения, классифицировать тип нарушения и готовить данные для последующей обработки.",
+                config: {
+                  temperature: 0.1,
+                  maxTokens: 2048
+                },
+                stats: {
+                  analyzedFootage: 10876,
+                  avgAnalysisTime: 5.8,
+                  detectionRate: 0.93,
+                  timeReduction: "87%"
                 }
               }
             ];
