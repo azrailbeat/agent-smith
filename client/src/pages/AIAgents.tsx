@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import RAGSourceSelector from "@/components/RAGSourceSelector";
 import { 
   Bot, 
   Brain, 
@@ -1560,6 +1561,19 @@ const AIAgentsPage = () => {
                 </div>
                 <p className="text-xs text-neutral-500">
                   Неактивные агенты не будут обрабатывать новые задачи.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="rag-sources">Источники данных RAG</Label>
+                <div className="mt-2">
+                  <RAGSourceSelector 
+                    entityType="agent"
+                    entityId={editingAgent.id}
+                  />
+                </div>
+                <p className="text-xs text-neutral-500">
+                  Настройте источники данных для улучшения ответов агента через Retrieval Augmented Generation (RAG)
                 </p>
               </div>
             </div>
