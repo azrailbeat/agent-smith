@@ -121,8 +121,20 @@ const CitizenRequests = () => {
     systemPrompt: "Вы - помощник для классификации обращений граждан. Ваша задача - определить тип обращения, уровень приоритета и предложить решение."
   });
   
+  // Определение типа агента
+  interface Agent {
+    id: number;
+    name: string;
+    type: string;
+    description?: string;
+    modelId: number;
+    isActive: boolean;
+    systemPrompt: string;
+    config: any;
+  }
+  
   // Загрузка AI агентов из API
-  const { data: availableAgents = [] } = useQuery({ 
+  const { data: availableAgents = [] } = useQuery<Agent[]>({ 
     queryKey: ['/api/agents'], 
     enabled: agentSettings.enabled 
   });
@@ -741,15 +753,6 @@ const CitizenRequests = () => {
                 >
                   <Send className="h-4 w-4 mr-2" />
                   <span>Отправить ответ</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center"
-                  onClick={() => setShowAgentSettingsDialog(true)}
-                >
-                  <Bot className="h-4 w-4 mr-2 text-primary-600" />
-                  <span>Настройки AI-агента</span>
                 </Button>
               </div>
             </div>
@@ -1725,50 +1728,66 @@ const CitizenRequests = () => {
                       {agentSettings.enabled ? (
                         <>
                           {availableAgents && availableAgents.length > 0 ? (
-                            availableAgents
-                              .filter(agent => agent.isActive)
-                              .map(agent => (
-                                <Button 
-                                  key={agent.id}
-                                  variant="outline" 
-                                  className="w-full justify-start" 
-                                  size="sm"
-                                  onClick={() => {
-                                    toast({
-                                      title: `Запрос к AI-агенту`,
-                                      description: `Отправка запроса к агенту "${agent.name}"...`
-                                    });
-                                    
-                                    // Имитация ответа
-                                    setTimeout(() => {
-                                      if (selectedRequest) {
-                                        const updatedRequest = {...selectedRequest};
-                                        
-                                        if (agent.type === 'citizen_requests') {
-                                          updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
-                                        } else if (agent.type === 'meeting_protocols') {
-                                          updatedRequest.aiSuggestion = "Запрос относится к департаменту документационного обеспечения. Рекомендуется перенаправить запрос для обработки специалистом данного департамента.";
-                                        } else if (agent.type === 'blockchain') {
-                                          updatedRequest.blockchainHash = "0x8f4e1a3b2c7d6e9f0a1b2c3d4e5f6a7b8c9d0e1f";
+                            <>
+                              {availableAgents
+                                .filter(agent => agent.isActive)
+                                .map(agent => (
+                                  <Button 
+                                    key={agent.id}
+                                    variant="outline" 
+                                    className="w-full justify-start" 
+                                    size="sm"
+                                    onClick={() => {
+                                      toast({
+                                        title: `Запрос к AI-агенту`,
+                                        description: `Отправка запроса к агенту "${agent.name}"...`
+                                      });
+                                      
+                                      // Имитация ответа
+                                      setTimeout(() => {
+                                        if (selectedRequest) {
+                                          const updatedRequest = {...selectedRequest};
+                                          
+                                          if (agent.type === 'citizen_requests') {
+                                            updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
+                                          } else if (agent.type === 'meeting_protocols') {
+                                            updatedRequest.aiSuggestion = "Запрос относится к департаменту документационного обеспечения. Рекомендуется перенаправить запрос для обработки специалистом данного департамента.";
+                                          } else if (agent.type === 'blockchain') {
+                                            updatedRequest.blockchainHash = "0x8f4e1a3b2c7d6e9f0a1b2c3d4e5f6a7b8c9d0e1f";
+                                          }
+                                          
+                                          setSelectedRequest(updatedRequest);
+                                          
+                                          toast({
+                                            title: "Ответ от агента",
+                                            description: `Получен ответ от агента "${agent.name}"`
+                                          });
                                         }
-                                        
-                                        setSelectedRequest(updatedRequest);
-                                        
-                                        toast({
-                                          title: "Ответ от агента",
-                                          description: `Получен ответ от агента "${agent.name}"`
-                                        });
-                                      }
-                                    }, 1500);
-                                  }}
+                                      }, 1500);
+                                    }}
+                                  >
+                                    {agent.type === 'citizen_requests' && <User className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'meeting_protocols' && <FileCheck className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'translator' && <BarChart2 className="h-4 w-4 mr-2" />}
+                                    {agent.type === 'blockchain' && <Database className="h-4 w-4 mr-2" />}
+                                    <span>{agent.name}</span>
+                                  </Button>
+                                ))
+                              }
+                              
+                              {/* Кнопка настроек AI-агента в нижней части панели */}
+                              <div className="pt-2 mt-2 border-t border-neutral-200">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="w-full justify-start text-neutral-500"
+                                  onClick={() => setShowAgentSettingsDialog(true)}
                                 >
-                                  {agent.type === 'citizen_requests' && <User className="h-4 w-4 mr-2" />}
-                                  {agent.type === 'meeting_protocols' && <FileCheck className="h-4 w-4 mr-2" />}
-                                  {agent.type === 'translator' && <BarChart2 className="h-4 w-4 mr-2" />}
-                                  {agent.type === 'blockchain' && <Database className="h-4 w-4 mr-2" />}
-                                  <span>{agent.name}</span>
+                                  <Bot className="h-4 w-4 mr-2" />
+                                  <span>Настройки AI-агента</span>
                                 </Button>
-                              ))
+                              </div>
+                            </>
                           ) : (
                             <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
                               Загрузка агентов...
