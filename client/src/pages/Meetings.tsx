@@ -33,6 +33,7 @@ import {
   SendHorizontal,
   Plus
 } from "lucide-react";
+import MeetingProtocolAgentSection from "@/components/MeetingProtocolAgentSection";
 import { 
   Dialog, 
   DialogContent, 
