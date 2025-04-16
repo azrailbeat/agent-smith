@@ -23,7 +23,8 @@ import {
   ListChecks,
   Bot,
   Settings,
-  Zap
+  Zap,
+  Send
 } from "lucide-react";
 import { 
   Dialog, 
