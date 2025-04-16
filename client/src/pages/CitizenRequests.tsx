@@ -1564,8 +1564,8 @@ const CitizenRequests = () => {
                 <div className="md:col-span-2 space-y-4">
                   <div>
                     <h3 className="text-sm font-medium mb-2">Описание обращения</h3>
-                    <div className="p-3 bg-neutral-50 rounded-md border text-sm">
-                      {selectedRequest.content}
+                    <div className="p-3 bg-neutral-50 rounded-md border text-sm whitespace-pre-wrap">
+                      {selectedRequest.description || selectedRequest.content || "Содержание обращения не указано"}
                     </div>
                   </div>
                   
@@ -1863,8 +1863,8 @@ const CitizenRequests = () => {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-sm font-medium text-neutral-500">Обращение</h3>
-                  <p className="mt-1 p-3 bg-neutral-50 rounded-md border border-neutral-200 text-sm">
-                    {selectedRequest.content}
+                  <p className="mt-1 p-3 bg-neutral-50 rounded-md border border-neutral-200 text-sm whitespace-pre-wrap">
+                    {selectedRequest.description || selectedRequest.content || "Содержание обращения не указано"}
                   </p>
                 </div>
                 
