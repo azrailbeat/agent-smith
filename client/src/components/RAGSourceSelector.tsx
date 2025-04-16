@@ -63,7 +63,7 @@ export interface RAGConfig {
 interface RAGSourceSelectorProps {
   isGlobal?: boolean;
   entityId?: number;
-  entityType?: 'citizen_request' | 'meeting_protocol' | 'document';
+  entityType?: 'citizen_request' | 'meeting_protocol' | 'document' | 'agent';
   onSourcesChange?: (sources: RAGSourceSettings[]) => void;
 }
 
