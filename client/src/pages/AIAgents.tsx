@@ -801,10 +801,7 @@ const AIAgentsPage = () => {
               <Plus className="h-4 w-4 mr-2" />
               Добавить агента
             </Button>
-            <Button onClick={handleOpenPersonaBuilder} variant="outline">
-              <Brain className="h-4 w-4 mr-2" />
-              PersonaBuilder
-            </Button>
+
           </div>
         </div>
       </div>
