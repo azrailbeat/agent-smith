@@ -121,6 +121,12 @@ const CitizenRequests = () => {
     systemPrompt: "Вы - помощник для классификации обращений граждан. Ваша задача - определить тип обращения, уровень приоритета и предложить решение."
   });
   
+  // Загрузка AI агентов из API
+  const { data: availableAgents = [] } = useQuery({ 
+    queryKey: ['/api/agents'], 
+    enabled: agentSettings.enabled 
+  });
+  
   // Интерфейс для колонок Канбан-доски
   interface KanbanColumn {
     id: string;
@@ -1718,87 +1724,56 @@ const CitizenRequests = () => {
                     <div className="space-y-2">
                       {agentSettings.enabled ? (
                         <>
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-start" 
-                            size="sm"
-                            onClick={() => {
-                              toast({
-                                title: "Запрос к AI-агенту",
-                                description: "Отправка запроса в департамент документов..."
-                              });
-                              
-                              // Имитация ответа
-                              setTimeout(() => {
-                                if (selectedRequest) {
-                                  const updatedRequest = {...selectedRequest};
-                                  updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
-                                  setSelectedRequest(updatedRequest);
-                                  
-                                  toast({
-                                    title: "Ответ от агента",
-                                    description: "Получен ответ от департамента документов"
-                                  });
-                                }
-                              }, 1500);
-                            }}
-                          >
-                            <User className="h-4 w-4 mr-2" />
-                            <span>Департамент документов</span>
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-start" 
-                            size="sm"
-                            onClick={() => {
-                              toast({
-                                title: "Запрос аналитики",
-                                description: "Формирование аналитического отчета..."
-                              });
-                              
-                              // Имитация ответа
-                              setTimeout(() => {
-                                if (selectedRequest) {
-                                  const updatedRequest = {...selectedRequest};
-                                  updatedRequest.aiClassification = "Анализ показывает: обращение относится к категории 'Получение документов', подтип 'Справка о несудимости'. Приоритет: средний. Прогнозируемое время обработки: 3-5 рабочих дней.";
-                                  setSelectedRequest(updatedRequest);
-                                  
-                                  toast({
-                                    title: "Аналитический отчет",
-                                    description: "Аналитический отчет по обращению сформирован"
-                                  });
-                                }
-                              }, 2000);
-                            }}
-                          >
-                            <BarChart2 className="h-4 w-4 mr-2" />
-                            <span>Аналитик данных</span>
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-start" 
-                            size="sm"
-                            onClick={() => {
-                              toast({
-                                title: "Проверка статуса",
-                                description: "Проверка статуса обращения в системах..."
-                              });
-                              
-                              // Имитация ответа
-                              setTimeout(() => {
-                                toast({
-                                  title: "Результат проверки",
-                                  description: "Обращение проверено во всех интегрированных системах",
-                                  variant: "default"
-                                });
-                              }, 1000);
-                            }}
-                          >
-                            <ListChecks className="h-4 w-4 mr-2" />
-                            <span>Проверка статуса</span>
-                          </Button>
+                          {availableAgents && availableAgents.length > 0 ? (
+                            availableAgents
+                              .filter(agent => agent.isActive)
+                              .map(agent => (
+                                <Button 
+                                  key={agent.id}
+                                  variant="outline" 
+                                  className="w-full justify-start" 
+                                  size="sm"
+                                  onClick={() => {
+                                    toast({
+                                      title: `Запрос к AI-агенту`,
+                                      description: `Отправка запроса к агенту "${agent.name}"...`
+                                    });
+                                    
+                                    // Имитация ответа
+                                    setTimeout(() => {
+                                      if (selectedRequest) {
+                                        const updatedRequest = {...selectedRequest};
+                                        
+                                        if (agent.type === 'citizen_requests') {
+                                          updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
+                                        } else if (agent.type === 'meeting_protocols') {
+                                          updatedRequest.aiSuggestion = "Запрос относится к департаменту документационного обеспечения. Рекомендуется перенаправить запрос для обработки специалистом данного департамента.";
+                                        } else if (agent.type === 'blockchain') {
+                                          updatedRequest.blockchainHash = "0x8f4e1a3b2c7d6e9f0a1b2c3d4e5f6a7b8c9d0e1f";
+                                        }
+                                        
+                                        setSelectedRequest(updatedRequest);
+                                        
+                                        toast({
+                                          title: "Ответ от агента",
+                                          description: `Получен ответ от агента "${agent.name}"`
+                                        });
+                                      }
+                                    }, 1500);
+                                  }}
+                                >
+                                  {agent.type === 'citizen_requests' && <User className="h-4 w-4 mr-2" />}
+                                  {agent.type === 'meeting_protocols' && <FileCheck className="h-4 w-4 mr-2" />}
+                                  {agent.type === 'translator' && <BarChart2 className="h-4 w-4 mr-2" />}
+                                  {agent.type === 'blockchain' && <Database className="h-4 w-4 mr-2" />}
+                                  <span>{agent.name}</span>
+                                </Button>
+                              ))
+                          ) : (
+                            <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
+                              Загрузка агентов...
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="text-center py-3 text-sm text-neutral-500 bg-neutral-50 rounded-md border border-dashed">
