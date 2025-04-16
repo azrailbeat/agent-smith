@@ -937,6 +937,206 @@ const AIAgentsPage = () => {
           </div>
         </TabsContent>
         
+        <TabsContent value="ministry">
+          <div className="space-y-8">
+            {isAgentsLoading ? (
+              <div className="animate-pulse space-y-6">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-6 bg-neutral-100 rounded w-1/3"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="h-48 bg-neutral-100 rounded-lg"></div>
+                      <div className="h-48 bg-neutral-100 rounded-lg"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {demoMinistries.map(ministry => {
+                  const ministryAgents = agents.filter(a => a.ministryId === ministry.id);
+                  
+                  if (ministryAgents.length === 0) return null;
+                  
+                  return (
+                    <div key={ministry.id} className="space-y-4">
+                      <div className="flex items-center space-x-2 border-b pb-2">
+                        <span className="text-2xl">{ministry.icon}</span>
+                        <h2 className="text-xl font-semibold">{ministry.name}</h2>
+                        <Badge variant="outline" className="ml-2">{ministryAgents.length} агентов</Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {ministryAgents.map(agent => {
+                          const integration = integrations.find(i => i.id === agent.modelId);
+                          const agentType = demoAgentTypes.find(t => t.id === agent.typeId);
+                          const agentTasks = tasks.filter(t => t.agentId === agent.id);
+                          const completedTasksCount = agentTasks.filter(t => t.status === "completed").length;
+                          const progress = agentTasks.length > 0 ? Math.round((completedTasksCount / agentTasks.length) * 100) : 100;
+                          
+                          return (
+                            <Card key={agent.id} className="overflow-hidden border-t-4" style={{ borderTopColor: getAgentTypeColor(agent.type) }}>
+                              <CardHeader className="pb-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center">
+                                    {getAgentTypeIcon(agent.type)}
+                                    <CardTitle className="ml-2 text-lg">
+                                      {agent.name}
+                                    </CardTitle>
+                                  </div>
+                                  <Badge className={agent.isActive ? "bg-green-100 text-green-800" : "bg-neutral-100 text-neutral-800"}>
+                                    {agent.isActive ? "Активен" : "Отключен"}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="mt-1">
+                                  {agent.description || (agentType ? agentType.description : `Агент для работы с ${getAgentTypeLabel(agent.type).toLowerCase()}`)}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="pb-4">
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-neutral-500 flex items-center">
+                                      <Brain className="h-4 w-4 mr-1" />
+                                      Модель:
+                                    </span>
+                                    <span className="font-medium flex items-center">
+                                      {integration && getModelTypeIcon(integration.type)}
+                                      <span className="ml-1">{integration?.name || "Неизвестная модель"}</span>
+                                    </span>
+                                  </div>
+                                  
+                                  {agent.stats && (
+                                    <>
+                                      {Object.entries(agent.stats).map(([key, value], i) => (
+                                        <div key={i} className="flex items-center justify-between text-sm">
+                                          <span className="text-neutral-500 capitalize">
+                                            {key.replace(/([A-Z])/g, ' $1').replace(/([A-Z][a-z])/g, ' $1').toLowerCase()}:
+                                          </span>
+                                          <span className="font-medium">{value}</span>
+                                        </div>
+                                      ))}
+                                    </>
+                                  )}
+                                  
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-neutral-500 flex items-center">
+                                      <FileCheck className="h-4 w-4 mr-1" />
+                                      Задачи:
+                                    </span>
+                                    <span className="font-medium">{agent.completedTasks || completedTasksCount}/{agent.totalTasks || agentTasks.length}</span>
+                                  </div>
+                                  
+                                  <div className="w-full bg-neutral-100 rounded-full h-2">
+                                    <div className="bg-primary h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                              <CardFooter className="flex justify-between border-t pt-4 bg-neutral-50">
+                                <Button variant="outline" size="sm" onClick={() => handleViewAgent(agent)}>
+                                  Подробнее
+                                </Button>
+                                <div className="flex space-x-2">
+                                  <Button variant="ghost" size="sm" onClick={() => handleEditSystemPrompt(agent)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleToggleAgentStatus(agent)}>
+                                    {agent.isActive ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
+                                  </Button>
+                                </div>
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {agents.filter(agent => !agent.ministryId).length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2 border-b pb-2">
+                      <Bot className="h-6 w-6 text-neutral-600" />
+                      <h2 className="text-xl font-semibold">Общие агенты</h2>
+                      <Badge variant="outline" className="ml-2">{agents.filter(agent => !agent.ministryId).length} агентов</Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {agents
+                        .filter(agent => !agent.ministryId)
+                        .map(agent => {
+                          const integration = integrations.find(i => i.id === agent.modelId);
+                          const agentTasks = tasks.filter(t => t.agentId === agent.id);
+                          const completedTasksCount = agentTasks.filter(t => t.status === "completed").length;
+                          const progress = agentTasks.length > 0 ? Math.round((completedTasksCount / agentTasks.length) * 100) : 100;
+                          
+                          return (
+                            <Card key={agent.id} className="overflow-hidden border-t-4" style={{ borderTopColor: getAgentTypeColor(agent.type) }}>
+                              <CardHeader className="pb-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center">
+                                    {getAgentTypeIcon(agent.type)}
+                                    <CardTitle className="ml-2 text-lg">
+                                      {agent.name}
+                                    </CardTitle>
+                                  </div>
+                                  <Badge className={agent.isActive ? "bg-green-100 text-green-800" : "bg-neutral-100 text-neutral-800"}>
+                                    {agent.isActive ? "Активен" : "Отключен"}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="mt-1">
+                                  {agent.description || `Агент для работы с ${getAgentTypeLabel(agent.type).toLowerCase()}`}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="pb-4">
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-neutral-500 flex items-center">
+                                      <Brain className="h-4 w-4 mr-1" />
+                                      Модель:
+                                    </span>
+                                    <span className="font-medium flex items-center">
+                                      {integration && getModelTypeIcon(integration.type)}
+                                      <span className="ml-1">{integration?.name || "Неизвестная модель"}</span>
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-neutral-500 flex items-center">
+                                      <FileCheck className="h-4 w-4 mr-1" />
+                                      Задачи:
+                                    </span>
+                                    <span className="font-medium">{agent.completedTasks || completedTasksCount}/{agent.totalTasks || agentTasks.length}</span>
+                                  </div>
+                                  
+                                  <div className="w-full bg-neutral-100 rounded-full h-2">
+                                    <div className="bg-primary h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                              <CardFooter className="flex justify-between border-t pt-4 bg-neutral-50">
+                                <Button variant="outline" size="sm" onClick={() => handleViewAgent(agent)}>
+                                  Подробнее
+                                </Button>
+                                <div className="flex space-x-2">
+                                  <Button variant="ghost" size="sm" onClick={() => handleEditSystemPrompt(agent)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleToggleAgentStatus(agent)}>
+                                    {agent.isActive ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
+                                  </Button>
+                                </div>
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="tasks">
           <div className="space-y-4">
             {isTasksLoading ? (
