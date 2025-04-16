@@ -199,9 +199,9 @@ const AIAgentsPage = () => {
   const saveAgentMutation = useMutation({
     mutationFn: (agent: Agent) => {
       if (agent.id) {
-        return apiRequest(`/api/agents/${agent.id}`, { method: 'PATCH', data: agent });
+        return apiRequest('PATCH', `/api/agents/${agent.id}`, agent);
       } else {
-        return apiRequest('/api/agents', { method: 'POST', data: agent });
+        return apiRequest('POST', '/api/agents', agent);
       }
     },
     onSuccess: () => {
@@ -224,7 +224,7 @@ const AIAgentsPage = () => {
   
   const updateAgentStatusMutation = useMutation({
     mutationFn: (data: {id: number, isActive: boolean}) => {
-      return apiRequest(`/api/agents/${data.id}/status`, { method: 'PATCH', data: { isActive: data.isActive } });
+      return apiRequest('PATCH', `/api/agents/${data.id}/status`, { isActive: data.isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
@@ -244,7 +244,7 @@ const AIAgentsPage = () => {
   
   const updateSystemPromptMutation = useMutation({
     mutationFn: (data: {id: number, systemPrompt: string}) => {
-      return apiRequest(`/api/agents/${data.id}/prompt`, { method: 'PATCH', data: { systemPrompt: data.systemPrompt } });
+      return apiRequest('PATCH', `/api/agents/${data.id}/prompt`, { systemPrompt: data.systemPrompt });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
@@ -265,7 +265,7 @@ const AIAgentsPage = () => {
   
   const assignTaskMutation = useMutation({
     mutationFn: (data: {taskId: number, agentId: number}) => {
-      return apiRequest(`/api/tasks/${data.taskId}/assign`, { method: 'PATCH', data: { agentId: data.agentId } });
+      return apiRequest('PATCH', `/api/tasks/${data.taskId}/assign`, { agentId: data.agentId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
