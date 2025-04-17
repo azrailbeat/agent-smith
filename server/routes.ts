@@ -1525,8 +1525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Загружаем сервис AI-агентов
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированный сервис агентов
       
       // Получаем документ из базы
       const document = await storage.getDocument(id);
@@ -1619,8 +1618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Загружаем сервис AI-агентов
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированный сервис агентов
       
       // Получаем задачу из базы данных
       const task = await storage.getTask(id);
@@ -1709,8 +1707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Загружаем сервис AI-агентов
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированный сервис агентов
       
       // Получаем предложение DAO из базы данных
       const proposal = await storage.getDAOProposal(id);
@@ -1838,7 +1835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Загружаем сервис AI-агентов
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированный сервис агентов
       
       // Проверяем инициализацию сервиса агентов
       if (!agentService.initialized) {
@@ -1923,7 +1920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Загружаем сервис AI-агентов
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированный сервис агентов
       
       // Проверяем инициализацию сервиса агентов
       if (!agentService.initialized) {
