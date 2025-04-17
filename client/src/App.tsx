@@ -69,8 +69,8 @@ function App() {
       <div className="min-h-screen flex flex-col bg-white text-slate-800">
         <div className="flex flex-1">
           <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} currentUser={currentUser} />
-          <main className={`flex-1 py-7 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64'}`}>
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
               <Router />
             </div>
           </main>

@@ -141,7 +141,7 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
     <div
       className={cn(
         "fixed left-0 top-0 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-20 shadow-sm",
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-14 sm:w-16" : "w-56 sm:w-64"
       )}
     >
       <div className="flex flex-col h-full pb-4">
@@ -220,8 +220,8 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
                                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                             )}
                           >
-                            <span className="mr-3">{item.icon}</span>
-                            {item.name}
+                            <span className="flex-shrink-0 mr-3">{item.icon}</span>
+                            <span className="truncate">{item.name}</span>
                           </Button>
                         </Link>
                       </li>
