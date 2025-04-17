@@ -1079,17 +1079,18 @@ const AIAgentsPage = () => {
                       <div className="w-full sm:w-2 h-2 sm:h-auto" style={{ backgroundColor: getAgentTypeColor(agent.type) }}></div>
                       <div className="flex-1 p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                          <div className="flex items-center mb-2 sm:mb-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-0">
                             {getAgentTypeIcon(agent.type)}
-                            <h3 className="text-lg font-semibold ml-2">{agent.name}</h3>
-                            <Badge className={`ml-2 ${agent.isActive ? "bg-green-100 text-green-800" : "bg-neutral-100 text-neutral-800"}`}>
+                            <h3 className="text-lg font-semibold">{agent.name}</h3>
+                            <Badge className={`${agent.isActive ? "bg-green-100 text-green-800" : "bg-neutral-100 text-neutral-800"}`}>
                               {agent.isActive ? "Активен" : "Отключен"}
                             </Badge>
                           </div>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEditAgent(agent)}>
                               <Edit className="h-4 w-4 mr-1" />
-                              Изменить
+                              <span className="hidden sm:inline">Изменить</span>
+                              <span className="sm:hidden">Ред.</span>
                             </Button>
                             <Button 
                               variant={agent.isActive ? "ghost" : "outline"} 
@@ -1100,12 +1101,14 @@ const AIAgentsPage = () => {
                               {agent.isActive ? (
                                 <>
                                   <XCircle className="h-4 w-4 mr-1" />
-                                  Отключить
+                                  <span className="hidden sm:inline">Отключить</span>
+                                  <span className="sm:hidden">Откл.</span>
                                 </>
                               ) : (
                                 <>
                                   <CheckCircle className="h-4 w-4 mr-1" />
-                                  Активировать
+                                  <span className="hidden sm:inline">Активировать</span>
+                                  <span className="sm:hidden">Вкл.</span>
                                 </>
                               )}
                             </Button>
@@ -1196,7 +1199,7 @@ const AIAgentsPage = () => {
                         <Badge variant="outline" className="ml-2">{ministryAgents.length} агентов</Badge>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {ministryAgents.map(agent => {
                           const integration = integrations.find(i => i.id === agent.modelId);
                           const agentType = demoAgentTypes.find(t => t.id === agent.typeId);
@@ -1290,7 +1293,7 @@ const AIAgentsPage = () => {
                       <Badge variant="outline" className="ml-2">{agents.filter(agent => !agent.ministryId).length} агентов</Badge>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {agents
                         .filter(agent => !agent.ministryId)
                         .map(agent => {
@@ -1381,18 +1384,18 @@ const AIAgentsPage = () => {
                 return (
                   <Card key={task.id}>
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <h3 className="font-medium text-neutral-900">{task.title}</h3>
-                            <Badge className={`ml-2 ${getStatusColor(task.status)}`}>
+                            <Badge className={`${getStatusColor(task.status)}`}>
                               {getStatusLabel(task.status)}
                             </Badge>
                           </div>
                           <p className="text-sm text-neutral-600">{task.description}</p>
                         </div>
                         
-                        <div className="ml-4 flex items-center">
+                        <div className="flex items-center">
                           {agent ? (
                             <div className="flex items-center bg-neutral-100 p-2 rounded-md">
                               <Bot className="h-4 w-4 text-primary mr-2" />
@@ -1401,7 +1404,8 @@ const AIAgentsPage = () => {
                           ) : (
                             <Button variant="outline" size="sm" onClick={() => handleAssignTask(task)}>
                               <UserCog className="h-4 w-4 mr-1" />
-                              Назначить агента
+                              <span className="hidden sm:inline">Назначить агента</span>
+                              <span className="sm:hidden">Назначить</span>
                             </Button>
                           )}
                         </div>
