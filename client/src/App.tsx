@@ -122,8 +122,9 @@ function App() {
           {/* Затемняющий оверлей при открытом сайдбаре на мобильных */}
           {isMobile && sidebarVisible && (
             <div 
-              className="fixed inset-0 bg-black/30 z-10"
+              className="fixed inset-0 bg-black/30 z-20 backdrop-blur-sm"
               onClick={() => setSidebarVisible(false)}
+              style={{ animation: 'fadeIn 0.2s ease-in-out' }}
             ></div>
           )}
           

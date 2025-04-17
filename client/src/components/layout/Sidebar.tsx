@@ -152,10 +152,12 @@ const Sidebar = ({
       className={cn(
         "fixed left-0 top-0 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-30 shadow-md",
         collapsed ? "w-14 sm:w-16" : "w-56 sm:w-64",
-        isMobile && !visible ? "-translate-x-full" : "translate-x-0"
+        isMobile && !visible ? "-translate-x-full" : "translate-x-0",
+        isMobile && visible ? "animate-sidebar-slide-in" : ""
       )}
+      style={isMobile && visible ? {animation: 'slideInLeft 0.3s ease-out'} : {}}
     >
-      <div className="flex flex-col h-full pb-4">
+      <div className="flex flex-col h-full pb-4 overflow-hidden">
         {/* Логотип */}
         <div className={cn("p-3 border-b border-slate-200", 
           collapsed ? "flex justify-center" : "px-4"
@@ -182,9 +184,12 @@ const Sidebar = ({
           </div>
         </div>
         
-        <div className="flex-1 py-5">
+        <div className={cn(
+          "flex-1 py-5 overflow-y-auto",
+          isMobile ? "max-h-[calc(100vh-180px)]" : "" // Ограничиваем высоту на мобильных устройствах
+        )}>
           {collapsed ? (
-            <ul className="space-y-2 px-3">
+            <ul className="space-y-2 px-3 sidebar-scroll">
               {navItems.map((item) => (
                 <li key={item.path}>
                   <TooltipProvider>
@@ -212,9 +217,9 @@ const Sidebar = ({
               ))}
             </ul>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 h-full overflow-y-auto pr-1 sidebar-scroll">
               {navGroups.map((group, index) => (
-                <div key={index}>
+                <div key={index} className="mb-4">
                   <h3 className="mb-2 px-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                     {group.title}
                   </h3>
