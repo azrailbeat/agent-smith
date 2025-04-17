@@ -1177,8 +1177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Загрузка всех API-модулей
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированные модули
       
       // Получаем обращение гражданина
       const request = await storage.getCitizenRequest(id);
@@ -1377,8 +1376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Загружаем сервис AI-агентов
-      const { agentService, AgentTaskType, AgentEntityType } = require('./services/agent-service');
+      // Используем импортированные модули
       
       // Получаем протокол из базы
       const protocol = await storage.getProtocol(id);
