@@ -1076,7 +1076,7 @@ const AIAgentsPage = () => {
                 return (
                   <Card key={agent.id} className="overflow-hidden">
                     <div className="flex flex-col sm:flex-row">
-                      <div className="w-2" style={{ backgroundColor: getAgentTypeColor(agent.type) }}></div>
+                      <div className="w-full sm:w-2 h-2 sm:h-auto" style={{ backgroundColor: getAgentTypeColor(agent.type) }}></div>
                       <div className="flex-1 p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                           <div className="flex items-center mb-2 sm:mb-0">
@@ -1114,7 +1114,7 @@ const AIAgentsPage = () => {
                         
                         <div className="text-sm text-neutral-600 mb-4">{agent.description}</div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                           <div className="flex items-center">
                             <div className="mr-2 p-2 bg-neutral-100 rounded-full">
                               {getModelTypeIcon(integration?.type || "")}
@@ -1174,7 +1174,7 @@ const AIAgentsPage = () => {
                 {[1, 2, 3].map(i => (
                   <div key={i} className="space-y-2">
                     <div className="h-6 bg-neutral-100 rounded w-1/3"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div className="h-48 bg-neutral-100 rounded-lg"></div>
                       <div className="h-48 bg-neutral-100 rounded-lg"></div>
                     </div>
