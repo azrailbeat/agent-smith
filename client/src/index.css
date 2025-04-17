@@ -183,4 +183,22 @@ html {
     overflow-y: auto !important;
     max-height: 90vh !important;
   }
+  
+  /* Исправление отображения чата и кнопок */
+  @media (max-width: 640px) {
+    /* Исправление отображения кнопок в чате */
+    .ChatInterface form button[type="submit"] {
+      z-index: 10 !important;
+      position: relative !important;
+      height: auto !important;
+      white-space: nowrap !important;
+      min-width: 70px !important;
+    }
+    
+    /* Добавляем дополнительное пространство внизу для кнопок в чате */
+    .ChatInterface [class*="CardFooter"] {
+      padding-bottom: 24px !important;
+      position: relative !important;
+    }
+  }
 }

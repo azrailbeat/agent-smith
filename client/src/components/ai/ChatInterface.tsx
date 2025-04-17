@@ -101,7 +101,7 @@ const ChatInterface = ({ taskId, currentUser }: ChatInterfaceProps) => {
   const isSendingMessage = sendMessageMutation.isPending;
 
   return (
-    <Card className="bg-white shadow rounded-lg overflow-hidden">
+    <Card className="bg-white shadow rounded-lg overflow-hidden ChatInterface">
       <CardHeader className="px-4 py-5 border-b border-neutral-200 sm:px-6 flex justify-between items-center">
         <CardTitle>Agent Smith</CardTitle>
         <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
@@ -211,7 +211,7 @@ const ChatInterface = ({ taskId, currentUser }: ChatInterfaceProps) => {
       
       <CardFooter className="px-4 py-4 sm:px-6 border-t border-neutral-200">
         <form className="relative w-full" onSubmit={handleSubmit}>
-          <div className="flex">
+          <div className="flex flex-row items-end">
             <div className="flex-grow">
               <Textarea 
                 rows={1} 
@@ -226,35 +226,26 @@ const ChatInterface = ({ taskId, currentUser }: ChatInterfaceProps) => {
               <Button 
                 type="submit" 
                 disabled={!message.trim() || isSendingMessage}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 z-10"
               >
                 {isSendingMessage ? "Отправка..." : "Отправить"}
               </Button>
             </div>
           </div>
-          <div className="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
-            <div className="flex items-center space-x-5">
-              <div className="flex items-center">
-                <button type="button" className="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-neutral-600 hover:text-neutral-900">
-                  <PaperclipIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex items-center">
-                <button type="button" className="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-neutral-600 hover:text-neutral-900">
-                  <ImageIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex items-center">
-                <button type="button" className="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-neutral-600 hover:text-neutral-900">
-                  <FileIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex items-center">
-                <button type="button" className="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-neutral-600 hover:text-neutral-900">
-                  <MicIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
+          {/* Дополнительные кнопки - скрыты на мобильных устройствах */}
+          <div className="pt-4 hidden sm:flex justify-start gap-2">
+            <button type="button" className="p-2 rounded-full text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100">
+              <PaperclipIcon className="h-5 w-5" />
+            </button>
+            <button type="button" className="p-2 rounded-full text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100">
+              <ImageIcon className="h-5 w-5" />
+            </button>
+            <button type="button" className="p-2 rounded-full text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100">
+              <FileIcon className="h-5 w-5" />
+            </button>
+            <button type="button" className="p-2 rounded-full text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100">
+              <MicIcon className="h-5 w-5" />
+            </button>
           </div>
         </form>
       </CardFooter>
