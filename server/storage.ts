@@ -75,6 +75,44 @@ export interface IStorage {
   createCitizenRequest(request: InsertCitizenRequest): Promise<CitizenRequest>;
   updateCitizenRequest(id: number, request: Partial<InsertCitizenRequest>): Promise<CitizenRequest | undefined>;
   processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined>;
+  
+  // Department and Position operations
+  getDepartments(): Promise<any[]>;
+  getDepartment(id: number): Promise<any | undefined>;
+  getDepartmentByName(name: string): Promise<any | undefined>;
+  createDepartment(department: any): Promise<any>;
+  updateDepartment(id: number, department: any): Promise<any | undefined>;
+  
+  getPositions(): Promise<any[]>;
+  getPosition(id: number): Promise<any | undefined>;
+  getPositionByName(name: string): Promise<any | undefined>;
+  createPosition(position: any): Promise<any>;
+  updatePosition(id: number, position: any): Promise<any | undefined>;
+  
+  // Task Rule operations
+  getTaskRules(): Promise<any[]>;
+  getTaskRule(id: number): Promise<any | undefined>;
+  getTaskRuleByName(name: string): Promise<any | undefined>;
+  createTaskRule(rule: any): Promise<any>;
+  updateTaskRule(id: number, rule: any): Promise<any | undefined>;
+  deleteTaskRule(id: number): Promise<boolean>;
+  
+  // System Settings operations
+  getSystemSettings(): Promise<any[]>;
+  getSystemSetting(key: string): Promise<any | undefined>;
+  updateSystemSetting(key: string, value: any): Promise<any | undefined>;
+  
+  // Agent operations extended
+  getAgentByName(name: string): Promise<Agent | undefined>;
+  getIntegrationByName(name: string): Promise<Integration | undefined>;
+  
+  // Planka Link operations
+  getPlankaLinks(): Promise<any[]>;
+  getPlankaLink(id: number): Promise<any | undefined>;
+  getPlankaLinkByEntity(entityType: string, entityId: number): Promise<any[]>;
+  createPlankaLink(link: any): Promise<any>;
+  updatePlankaLink(id: number, link: any): Promise<any | undefined>;
+  deletePlankaLink(id: number): Promise<boolean>;
 }
 
 // In-memory storage implementation
@@ -89,6 +127,11 @@ export class MemStorage implements IStorage {
   private integrations: Map<number, Integration>;
   private agents: Map<number, Agent>;
   private citizenRequests: Map<number, CitizenRequest>;
+  private departments: Map<number, any>;
+  private positions: Map<number, any>;
+  private taskRules: Map<number, any>;
+  private systemSettings: Map<string, any>;
+  private plankaLinks: Map<number, any>;
   
   private userIdCounter: number;
   private taskIdCounter: number;
@@ -99,8 +142,11 @@ export class MemStorage implements IStorage {
   private systemStatusIdCounter: number;
   private integrationIdCounter: number;
   private agentIdCounter: number;
-
   private citizenRequestIdCounter: number;
+  private departmentIdCounter: number;
+  private positionIdCounter: number;
+  private taskRuleIdCounter: number;
+  private plankaLinkIdCounter: number;
   
   constructor() {
     this.users = new Map();
@@ -113,6 +159,11 @@ export class MemStorage implements IStorage {
     this.integrations = new Map();
     this.agents = new Map();
     this.citizenRequests = new Map();
+    this.departments = new Map();
+    this.positions = new Map();
+    this.taskRules = new Map();
+    this.systemSettings = new Map();
+    this.plankaLinks = new Map();
     
     this.userIdCounter = 1;
     this.taskIdCounter = 1;
@@ -124,6 +175,10 @@ export class MemStorage implements IStorage {
     this.integrationIdCounter = 1;
     this.agentIdCounter = 1;
     this.citizenRequestIdCounter = 1;
+    this.departmentIdCounter = 1;
+    this.positionIdCounter = 1;
+    this.taskRuleIdCounter = 1;
+    this.plankaLinkIdCounter = 1;
     
     // Initialize with some default data
     this.initializeDefaultData();
@@ -1395,6 +1450,213 @@ export class MemStorage implements IStorage {
     // Выбираем случайный шаблон
     const randomIndex = Math.floor(Math.random() * templates.length);
     return templates[randomIndex];
+  }
+
+  // Department operations
+  async getDepartments(): Promise<any[]> {
+    return Array.from(this.departments.values());
+  }
+
+  async getDepartment(id: number): Promise<any | undefined> {
+    return this.departments.get(id);
+  }
+
+  async getDepartmentByName(name: string): Promise<any | undefined> {
+    return Array.from(this.departments.values()).find(
+      (department) => department.name === name
+    );
+  }
+
+  async createDepartment(department: any): Promise<any> {
+    const id = this.departmentIdCounter++;
+    const now = new Date();
+    const newDepartment = {
+      id,
+      ...department,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.departments.set(id, newDepartment);
+    return newDepartment;
+  }
+
+  async updateDepartment(id: number, department: any): Promise<any | undefined> {
+    const existingDepartment = this.departments.get(id);
+    if (!existingDepartment) {
+      return undefined;
+    }
+    const updatedDepartment = {
+      ...existingDepartment,
+      ...department,
+      id, // Гарантируем что ID не изменяется
+      updatedAt: new Date(),
+    };
+    this.departments.set(id, updatedDepartment);
+    return updatedDepartment;
+  }
+
+  // Position operations
+  async getPositions(): Promise<any[]> {
+    return Array.from(this.positions.values());
+  }
+
+  async getPosition(id: number): Promise<any | undefined> {
+    return this.positions.get(id);
+  }
+
+  async getPositionByName(name: string): Promise<any | undefined> {
+    return Array.from(this.positions.values()).find(
+      (position) => position.name === name
+    );
+  }
+
+  async createPosition(position: any): Promise<any> {
+    const id = this.positionIdCounter++;
+    const now = new Date();
+    const newPosition = {
+      id,
+      ...position,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.positions.set(id, newPosition);
+    return newPosition;
+  }
+
+  async updatePosition(id: number, position: any): Promise<any | undefined> {
+    const existingPosition = this.positions.get(id);
+    if (!existingPosition) {
+      return undefined;
+    }
+    const updatedPosition = {
+      ...existingPosition,
+      ...position,
+      id, // Гарантируем что ID не изменяется
+      updatedAt: new Date(),
+    };
+    this.positions.set(id, updatedPosition);
+    return updatedPosition;
+  }
+
+  // Task Rule operations
+  async getTaskRules(): Promise<any[]> {
+    return Array.from(this.taskRules.values());
+  }
+
+  async getTaskRule(id: number): Promise<any | undefined> {
+    return this.taskRules.get(id);
+  }
+
+  async getTaskRuleByName(name: string): Promise<any | undefined> {
+    return Array.from(this.taskRules.values()).find(
+      (rule) => rule.name === name
+    );
+  }
+
+  async createTaskRule(rule: any): Promise<any> {
+    const id = this.taskRuleIdCounter++;
+    const now = new Date();
+    const newRule = {
+      id,
+      ...rule,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.taskRules.set(id, newRule);
+    return newRule;
+  }
+
+  async updateTaskRule(id: number, rule: any): Promise<any | undefined> {
+    const existingRule = this.taskRules.get(id);
+    if (!existingRule) {
+      return undefined;
+    }
+    const updatedRule = {
+      ...existingRule,
+      ...rule,
+      id, // Гарантируем что ID не изменяется
+      updatedAt: new Date(),
+    };
+    this.taskRules.set(id, updatedRule);
+    return updatedRule;
+  }
+
+  async deleteTaskRule(id: number): Promise<boolean> {
+    return this.taskRules.delete(id);
+  }
+
+  // System Settings operations
+  async getSystemSettings(): Promise<any[]> {
+    return Array.from(this.systemSettings.entries()).map(([key, value]) => ({ key, value }));
+  }
+
+  async getSystemSetting(key: string): Promise<any | undefined> {
+    return this.systemSettings.get(key);
+  }
+
+  async updateSystemSetting(key: string, value: any): Promise<any | undefined> {
+    this.systemSettings.set(key, value);
+    return { key, value, updatedAt: new Date() };
+  }
+
+  // Extended agent operations
+  async getAgentByName(name: string): Promise<Agent | undefined> {
+    return Array.from(this.agents.values()).find(
+      (agent) => agent.name === name
+    );
+  }
+
+  async getIntegrationByName(name: string): Promise<Integration | undefined> {
+    return Array.from(this.integrations.values()).find(
+      (integration) => integration.name === name
+    );
+  }
+
+  // Planka Link operations
+  async getPlankaLinks(): Promise<any[]> {
+    return Array.from(this.plankaLinks.values());
+  }
+
+  async getPlankaLink(id: number): Promise<any | undefined> {
+    return this.plankaLinks.get(id);
+  }
+
+  async getPlankaLinkByEntity(entityType: string, entityId: number): Promise<any[]> {
+    return Array.from(this.plankaLinks.values()).filter(
+      (link) => link.entityType === entityType && link.entityId === entityId
+    );
+  }
+
+  async createPlankaLink(link: any): Promise<any> {
+    const id = this.plankaLinkIdCounter++;
+    const now = new Date();
+    const newLink = {
+      id,
+      ...link,
+      createdAt: now,
+      lastSyncedAt: now,
+    };
+    this.plankaLinks.set(id, newLink);
+    return newLink;
+  }
+
+  async updatePlankaLink(id: number, link: any): Promise<any | undefined> {
+    const existingLink = this.plankaLinks.get(id);
+    if (!existingLink) {
+      return undefined;
+    }
+    const updatedLink = {
+      ...existingLink,
+      ...link,
+      id, // Гарантируем что ID не изменяется
+      lastSyncedAt: new Date(),
+    };
+    this.plankaLinks.set(id, updatedLink);
+    return updatedLink;
+  }
+
+  async deletePlankaLink(id: number): Promise<boolean> {
+    return this.plankaLinks.delete(id);
   }
 }
 
