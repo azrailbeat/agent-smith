@@ -364,6 +364,147 @@ const CitizenRequests = () => {
       });
     }
   };
+  
+  // Функция обработки запросов согласно организационной структуре
+  const handleOrganizationalProcessing = async () => {
+    if (!isAIProcessingEnabled || !requests.length) return;
+    
+    try {
+      // Получаем данные об организационной структуре и правилах распределения
+      const response = await apiRequest('GET', '/api/task-rules');
+      const organizationRules = await response.json();
+      
+      // Для каждого нового обращения в статусе "pending"
+      const pendingRequests = requests.filter(req => req.status === 'pending');
+      
+      if (pendingRequests.length === 0) {
+        console.log('Нет новых обращений для автоматической обработки');
+        return;
+      }
+      
+      toast({
+        title: "Автоматическая обработка",
+        description: `Запущена обработка ${pendingRequests.length} обращений согласно орг. структуре`
+      });
+      
+      // Обрабатываем каждое обращение
+      for (const request of pendingRequests) {
+        // 1. Классифицируем обращение с помощью AI
+        const classifiedRequest = await classifyRequest(request);
+        
+        // 2. Определяем подходящее правило распределения на основе классификации
+        const matchedRule = findMatchingRule(classifiedRequest, organizationRules);
+        
+        if (matchedRule) {
+          // 3. Обрабатываем согласно правилу
+          await processRequestWithRule(classifiedRequest, matchedRule);
+          
+          toast({
+            title: "Обработка завершена",
+            description: `Обращение "${classifiedRequest.title}" обработано согласно правилу "${matchedRule.name}"`
+          });
+        } else {
+          // Если правило не найдено, оставляем как есть
+          console.log(`Не найдено подходящее правило для обращения #${request.id}`);
+        }
+      }
+      
+      // Обновляем данные
+      queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
+      
+    } catch (error) {
+      console.error('Ошибка при организационной обработке:', error);
+      toast({
+        title: "Ошибка обработки",
+        description: "Не удалось выполнить автоматическую обработку обращений",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Классификация обращения с использованием AI
+  const classifyRequest = async (request: CitizenRequest): Promise<CitizenRequest> => {
+    try {
+      // Находим подходящий агент для классификации
+      const classificationAgent = availableAgents.find(agent => 
+        agent.type === 'citizen_requests' && agent.isActive
+      );
+      
+      if (!classificationAgent) {
+        console.warn('Не найден агент для классификации');
+        return request;
+      }
+      
+      // Отправляем на обработку AI для классификации
+      const response = await apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, {
+        agentId: classificationAgent.id,
+        actionType: 'classify',
+        text: request.content || request.description || '',
+        requestType: request.requestType || 'general'
+      });
+      
+      const data = await response.json();
+      return { ...request, ...data };
+    } catch (error) {
+      console.error('Ошибка классификации обращения:', error);
+      return request;
+    }
+  };
+  
+  // Поиск подходящего правила обработки
+  const findMatchingRule = (request: CitizenRequest, rules: any[]): any | null => {
+    // Проверяем текст обращения на наличие ключевых слов из правил
+    const requestText = `${request.title} ${request.content || ''} ${request.description || ''}`.toLowerCase();
+    
+    // Ищем правило, у которого ключевые слова содержатся в тексте обращения
+    return rules.find(rule => {
+      // Если категория правила не соответствует категории обращения и категория указана
+      if (rule.sourceType !== 'citizen_request') return false;
+      
+      // Проверяем наличие ключевых слов
+      return rule.keywords.some((keyword: string) => 
+        requestText.includes(keyword.toLowerCase())
+      );
+    }) || null;
+  };
+  
+  // Обработка обращения согласно правилу
+  const processRequestWithRule = async (request: CitizenRequest, rule: any) => {
+    try {
+      // 1. Обновляем статус обращения на "in_progress"
+      await apiRequest('PATCH', `/api/citizen-requests/${request.id}`, {
+        status: 'in_progress',
+        departmentId: rule.departmentId,
+        assignedTo: null // Будет назначено автоматически согласно правилу
+      });
+      
+      // 2. Запускаем полную обработку с помощью соответствующего агента
+      const processingAgent = availableAgents.find(agent => 
+        agent.type === 'citizen_requests' && agent.isActive
+      );
+      
+      if (processingAgent) {
+        await apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, {
+          agentId: processingAgent.id,
+          actionType: 'full',
+          text: request.content || request.description || '',
+          requestType: request.requestType || 'general',
+          metadata: {
+            departmentId: rule.departmentId,
+            positionId: rule.positionId,
+            ruleName: rule.name
+          }
+        });
+      }
+      
+      // 3. Записываем в blockchain факт обработки согласно орг. структуре
+      await saveToBlockchain(request.id);
+      
+    } catch (error) {
+      console.error(`Ошибка обработки обращения ${request.id} по правилу:`, error);
+      throw error;
+    }
+  };
 
   // Запуск записи аудио
   const startRecording = async () => {
@@ -519,6 +660,14 @@ const CitizenRequests = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requests, isLoading]);
+  
+  // Эффект для обработки запросов согласно оргструктуре при активации автоматической обработки
+  useEffect(() => {
+    if (isAIProcessingEnabled && requests.length > 0) {
+      // Если включена автоматическая обработка и есть запросы
+      handleOrganizationalProcessing();
+    }
+  }, [isAIProcessingEnabled, requests]);
 
   return (
     <>
