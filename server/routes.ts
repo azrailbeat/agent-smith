@@ -14,11 +14,10 @@ import {
 } from "./services/openai";
 import { 
   recordToBlockchain, 
-  verifyBlockchainRecord, 
-  getTransactionDetails, 
-  BlockchainRecordType,
-  testMoralisConnection
-} from "./services/blockchain";
+  getTransactionStatus,
+  getEntityTransactions, 
+  BlockchainRecordType
+} from "./blockchain";
 import { 
   logActivity, 
   getRecentActivities, 
@@ -26,9 +25,12 @@ import {
   getUserActivities 
 } from "./activity-logger";
 import { registerSystemRoutes } from "./system-api";
+import { registerDatabaseRoutes } from "./database-api";
+import { registerPlankaRoutes } from "./planka-api";
 import { initializeSettings } from "./services/system-settings";
 import { getTaskRules, saveTaskRule, getTaskRuleById, deleteTaskRule, processRequestByOrgStructure } from "./services/org-structure";
 import { agentService, AgentTaskType, AgentEntityType } from "./services/agent-service";
+import { databaseConnector, DatabaseProvider } from "./services/database-connector";
 import { z } from "zod";
 import { 
   insertTaskSchema, 
@@ -1953,6 +1955,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: 'Blockchain validation failed',
         message: error.message || "Ошибка при валидации блокчейн-записи"
+      });
+    }
+  });
+  
+  // Регистрация API маршрутов для базы данных (импорт/экспорт, переключение между провайдерами)
+  registerDatabaseRoutes(app);
+  
+  // Регистрация API маршрутов для интеграции с Planka
+  registerPlankaRoutes(app);
+  
+  // API маршруты для статуса подключения к базе данных
+  app.get('/api/database/status', async (req, res) => {
+    try {
+      const currentProvider = databaseConnector.getCurrentProvider();
+      const status = {
+        provider: currentProvider,
+        isConnected: true,
+        lastChecked: new Date()
+      };
+      
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting database status:', error);
+      res.status(500).json({ 
+        error: 'Failed to get database status',
+        isConnected: false 
+      });
+    }
+  });
+  
+  // API маршрут для переключения провайдера базы данных
+  app.post('/api/database/switch-provider', async (req, res) => {
+    try {
+      const { provider, config } = req.body;
+      
+      if (!provider || !Object.values(DatabaseProvider).includes(provider)) {
+        return res.status(400).json({ error: 'Invalid database provider' });
+      }
+      
+      const result = await databaseConnector.switchProvider(provider, config);
+      
+      if (result) {
+        // Логируем успешное переключение
+        await logActivity({
+          action: 'database_provider_switched',
+          entityType: 'database',
+          userId: req.query.userId,
+          details: `Переключение на провайдер базы данных: ${provider}`,
+          metadata: { provider }
+        });
+        
+        res.json({ success: true, provider });
+      } else {
+        res.status(500).json({ 
+          error: 'Failed to switch database provider',
+          success: false 
+        });
+      }
+    } catch (error) {
+      console.error('Error switching database provider:', error);
+      res.status(500).json({ 
+        error: error.message || 'Failed to switch database provider',
+        success: false 
       });
     }
   });

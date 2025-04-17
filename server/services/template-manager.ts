@@ -4,8 +4,13 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { storage } from '../storage';
 import { databaseConnector } from './database-connector';
+
+// ES модули не имеют доступа к переменной __dirname, создаем аналоги
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Logging utilities
 const logger = {

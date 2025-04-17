@@ -9,6 +9,11 @@ import { templateManager } from "./services/template-manager";
 import { logActivity } from "./activity-logger";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from 'url';
+
+// ES модули не имеют доступа к переменной __dirname, создаем аналоги
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Папка для хранения экспортированных файлов
 const EXPORTS_DIR = path.join(__dirname, "..", "data", "exports");
