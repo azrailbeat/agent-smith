@@ -23,7 +23,9 @@ import {
   User,
   Shield,
   LogOut,
-  Vote
+  Vote,
+  XCircle,
+  FileStack
 } from "lucide-react";
 import { 
   Tooltip, 
@@ -148,10 +150,9 @@ const Sidebar = ({
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-20 shadow-sm",
+        "fixed left-0 top-0 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-30 shadow-md",
         collapsed ? "w-14 sm:w-16" : "w-56 sm:w-64",
-        isMobile && !visible ? "-translate-x-full" : "translate-x-0",
-        isMobile ? "md:hidden" : ""
+        isMobile && !visible ? "-translate-x-full" : "translate-x-0"
       )}
     >
       <div className="flex flex-col h-full pb-4">
@@ -322,14 +323,18 @@ const Sidebar = ({
             )}
           </div>
           
-          {/* Кнопка сворачивания */}
+          {/* Кнопка сворачивания/закрытия */}
           <Button
             variant="ghost"
             size={collapsed ? "icon" : "default"}
             onClick={onToggle}
             className="w-full justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
           >
-            {collapsed ? <ChevronRight size={20} /> : <><ChevronLeft size={20} className="mr-2" /> Свернуть</>}
+            {isMobile ? (
+              <><XCircle size={20} className="mr-2" /> Закрыть</>
+            ) : (
+              collapsed ? <ChevronRight size={20} /> : <><ChevronLeft size={20} className="mr-2" /> Свернуть</>
+            )}
           </Button>
         </div>
       </div>

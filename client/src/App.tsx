@@ -60,7 +60,7 @@ function App() {
 
   // Определение состояния мобильного устройства 
   const [isMobile, setIsMobile] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 768); // По умолчанию свернуто на мобильных
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Начальное значение, которое будет обновлено в useEffect
   const [sidebarVisible, setSidebarVisible] = useState(false);
   
   const toggleSidebar = () => {
@@ -73,6 +73,20 @@ function App() {
   
   // Обновление состояния мобильного устройства при изменении размера окна
   useEffect(() => {
+    // Инициализация состояния при монтировании компонента
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Задаем начальное состояние сайдбара на основе размера экрана
+      if (mobile) {
+        setSidebarVisible(false);
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
+    
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
@@ -83,8 +97,11 @@ function App() {
       }
     };
     
+    // Первоначальная проверка
+    checkMobile();
+    
+    // Обработчик изменения размера окна
     window.addEventListener('resize', handleResize);
-    handleResize(); // Вызов при первом рендере
     
     return () => window.removeEventListener('resize', handleResize);
   }, [isMobile]);
@@ -113,8 +130,9 @@ function App() {
           {/* Кнопка открытия меню на мобильных */}
           {isMobile && !sidebarVisible && (
             <button 
-              className="fixed left-4 top-4 z-10 p-2 bg-white rounded-full shadow-md"
+              className="fixed left-4 top-4 z-20 p-2 bg-white rounded-full shadow-md text-slate-700 hover:text-emerald-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
               onClick={() => setSidebarVisible(true)}
+              aria-label="Открыть меню"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
