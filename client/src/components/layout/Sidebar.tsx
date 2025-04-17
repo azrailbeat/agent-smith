@@ -44,15 +44,23 @@ interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   currentUser: UserType;
+  isMobile?: boolean;
+  visible?: boolean;
 }
 
-const Sidebar = ({ collapsed, onToggle, currentUser = {
-  id: 1,
-  username: "admin",
-  fullName: "Пользователь",
-  department: "Не указан",
-  role: "user",
-} }: SidebarProps) => {
+const Sidebar = ({ 
+  collapsed, 
+  onToggle, 
+  isMobile = false,
+  visible = true,
+  currentUser = {
+    id: 1,
+    username: "admin",
+    fullName: "Пользователь",
+    department: "Не указан",
+    role: "user",
+  } 
+}: SidebarProps) => {
   const [location] = useLocation();
   
   // Группы для навигации
@@ -141,7 +149,9 @@ const Sidebar = ({ collapsed, onToggle, currentUser = {
     <div
       className={cn(
         "fixed left-0 top-0 h-screen bg-slate-50 border-r border-slate-200 transition-all duration-300 ease-in-out z-20 shadow-sm",
-        collapsed ? "w-14 sm:w-16" : "w-56 sm:w-64"
+        collapsed ? "w-14 sm:w-16" : "w-56 sm:w-64",
+        isMobile && !visible ? "-translate-x-full" : "translate-x-0",
+        isMobile ? "md:hidden" : ""
       )}
     >
       <div className="flex flex-col h-full pb-4">

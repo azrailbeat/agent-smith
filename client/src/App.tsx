@@ -21,7 +21,7 @@ import Documents from "@/pages/Documents";
 import AIAgents from "@/pages/AIAgents";
 import DAOVoting from "@/pages/DAOVoting";
 import UserProfile from "@/pages/UserProfile";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
 
 function Router() {
@@ -58,18 +58,73 @@ function App() {
     avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=256&h=256&q=80"
   });
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Определение состояния мобильного устройства 
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 768); // По умолчанию свернуто на мобильных
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   
   const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
+    if (isMobile) {
+      setSidebarVisible(!sidebarVisible);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
   };
+  
+  // Обновление состояния мобильного устройства при изменении размера окна
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Если переключаемся на мобильный вид, скрываем боковую панель
+      if (mobile && !isMobile) {
+        setSidebarVisible(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Вызов при первом рендере
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobile]);
   
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen flex flex-col bg-white text-slate-800">
         <div className="flex flex-1">
-          <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} currentUser={currentUser} />
-          <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64'}`}>
+          {/* Настольная версия сайдбара */}
+          <Sidebar 
+            collapsed={sidebarCollapsed} 
+            onToggle={toggleSidebar} 
+            currentUser={currentUser} 
+            isMobile={isMobile}
+            visible={sidebarVisible}
+          />
+          
+          {/* Затемняющий оверлей при открытом сайдбаре на мобильных */}
+          {isMobile && sidebarVisible && (
+            <div 
+              className="fixed inset-0 bg-black/30 z-10"
+              onClick={() => setSidebarVisible(false)}
+            ></div>
+          )}
+          
+          {/* Кнопка открытия меню на мобильных */}
+          {isMobile && !sidebarVisible && (
+            <button 
+              className="fixed left-4 top-4 z-10 p-2 bg-white rounded-full shadow-md"
+              onClick={() => setSidebarVisible(true)}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+          
+          <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${
+            isMobile ? 'ml-0' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
+          }`}>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
               <Router />
             </div>
