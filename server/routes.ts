@@ -27,7 +27,7 @@ import {
 } from "./activity-logger";
 import { registerSystemRoutes } from "./system-api";
 import { initializeSettings } from "./services/system-settings";
-import { getTaskRules, saveTaskRule } from "./services/org-structure";
+import { getTaskRules, saveTaskRule, getTaskRuleById, deleteTaskRule, processRequestByOrgStructure } from "./services/org-structure";
 import { z } from "zod";
 import { 
   insertTaskSchema, 
@@ -1071,6 +1071,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Organization structure and task rules API
+  app.get('/api/task-rules', async (req, res) => {
+    try {
+      const rules = await getTaskRules();
+      res.json(rules);
+    } catch (error) {
+      console.error('Error fetching task rules:', error);
+      res.status(500).json({ error: 'Failed to fetch task rules', details: error.message });
+    }
+  });
+  
+  app.get('/api/task-rules/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid rule ID' });
+      }
+      
+      const rule = await getTaskRuleById(id);
+      if (!rule) {
+        return res.status(404).json({ error: 'Rule not found' });
+      }
+      
+      res.json(rule);
+    } catch (error) {
+      console.error('Error fetching task rule:', error);
+      res.status(500).json({ error: 'Failed to fetch task rule', details: error.message });
+    }
+  });
+  
+  app.post('/api/task-rules', async (req, res) => {
+    try {
+      const rule = req.body;
+      const savedRule = await saveTaskRule(rule);
+      res.status(201).json(savedRule);
+    } catch (error) {
+      console.error('Error creating task rule:', error);
+      res.status(500).json({ error: 'Failed to create task rule', details: error.message });
+    }
+  });
+  
+  app.patch('/api/task-rules/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid rule ID' });
+      }
+      
+      const rule = { ...req.body, id };
+      const savedRule = await saveTaskRule(rule);
+      res.json(savedRule);
+    } catch (error) {
+      console.error('Error updating task rule:', error);
+      res.status(500).json({ error: 'Failed to update task rule', details: error.message });
+    }
+  });
+  
+  app.delete('/api/task-rules/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid rule ID' });
+      }
+      
+      const result = await deleteTaskRule(id);
+      if (result) {
+        res.status(204).end();
+      } else {
+        res.status(404).json({ error: 'Rule not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting task rule:', error);
+      res.status(500).json({ error: 'Failed to delete task rule', details: error.message });
+    }
+  });
+  
+  // Process citizen request by organization structure
+  app.post('/api/citizen-requests/:id/process-by-org-structure', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid request ID' });
+      }
+      
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: 'Request text is required' });
+      }
+      
+      const result = await processRequestByOrgStructure(id, text);
+      res.json(result);
+    } catch (error) {
+      console.error('Error processing request by org structure:', error);
+      res.status(500).json({ error: 'Failed to process request by org structure', details: error.message });
+    }
+  });
+
+  // Process citizen request with AI
   app.post('/api/citizen-requests/:id/process', async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
