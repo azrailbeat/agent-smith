@@ -1,401 +1,522 @@
 /**
- * Интеграция с Planka - система управления проектами типа Kanban
+ * Сервис для интеграции с Planka (система управления проектами Kanban)
  */
 
-import axios, { AxiosInstance } from 'axios';
-import { logActivity } from '../activity-logger';
+import axios from 'axios';
+import { storage } from '../storage';
 
-// Интерфейсы для работы с Planka
-export interface PlankaAuthConfig {
-  baseUrl: string;
-  username: string;
-  password: string;
-  projectId?: string;
+interface PlankaConfig {
+  url: string;
+  token: string;
+  syncInterval?: number; // в минутах
+  autoSync?: boolean;
 }
 
-export interface PlankaBoard {
-  id: string;
+interface SyncResult {
+  success: boolean;
+  updated: number;
+  errors: string[];
+  details: any;
+}
+
+interface ConnectionResult {
+  success: boolean;
+  message: string;
+  details?: any;
+}
+
+interface CardCreateParams {
   name: string;
-  position: number;
+  description?: string;
   projectId: string;
-}
-
-export interface PlankaList {
-  id: string;
-  name: string;
-  position: number;
   boardId: string;
+  listId?: string; // Если не указан, будет использован первый список на доске
 }
 
-export interface PlankaCard {
-  id: string;
-  name: string;
-  description: string;
-  position: number;
-  listId: string;
-  boardId: string;
-  dueDate?: string;
-  labels?: string[];
-  members?: string[];
+interface CardCreateResult {
+  success: boolean;
+  message: string;
+  cardId?: string;
+  cardUrl?: string;
+  card?: any;
 }
 
-export interface PlankaComment {
-  id: string;
-  text: string;
-  cardId: string;
-  userId: string;
-  createdAt: string;
+interface CardDetails {
+  success: boolean;
+  card?: any;
+  error?: string;
 }
 
-// Класс для интеграции с Planka
-export class PlankaIntegration {
-  private static instance: PlankaIntegration;
-  private api: AxiosInstance | null = null;
-  private token: string | null = null;
-  private config: PlankaAuthConfig | null = null;
-  private initialized = false;
-
-  // Получение экземпляра синглтона
-  public static getInstance(): PlankaIntegration {
-    if (!PlankaIntegration.instance) {
-      PlankaIntegration.instance = new PlankaIntegration();
+class PlankaService {
+  private config: PlankaConfig | null = null;
+  private syncTimer: NodeJS.Timeout | null = null;
+  private isInitialized = false;
+  
+  // Методы REST API для Planka
+  private apiClient = {
+    get: async (endpoint: string, config?: any) => {
+      if (!this.config) throw new Error('Planka не инициализирована');
+      
+      try {
+        const response = await axios.get(`${this.config.url}/api/v1${endpoint}`, {
+          headers: {
+            'Authorization': `Bearer ${this.config.token}`,
+            'Content-Type': 'application/json'
+          },
+          ...config
+        });
+        return response.data;
+      } catch (error) {
+        console.error(`Planka API error (GET ${endpoint}):`, error.response?.data || error.message);
+        throw error;
+      }
+    },
+    
+    post: async (endpoint: string, data: any, config?: any) => {
+      if (!this.config) throw new Error('Planka не инициализирована');
+      
+      try {
+        const response = await axios.post(`${this.config.url}/api/v1${endpoint}`, data, {
+          headers: {
+            'Authorization': `Bearer ${this.config.token}`,
+            'Content-Type': 'application/json'
+          },
+          ...config
+        });
+        return response.data;
+      } catch (error) {
+        console.error(`Planka API error (POST ${endpoint}):`, error.response?.data || error.message);
+        throw error;
+      }
+    },
+    
+    patch: async (endpoint: string, data: any, config?: any) => {
+      if (!this.config) throw new Error('Planka не инициализирована');
+      
+      try {
+        const response = await axios.patch(`${this.config.url}/api/v1${endpoint}`, data, {
+          headers: {
+            'Authorization': `Bearer ${this.config.token}`,
+            'Content-Type': 'application/json'
+          },
+          ...config
+        });
+        return response.data;
+      } catch (error) {
+        console.error(`Planka API error (PATCH ${endpoint}):`, error.response?.data || error.message);
+        throw error;
+      }
+    },
+    
+    delete: async (endpoint: string, config?: any) => {
+      if (!this.config) throw new Error('Planka не инициализирована');
+      
+      try {
+        const response = await axios.delete(`${this.config.url}/api/v1${endpoint}`, {
+          headers: {
+            'Authorization': `Bearer ${this.config.token}`,
+            'Content-Type': 'application/json'
+          },
+          ...config
+        });
+        return response.data;
+      } catch (error) {
+        console.error(`Planka API error (DELETE ${endpoint}):`, error.response?.data || error.message);
+        throw error;
+      }
     }
-    return PlankaIntegration.instance;
-  }
-
-  // Приватный конструктор для синглтона
-  private constructor() {}
-
-  // Проверка, инициализирована ли интеграция
-  public isInitialized(): boolean {
-    return this.initialized;
-  }
-
-  // Инициализация с конфигурацией
-  public async initialize(config: PlankaAuthConfig): Promise<boolean> {
+  };
+  
+  /**
+   * Инициализация сервиса Planka
+   */
+  public async initialize(config: PlankaConfig): Promise<boolean> {
+    this.config = config;
+    
+    // Проверяем подключение
     try {
-      this.config = config;
-      this.api = axios.create({
-        baseURL: config.baseUrl,
+      const testResult = await this.testConnection(config.url, config.token);
+      if (!testResult.success) {
+        console.error('Не удалось подключиться к Planka:', testResult.message);
+        return false;
+      }
+      
+      // Устанавливаем таймер синхронизации, если включена автосинхронизация
+      if (config.autoSync && config.syncInterval) {
+        this.startSyncTimer(config.syncInterval);
+      }
+      
+      this.isInitialized = true;
+      console.log('Planka интеграция инициализирована успешно');
+      
+      return true;
+    } catch (error) {
+      console.error('Ошибка при инициализации Planka:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Остановка сервиса
+   */
+  public stop(): void {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+      this.syncTimer = null;
+    }
+    
+    this.isInitialized = false;
+    console.log('Planka интеграция остановлена');
+  }
+  
+  /**
+   * Запуск таймера синхронизации
+   */
+  private startSyncTimer(intervalMinutes: number): void {
+    // Останавливаем предыдущий таймер, если был
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+    }
+    
+    // Устанавливаем новый таймер
+    const intervalMs = intervalMinutes * 60 * 1000;
+    this.syncTimer = setInterval(async () => {
+      try {
+        console.log('Запуск автоматической синхронизации с Planka...');
+        await this.synchronize();
+      } catch (error) {
+        console.error('Ошибка при автоматической синхронизации с Planka:', error);
+      }
+    }, intervalMs);
+    
+    console.log(`Автоматическая синхронизация с Planka настроена на интервал ${intervalMinutes} минут`);
+  }
+  
+  /**
+   * Тестирование подключения к Planka
+   */
+  public async testConnection(url: string, token: string): Promise<ConnectionResult> {
+    try {
+      // Попробуем получить информацию о пользователе
+      const response = await axios.get(`${url}/api/v1/users/me`, {
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-
-      // Аутентификация
-      const response = await this.api.post('/api/access-tokens', {
-        username: config.username,
-        password: config.password,
-      });
-
-      this.token = response.data.item.accessToken;
-      this.api.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
-      this.initialized = true;
-
-      console.log('Planka интеграция инициализирована');
-      return true;
-    } catch (error) {
-      console.error('Ошибка при инициализации Planka интеграции:', error);
-      this.initialized = false;
-      return false;
-    }
-  }
-
-  // Получение конфигурации
-  public getConfig(): PlankaAuthConfig | null {
-    return this.config;
-  }
-
-  // Проверка соединения
-  public async testConnection(): Promise<boolean> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      await this.api.get('/api/users/me');
-      return true;
-    } catch (error) {
-      console.error('Ошибка проверки соединения с Planka:', error);
-      return false;
-    }
-  }
-
-  // Получение проектов
-  public async getProjects(): Promise<any[]> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.get('/api/projects');
-      return response.data.items;
-    } catch (error) {
-      console.error('Ошибка при получении проектов из Planka:', error);
-      return [];
-    }
-  }
-
-  // Получение досок для проекта
-  public async getBoards(projectId: string): Promise<PlankaBoard[]> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.get(`/api/projects/${projectId}/boards`);
-      return response.data.items;
-    } catch (error) {
-      console.error(`Ошибка при получении досок для проекта ${projectId}:`, error);
-      return [];
-    }
-  }
-
-  // Получение списков для доски
-  public async getLists(boardId: string): Promise<PlankaList[]> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.get(`/api/boards/${boardId}/lists`);
-      return response.data.items;
-    } catch (error) {
-      console.error(`Ошибка при получении списков для доски ${boardId}:`, error);
-      return [];
-    }
-  }
-
-  // Получение карточек для списка
-  public async getCards(listId: string): Promise<PlankaCard[]> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.get(`/api/lists/${listId}/cards`);
-      return response.data.items;
-    } catch (error) {
-      console.error(`Ошибка при получении карточек для списка ${listId}:`, error);
-      return [];
-    }
-  }
-
-  // Создание карточки
-  public async createCard(card: Omit<PlankaCard, 'id' | 'position'>): Promise<PlankaCard | null> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.post(`/api/lists/${card.listId}/cards`, card);
-      return response.data.item;
-    } catch (error) {
-      console.error('Ошибка при создании карточки в Planka:', error);
-      return null;
-    }
-  }
-
-  // Обновление карточки
-  public async updateCard(cardId: string, updateData: Partial<PlankaCard>): Promise<PlankaCard | null> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.patch(`/api/cards/${cardId}`, updateData);
-      return response.data.item;
-    } catch (error) {
-      console.error(`Ошибка при обновлении карточки ${cardId}:`, error);
-      return null;
-    }
-  }
-
-  // Добавление комментария к карточке
-  public async addComment(cardId: string, text: string): Promise<PlankaComment | null> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      const response = await this.api.post(`/api/cards/${cardId}/comments`, { text });
-      return response.data.item;
-    } catch (error) {
-      console.error(`Ошибка при добавлении комментария к карточке ${cardId}:`, error);
-      return null;
-    }
-  }
-
-  // Создание обращения гражданина в Planka
-  public async createCitizenRequestCard(
-    request: any,
-    projectId: string,
-    boardId: string,
-    listId: string,
-    userId: number
-  ): Promise<PlankaCard | null> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      // Создаем карточку для обращения
-      const card = await this.createCard({
-        name: `Обращение: ${request.subject}`,
-        description: `От: ${request.fullName}\nКонтакт: ${request.contactInfo}\n\n${request.description}`,
-        listId,
-        boardId,
-        dueDate: request.dueDate,
-        labels: [request.priority, request.requestType]
-      });
-
-      if (card) {
-        // Добавляем комментарий с дополнительной информацией
-        const commentText = `
-          Тип обращения: ${request.requestType}
-          Приоритет: ${request.priority}
-          Дата создания: ${new Date(request.createdAt).toLocaleDateString()}
-          ${request.aiProcessed ? 'Классификация ИИ: ' + request.aiClassification : ''}
-        `;
-        
-        await this.addComment(card.id, commentText);
-
-        // Логируем создание карточки
-        await logActivity({
-          action: 'planka_card_created',
-          userId,
-          entityType: 'citizen_request',
-          entityId: request.id,
-          details: `Создана карточка в Planka для обращения ${request.id}`,
-          metadata: { cardId: card.id, boardId, listId }
-        });
-
-        return card;
-      }
       
-      return null;
+      if (response.status === 200 && response.data) {
+        return {
+          success: true,
+          message: 'Успешное подключение к Planka',
+          details: {
+            user: response.data,
+            serverVersion: response.headers['x-server-version'] || 'неизвестно'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Не удалось проверить подключение к Planka',
+          details: response.data
+        };
+      }
     } catch (error) {
-      console.error('Ошибка при создании карточки для обращения в Planka:', error);
-      return null;
-    }
-  }
-
-  // Создание задачи в Planka
-  public async createTaskCard(
-    task: any,
-    projectId: string,
-    boardId: string,
-    listId: string,
-    userId: number
-  ): Promise<PlankaCard | null> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      // Создаем карточку для задачи
-      const card = await this.createCard({
-        name: task.title,
-        description: task.description || '',
-        listId,
-        boardId,
-        dueDate: task.dueDate,
-        labels: [task.priority, 'task']
-      });
-
-      if (card) {
-        // Добавляем комментарий с дополнительной информацией
-        const commentText = `
-          Приоритет: ${task.priority}
-          Статус: ${task.status}
-          Назначена: ${task.assignedTo ? `ID пользователя ${task.assignedTo}` : 'Не назначена'}
-          Дата создания: ${new Date(task.createdAt).toLocaleDateString()}
-        `;
-        
-        await this.addComment(card.id, commentText);
-
-        // Логируем создание карточки
-        await logActivity({
-          action: 'planka_card_created',
-          userId,
-          entityType: 'task',
-          entityId: task.id,
-          details: `Создана карточка в Planka для задачи ${task.id}`,
-          metadata: { cardId: card.id, boardId, listId }
-        });
-
-        return card;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Ошибка при создании карточки для задачи в Planka:', error);
-      return null;
-    }
-  }
-
-  // Синхронизация статуса карточки с задачей
-  public async syncTaskWithCard(
-    taskId: number,
-    cardId: string,
-    taskStatus: string,
-    userId: number
-  ): Promise<boolean> {
-    try {
-      if (!this.initialized || !this.api) {
-        throw new Error('Интеграция не инициализирована');
-      }
-
-      // Получаем текущие данные карточки
-      const response = await this.api.get(`/api/cards/${cardId}`);
-      const card = response.data.item;
-      
-      if (!card) {
-        throw new Error(`Карточка с ID ${cardId} не найдена`);
-      }
-
-      // Получаем списки на доске
-      const lists = await this.getLists(card.boardId);
-      
-      // Сопоставляем статусы задач с названиями списков
-      const statusToListMap: Record<string, string> = {
-        'new': lists.find(l => l.name.toLowerCase().includes('новы'))?.id,
-        'in_progress': lists.find(l => l.name.toLowerCase().includes('работ'))?.id,
-        'review': lists.find(l => l.name.toLowerCase().includes('ревью') || l.name.toLowerCase().includes('проверк'))?.id,
-        'done': lists.find(l => l.name.toLowerCase().includes('готов') || l.name.toLowerCase().includes('выполнен'))?.id,
-        'canceled': lists.find(l => l.name.toLowerCase().includes('отмен'))?.id,
+      return {
+        success: false,
+        message: `Ошибка подключения к Planka: ${error.message}`,
+        details: {
+          status: error.response?.status,
+          data: error.response?.data
+        }
       };
-
-      // Находим подходящий список по статусу
-      const targetListId = statusToListMap[taskStatus];
+    }
+  }
+  
+  /**
+   * Синхронизация данных с Planka
+   */
+  public async synchronize(): Promise<SyncResult> {
+    if (!this.isInitialized || !this.config) {
+      throw new Error('Planka не инициализирована');
+    }
+    
+    console.log('Синхронизация с Planka...');
+    
+    try {
+      const result: SyncResult = {
+        success: true,
+        updated: 0,
+        errors: [],
+        details: {}
+      };
       
-      if (targetListId && targetListId !== card.listId) {
-        // Перемещаем карточку в соответствующий список
-        await this.api.patch(`/api/cards/${cardId}`, { listId: targetListId });
-        
-        // Добавляем комментарий о смене статуса
-        await this.addComment(cardId, `Статус изменен на: ${taskStatus}`);
-        
-        // Логируем синхронизацию
-        await logActivity({
-          action: 'planka_card_updated',
-          userId,
-          entityType: 'task',
-          entityId: taskId,
-          details: `Карточка в Planka синхронизирована с задачей ${taskId}`,
-          metadata: { cardId, taskStatus, listId: targetListId }
-        });
-        
-        return true;
+      // Получаем все связи с Planka
+      const links = await storage.getPlankaLinks();
+      console.log(`Найдено ${links.length} связей для синхронизации`);
+      
+      // Обновляем каждую связь
+      for (const link of links) {
+        try {
+          // Получаем информацию о карточке
+          const cardDetails = await this.getCardDetails(link.plankaCardId);
+          
+          if (cardDetails.success && cardDetails.card) {
+            // Обновляем дату последней синхронизации
+            await storage.updatePlankaLink(link.id, {
+              ...link,
+              lastSyncedAt: new Date()
+            });
+            
+            // Определяем тип сущности для обновления
+            switch (link.entityType) {
+              case 'task':
+                // Обновляем задачу на основе карточки Planka, если нужно
+                await this.updateTaskFromCard(link.entityId, cardDetails.card);
+                break;
+              
+              case 'citizen_request':
+                // Обновляем заявку гражданина на основе карточки Planka, если нужно
+                await this.updateCitizenRequestFromCard(link.entityId, cardDetails.card);
+                break;
+              
+              // Другие типы сущностей...
+            }
+            
+            result.updated++;
+          } else {
+            result.errors.push(`Не удалось получить информацию о карточке #${link.plankaCardId}`);
+          }
+        } catch (error) {
+          result.errors.push(`Ошибка при синхронизации связи #${link.id}: ${error.message}`);
+        }
       }
-
-      return false;
+      
+      // Обновляем системный статус
+      await storage.updateSystemStatus('PlankaIntegration', {
+        serviceName: 'PlankaIntegration',
+        status: result.errors.length === 0 ? 100 : 50,
+        details: `Синхронизировано ${result.updated} из ${links.length} связей`
+      });
+      
+      return result;
     } catch (error) {
-      console.error(`Ошибка при синхронизации задачи ${taskId} с карточкой в Planka:`, error);
-      return false;
+      console.error('Ошибка при синхронизации с Planka:', error);
+      
+      // Обновляем системный статус с ошибкой
+      await storage.updateSystemStatus('PlankaIntegration', {
+        serviceName: 'PlankaIntegration',
+        status: 0,
+        details: `Ошибка синхронизации: ${error.message}`
+      });
+      
+      throw error;
+    }
+  }
+  
+  /**
+   * Обновление задачи на основе карточки Planka
+   */
+  private async updateTaskFromCard(taskId: number, card: any): Promise<void> {
+    // Получаем задачу
+    const task = await storage.getTask(taskId);
+    
+    if (!task) {
+      console.warn(`Задача #${taskId} не найдена при синхронизации с Planka`);
+      return;
+    }
+    
+    // Определяем статус на основе списка карточки
+    let status = task.status;
+    if (card.list) {
+      switch (card.list.name.toLowerCase()) {
+        case 'в работе':
+        case 'in progress':
+          status = 'in_progress';
+          break;
+        case 'сделано':
+        case 'done':
+          status = 'completed';
+          break;
+        case 'отложено':
+        case 'backlog':
+          status = 'pending';
+          break;
+      }
+    }
+    
+    // Обновляем задачу только если есть изменения
+    if (task.status !== status || 
+        task.title !== card.name || 
+        task.description !== card.description) {
+      
+      await storage.updateTask(taskId, {
+        status,
+        title: card.name,
+        description: card.description
+      });
+      
+      console.log(`Задача #${taskId} обновлена на основе карточки Planka`);
+    }
+  }
+  
+  /**
+   * Обновление заявки гражданина на основе карточки Planka
+   */
+  private async updateCitizenRequestFromCard(requestId: number, card: any): Promise<void> {
+    // Получаем заявку
+    const request = await storage.getCitizenRequest(requestId);
+    
+    if (!request) {
+      console.warn(`Заявка #${requestId} не найдена при синхронизации с Planka`);
+      return;
+    }
+    
+    // Определяем статус на основе списка карточки
+    let status = request.status;
+    if (card.list) {
+      switch (card.list.name.toLowerCase()) {
+        case 'в работе':
+        case 'in progress':
+          status = 'processing';
+          break;
+        case 'сделано':
+        case 'done':
+          status = 'completed';
+          break;
+        case 'отложено':
+        case 'backlog':
+          status = 'pending';
+          break;
+      }
+    }
+    
+    // Обновляем заявку только если есть изменения
+    if (request.status !== status || 
+        request.subject !== card.name || 
+        request.description !== card.description) {
+      
+      await storage.updateCitizenRequest(requestId, {
+        status,
+        subject: card.name,
+        description: card.description
+      });
+      
+      console.log(`Заявка #${requestId} обновлена на основе карточки Planka`);
+    }
+  }
+  
+  /**
+   * Получение списка проектов из Planka
+   */
+  public async getProjects(): Promise<any[]> {
+    return await this.apiClient.get('/projects');
+  }
+  
+  /**
+   * Получение списка досок для проекта
+   */
+  public async getBoardsByProject(projectId: string): Promise<any[]> {
+    return await this.apiClient.get(`/projects/${projectId}/boards`);
+  }
+  
+  /**
+   * Получение списков для доски
+   */
+  public async getListsByBoard(boardId: string): Promise<any[]> {
+    return await this.apiClient.get(`/boards/${boardId}/lists`);
+  }
+  
+  /**
+   * Получение карточек для доски
+   */
+  public async getCardsByBoard(boardId: string): Promise<any[]> {
+    return await this.apiClient.get(`/boards/${boardId}/cards`);
+  }
+  
+  /**
+   * Получение информации о карточке
+   */
+  public async getCardDetails(cardId: string): Promise<CardDetails> {
+    try {
+      const card = await this.apiClient.get(`/cards/${cardId}`);
+      
+      return {
+        success: true,
+        card
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+  
+  /**
+   * Создание карточки в Planka
+   */
+  public async createCard(params: CardCreateParams): Promise<CardCreateResult> {
+    try {
+      // Если не указан listId, получаем первый список из доски
+      let listId = params.listId;
+      if (!listId) {
+        const lists = await this.getListsByBoard(params.boardId);
+        if (lists && lists.length > 0) {
+          listId = lists[0].id;
+        } else {
+          return {
+            success: false,
+            message: 'Не найдены списки на доске'
+          };
+        }
+      }
+      
+      // Создаем карточку
+      const card = await this.apiClient.post('/cards', {
+        name: params.name,
+        description: params.description || '',
+        projectId: params.projectId,
+        boardId: params.boardId,
+        listId
+      });
+      
+      return {
+        success: true,
+        message: 'Карточка успешно создана',
+        cardId: card.id,
+        cardUrl: `${this.config?.url}/projects/${params.projectId}/boards/${params.boardId}?cardId=${card.id}`,
+        card
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Ошибка при создании карточки: ${error.message}`
+      };
+    }
+  }
+  
+  /**
+   * Обновление карточки в Planka
+   */
+  public async updateCard(cardId: string, data: any): Promise<any> {
+    return await this.apiClient.patch(`/cards/${cardId}`, data);
+  }
+  
+  /**
+   * Удаление карточки в Planka
+   */
+  public async deleteCard(cardId: string): Promise<{ success: boolean, message?: string }> {
+    try {
+      await this.apiClient.delete(`/cards/${cardId}`);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
     }
   }
 }
 
-// Экспорт экземпляра синглтона
-export const plankaIntegration = PlankaIntegration.getInstance();
+export const plankaService = new PlankaService();

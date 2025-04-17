@@ -2,380 +2,456 @@
  * API для интеграции с Planka (система управления проектами Kanban)
  */
 
-import { Router } from 'express';
-import { plankaIntegration } from './services/planka-integration';
-import { logActivity } from './activity-logger';
-import { storage } from './storage';
-import { z } from 'zod';
+import { Router } from "express";
+import { storage } from "./storage";
+import { plankaService } from "./services/planka-integration";
+import { logActivity } from "./activity-logger";
 
-// Схема валидации для конфигурации Planka
-const plankaConfigSchema = z.object({
-  baseUrl: z.string().url(),
-  username: z.string().min(1),
-  password: z.string().min(1),
-  projectId: z.string().optional()
-});
+// Настройки по умолчанию
+const DEFAULT_PLANKA_CONFIG = {
+  enabled: false,
+  plankaUrl: "",
+  plankaToken: "",
+  syncInterval: 15, // минут
+  autoSync: true
+};
 
-// Схема валидации для создания карточки
-const createCardSchema = z.object({
-  entityType: z.enum(['citizen_request', 'task', 'document']),
-  entityId: z.number().int().positive(),
-  projectId: z.string(),
-  boardId: z.string(),
-  listId: z.string()
-});
-
-// Схема валидации для синхронизации карточки с задачей
-const syncCardSchema = z.object({
-  taskId: z.number().int().positive(),
-  cardId: z.string()
-});
-
-// Функция для регистрации API маршрутов
 export function registerPlankaRoutes(router: Router): void {
-  // Инициализация интеграции с Planka
-  router.post('/api/planka/initialize', async (req, res) => {
+  // Получение настроек Planka
+  router.get("/api/planka/config", async (req, res) => {
     try {
-      const config = plankaConfigSchema.parse(req.body);
+      // Берем настройки из хранилища или используем значения по умолчанию
+      const storedConfig = await storage.getSystemSetting("plankaConfig");
+      const config = storedConfig ? JSON.parse(storedConfig) : DEFAULT_PLANKA_CONFIG;
       
-      const initialized = await plankaIntegration.initialize(config);
-      
-      if (!initialized) {
-        return res.status(400).json({ error: 'Failed to initialize Planka integration' });
+      // Маскируем токен в ответе из соображений безопасности
+      if (config.plankaToken) {
+        config.plankaToken = "***"; // Не отправляем реальный токен клиенту
       }
       
-      // Сохраняем конфигурацию в системных настройках
-      await storage.updateSystemSetting('planka_config', JSON.stringify(config));
+      res.json({
+        success: true,
+        config
+      });
+    } catch (error) {
+      console.error("Ошибка при получении настроек Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении настроек Planka"
+      });
+    }
+  });
+  
+  // Обновление настроек Planka
+  router.post("/api/planka/config", async (req, res) => {
+    try {
+      const { enabled, plankaUrl, plankaToken, syncInterval, autoSync } = req.body;
       
-      // Логируем активность
+      // Логируем действие
       await logActivity({
-        action: 'integration_initialized',
-        userId: req.session?.userId || 1,
-        details: 'Инициализирована интеграция с Planka',
-        metadata: { baseUrl: config.baseUrl }
+        action: "planka_update_config",
+        entityType: "integration",
+        userId: req.session?.userId,
+        details: "Обновление настроек интеграции с Planka"
       });
       
-      res.json({ 
-        success: true, 
-        message: 'Интеграция с Planka успешно инициализирована'
-      });
-    } catch (error) {
-      console.error('Ошибка при инициализации интеграции с Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka initialization error',
-        message: error.message || 'Ошибка при инициализации интеграции с Planka'
-      });
-    }
-  });
-
-  // Проверка статуса интеграции
-  router.get('/api/planka/status', async (req, res) => {
-    try {
-      const initialized = plankaIntegration.isInitialized();
+      // Получаем текущие настройки
+      const storedConfig = await storage.getSystemSetting("plankaConfig");
+      const currentConfig = storedConfig ? JSON.parse(storedConfig) : DEFAULT_PLANKA_CONFIG;
       
-      if (!initialized) {
-        return res.json({ 
-          initialized: false,
-          connected: false,
-          message: 'Интеграция с Planka не инициализирована'
+      // Создаем обновленную конфигурацию
+      const newConfig = {
+        ...currentConfig,
+        enabled: enabled !== undefined ? enabled : currentConfig.enabled,
+        plankaUrl: plankaUrl || currentConfig.plankaUrl,
+        // Не обновляем токен, если передано значение "***" (маска)
+        plankaToken: (plankaToken && plankaToken !== "***") ? plankaToken : currentConfig.plankaToken,
+        syncInterval: syncInterval || currentConfig.syncInterval,
+        autoSync: autoSync !== undefined ? autoSync : currentConfig.autoSync
+      };
+      
+      // Сохраняем настройки
+      await storage.updateSystemSetting("plankaConfig", JSON.stringify(newConfig));
+      
+      // Если включена интеграция, инициализируем сервис
+      if (newConfig.enabled) {
+        try {
+          await plankaService.initialize({
+            url: newConfig.plankaUrl,
+            token: newConfig.plankaToken,
+            syncInterval: newConfig.syncInterval,
+            autoSync: newConfig.autoSync
+          });
+          
+          // Обновляем статус системной интеграции
+          await storage.updateSystemStatus("PlankaIntegration", {
+            serviceName: "PlankaIntegration",
+            status: 100,
+            details: "Интеграция с Planka активна"
+          });
+        } catch (error) {
+          console.error("Ошибка при инициализации сервиса Planka:", error);
+          
+          // Обновляем статус с ошибкой
+          await storage.updateSystemStatus("PlankaIntegration", {
+            serviceName: "PlankaIntegration",
+            status: 0,
+            details: `Ошибка: ${error.message}`
+          });
+          
+          return res.status(500).json({
+            success: false,
+            error: "Ошибка инициализации Planka: " + error.message
+          });
+        }
+      } else {
+        // Если интеграция выключена, останавливаем сервис
+        plankaService.stop();
+        
+        // Обновляем статус системной интеграции
+        await storage.updateSystemStatus("PlankaIntegration", {
+          serviceName: "PlankaIntegration",
+          status: 50,
+          details: "Интеграция с Planka отключена"
         });
       }
       
-      const connected = await plankaIntegration.testConnection();
+      // Маскируем токен в ответе
+      const responseConfig = { ...newConfig, plankaToken: "***" };
       
-      res.json({ 
-        initialized,
-        connected, 
-        config: plankaIntegration.getConfig(),
-        message: connected 
-          ? 'Интеграция с Planka активна и подключена' 
-          : 'Интеграция с Planka инициализирована, но соединение не установлено'
+      res.json({
+        success: true,
+        config: responseConfig
       });
     } catch (error) {
-      console.error('Ошибка при проверке статуса интеграции с Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka status check error',
-        message: error.message || 'Ошибка при проверке статуса интеграции с Planka'
+      console.error("Ошибка при обновлении настроек Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при обновлении настроек Planka"
       });
     }
   });
-
+  
+  // Проверка подключения к Planka
+  router.post("/api/planka/test-connection", async (req, res) => {
+    try {
+      const { url, token } = req.body;
+      
+      // Логируем действие
+      await logActivity({
+        action: "planka_test_connection",
+        entityType: "integration",
+        userId: req.session?.userId,
+        details: "Тестирование подключения к Planka",
+        metadata: { url }
+      });
+      
+      const result = await plankaService.testConnection(url, token);
+      
+      res.json({
+        success: true,
+        connected: result.success,
+        message: result.message,
+        details: result.details
+      });
+    } catch (error) {
+      console.error("Ошибка при тестировании подключения к Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при тестировании подключения"
+      });
+    }
+  });
+  
+  // Ручная синхронизация с Planka
+  router.post("/api/planka/sync", async (req, res) => {
+    try {
+      // Логируем действие
+      await logActivity({
+        action: "planka_sync",
+        entityType: "integration",
+        userId: req.session?.userId,
+        details: "Ручная синхронизация с Planka"
+      });
+      
+      const result = await plankaService.synchronize();
+      
+      res.json({
+        success: true,
+        syncResult: result
+      });
+    } catch (error) {
+      console.error("Ошибка при синхронизации с Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при синхронизации с Planka"
+      });
+    }
+  });
+  
   // Получение проектов из Planka
-  router.get('/api/planka/projects', async (req, res) => {
+  router.get("/api/planka/projects", async (req, res) => {
     try {
-      if (!plankaIntegration.isInitialized()) {
-        return res.status(400).json({ error: 'Planka integration not initialized' });
-      }
+      // Логируем действие
+      await logActivity({
+        action: "planka_get_projects",
+        entityType: "integration",
+        userId: req.session?.userId,
+        details: "Получение списка проектов из Planka"
+      });
       
-      const projects = await plankaIntegration.getProjects();
+      const projects = await plankaService.getProjects();
       
-      res.json(projects);
+      res.json({
+        success: true,
+        projects
+      });
     } catch (error) {
-      console.error('Ошибка при получении проектов из Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka projects fetch error',
-        message: error.message || 'Ошибка при получении проектов из Planka'
+      console.error("Ошибка при получении проектов из Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении проектов из Planka"
       });
     }
   });
-
-  // Получение досок для проекта
-  router.get('/api/planka/projects/:projectId/boards', async (req, res) => {
+  
+  // Получение досок в проекте
+  router.get("/api/planka/project/:projectId/boards", async (req, res) => {
     try {
-      if (!plankaIntegration.isInitialized()) {
-        return res.status(400).json({ error: 'Planka integration not initialized' });
-      }
-      
       const { projectId } = req.params;
-      const boards = await plankaIntegration.getBoards(projectId);
       
-      res.json(boards);
+      // Логируем действие
+      await logActivity({
+        action: "planka_get_boards",
+        entityType: "integration",
+        userId: req.session?.userId,
+        details: `Получение досок проекта ${projectId} из Planka`
+      });
+      
+      const boards = await plankaService.getBoardsByProject(projectId);
+      
+      res.json({
+        success: true,
+        boards
+      });
     } catch (error) {
-      console.error('Ошибка при получении досок из Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka boards fetch error',
-        message: error.message || 'Ошибка при получении досок из Planka'
+      console.error("Ошибка при получении досок из Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении досок из Planka"
       });
     }
   });
-
-  // Получение списков для доски
-  router.get('/api/planka/boards/:boardId/lists', async (req, res) => {
+  
+  // Создание связи задачи с карточкой Planka
+  router.post("/api/planka/link", async (req, res) => {
     try {
-      if (!plankaIntegration.isInitialized()) {
-        return res.status(400).json({ error: 'Planka integration not initialized' });
-      }
+      const { entityType, entityId, projectId, boardId, cardName, description } = req.body;
       
-      const { boardId } = req.params;
-      const lists = await plankaIntegration.getLists(boardId);
-      
-      res.json(lists);
-    } catch (error) {
-      console.error('Ошибка при получении списков из Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka lists fetch error',
-        message: error.message || 'Ошибка при получении списков из Planka'
-      });
-    }
-  });
-
-  // Получение карточек для списка
-  router.get('/api/planka/lists/:listId/cards', async (req, res) => {
-    try {
-      if (!plankaIntegration.isInitialized()) {
-        return res.status(400).json({ error: 'Planka integration not initialized' });
-      }
-      
-      const { listId } = req.params;
-      const cards = await plankaIntegration.getCards(listId);
-      
-      res.json(cards);
-    } catch (error) {
-      console.error('Ошибка при получении карточек из Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka cards fetch error',
-        message: error.message || 'Ошибка при получении карточек из Planka'
-      });
-    }
-  });
-
-  // Создание карточки для сущности (обращение, задача и т.д.)
-  router.post('/api/planka/cards', async (req, res) => {
-    try {
-      if (!plankaIntegration.isInitialized()) {
-        return res.status(400).json({ error: 'Planka integration not initialized' });
-      }
-      
-      const {
-        entityType,
-        entityId,
-        projectId,
-        boardId,
-        listId
-      } = createCardSchema.parse(req.body);
-      
-      let card = null;
-      let entity = null;
-      
-      // В зависимости от типа сущности получаем данные и создаем карточку
-      switch (entityType) {
-        case 'citizen_request':
-          entity = await storage.getCitizenRequest(entityId);
-          if (!entity) {
-            return res.status(404).json({ error: 'Citizen request not found' });
-          }
-          card = await plankaIntegration.createCitizenRequestCard(
-            entity,
-            projectId,
-            boardId,
-            listId,
-            req.session?.userId || 1
-          );
-          break;
-          
-        case 'task':
-          entity = await storage.getTask(entityId);
-          if (!entity) {
-            return res.status(404).json({ error: 'Task not found' });
-          }
-          card = await plankaIntegration.createTaskCard(
-            entity,
-            projectId,
-            boardId,
-            listId,
-            req.session?.userId || 1
-          );
-          break;
-          
-        default:
-          return res.status(400).json({ error: 'Unsupported entity type' });
-      }
-      
-      if (!card) {
-        return res.status(500).json({ error: 'Failed to create card' });
-      }
-      
-      // Сохраняем связь карточки с сущностью
-      await storage.createPlankaLink({
-        entityType,
-        entityId,
-        cardId: card.id,
-        boardId,
-        listId,
-        projectId,
-        createdBy: req.session?.userId || 1,
-        createdAt: new Date()
-      });
-      
-      res.json({ 
-        success: true, 
-        card,
-        message: `Карточка успешно создана для ${entityType} ID: ${entityId}`
-      });
-    } catch (error) {
-      console.error('Ошибка при создании карточки в Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka card creation error',
-        message: error.message || 'Ошибка при создании карточки в Planka'
-      });
-    }
-  });
-
-  // Синхронизация статуса задачи с карточкой в Planka
-  router.post('/api/planka/sync-task', async (req, res) => {
-    try {
-      if (!plankaIntegration.isInitialized()) {
-        return res.status(400).json({ error: 'Planka integration not initialized' });
-      }
-      
-      const { taskId, cardId } = syncCardSchema.parse(req.body);
-      
-      // Получаем задачу
-      const task = await storage.getTask(taskId);
-      if (!task) {
-        return res.status(404).json({ error: 'Task not found' });
-      }
-      
-      // Синхронизируем статус
-      const synced = await plankaIntegration.syncTaskWithCard(
-        taskId,
-        cardId,
-        task.status,
-        req.session?.userId || 1
-      );
-      
-      if (!synced) {
-        return res.json({ 
-          success: false, 
-          message: 'Синхронизация не требуется или не выполнена'
+      if (!entityType || !entityId) {
+        return res.status(400).json({
+          success: false,
+          error: "Требуются параметры entityType и entityId"
         });
       }
       
-      res.json({ 
-        success: true, 
-        message: 'Статус задачи успешно синхронизирован с карточкой в Planka'
+      // Логируем действие
+      await logActivity({
+        action: "planka_create_link",
+        entityType: entityType,
+        entityId: entityId,
+        userId: req.session?.userId,
+        details: `Создание связи ${entityType} #${entityId} с карточкой Planka`
+      });
+      
+      // Получаем сущность по типу и ID
+      let entity;
+      switch (entityType) {
+        case "task":
+          entity = await storage.getTask(entityId);
+          break;
+        case "document":
+          entity = await storage.getDocument(entityId);
+          break;
+        case "citizen_request":
+          entity = await storage.getCitizenRequest(entityId);
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            error: `Неподдерживаемый тип сущности: ${entityType}`
+          });
+      }
+      
+      if (!entity) {
+        return res.status(404).json({
+          success: false,
+          error: `Сущность ${entityType} #${entityId} не найдена`
+        });
+      }
+      
+      // Создаем карточку в Planka
+      const cardResult = await plankaService.createCard({
+        name: cardName || entity.title || `${entityType} #${entityId}`,
+        description: description || entity.description || "",
+        projectId,
+        boardId
+      });
+      
+      if (!cardResult.success) {
+        return res.status(500).json({
+          success: false,
+          error: cardResult.message
+        });
+      }
+      
+      // Сохраняем связь в хранилище
+      const link = await storage.createPlankaLink({
+        entityType,
+        entityId,
+        plankaProjectId: projectId,
+        plankaBoardId: boardId,
+        plankaCardId: cardResult.cardId,
+        createdAt: new Date(),
+        lastSyncedAt: new Date()
+      });
+      
+      res.json({
+        success: true,
+        link,
+        cardDetails: cardResult
       });
     } catch (error) {
-      console.error('Ошибка при синхронизации задачи с карточкой в Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka sync error',
-        message: error.message || 'Ошибка при синхронизации задачи с карточкой в Planka'
+      console.error("Ошибка при создании связи с карточкой Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при создании связи с карточкой Planka"
       });
     }
   });
-
-  // Получение связей между сущностями и карточками Planka
-  router.get('/api/planka/links', async (req, res) => {
-    try {
-      const links = await storage.getPlankaLinks();
-      res.json(links);
-    } catch (error) {
-      console.error('Ошибка при получении связей с Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka links fetch error',
-        message: error.message || 'Ошибка при получении связей с Planka'
-      });
-    }
-  });
-
-  // Получение связей для конкретной сущности
-  router.get('/api/planka/links/:entityType/:entityId', async (req, res) => {
+  
+  // Получение связанных карточек Planka для сущности
+  router.get("/api/planka/links/:entityType/:entityId", async (req, res) => {
     try {
       const { entityType, entityId } = req.params;
-      const id = parseInt(entityId);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ error: 'Invalid entity ID' });
+      // Логируем действие
+      await logActivity({
+        action: "planka_get_links",
+        entityType: entityType,
+        entityId: parseInt(entityId),
+        userId: req.session?.userId,
+        details: `Получение связей ${entityType} #${entityId} с Planka`
+      });
+      
+      const links = await storage.getPlankaLinkByEntity(
+        entityType,
+        parseInt(entityId)
+      );
+      
+      // Получаем подробную информацию о каждой карточке из Planka
+      const detailedLinks = [];
+      for (const link of links) {
+        try {
+          const cardDetails = await plankaService.getCardDetails(link.plankaCardId);
+          detailedLinks.push({
+            ...link,
+            cardDetails: cardDetails.success ? cardDetails.card : null
+          });
+        } catch (error) {
+          // Если не удалось получить детали карточки, добавляем только информацию о связи
+          detailedLinks.push({
+            ...link,
+            cardDetails: null,
+            error: error.message
+          });
+        }
       }
       
-      const links = await storage.getPlankaLinkByEntity(entityType, id);
-      
-      if (!links || links.length === 0) {
-        return res.status(404).json({ error: 'No Planka links found for this entity' });
-      }
-      
-      res.json(links);
+      res.json({
+        success: true,
+        links: detailedLinks
+      });
     } catch (error) {
-      console.error('Ошибка при получении связей с Planka для сущности:', error);
-      res.status(500).json({ 
-        error: 'Planka entity links fetch error',
-        message: error.message || 'Ошибка при получении связей с Planka для сущности'
+      console.error("Ошибка при получении связей с Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении связей с Planka"
       });
     }
   });
-
-  // Удаление связи
-  router.delete('/api/planka/links/:linkId', async (req, res) => {
+  
+  // Получение всех связей с Planka
+  router.get("/api/planka/links", async (req, res) => {
     try {
-      const { linkId } = req.params;
-      const id = parseInt(linkId);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({ error: 'Invalid link ID' });
-      }
-      
-      const deleted = await storage.deletePlankaLink(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: 'Link not found or could not be deleted' });
-      }
-      
-      // Логируем активность
+      // Логируем действие
       await logActivity({
-        action: 'planka_link_deleted',
-        userId: req.session?.userId || 1,
-        details: `Удалена связь с Planka ID: ${id}`
+        action: "planka_get_all_links",
+        entityType: "integration",
+        userId: req.session?.userId,
+        details: "Получение всех связей с Planka"
       });
       
-      res.json({ 
-        success: true, 
-        message: 'Связь с Planka успешно удалена'
+      const links = await storage.getPlankaLinks();
+      
+      res.json({
+        success: true,
+        links
       });
     } catch (error) {
-      console.error('Ошибка при удалении связи с Planka:', error);
-      res.status(500).json({ 
-        error: 'Planka link deletion error',
-        message: error.message || 'Ошибка при удалении связи с Planka'
+      console.error("Ошибка при получении всех связей с Planka:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении всех связей с Planka"
+      });
+    }
+  });
+  
+  // Удаление связи с Planka
+  router.delete("/api/planka/link/:linkId", async (req, res) => {
+    try {
+      const linkId = parseInt(req.params.linkId);
+      
+      if (isNaN(linkId)) {
+        return res.status(400).json({
+          success: false,
+          error: "Некорректный ID связи"
+        });
+      }
+      
+      // Получаем связь перед удалением для логирования
+      const link = await storage.getPlankaLink(linkId);
+      if (!link) {
+        return res.status(404).json({
+          success: false,
+          error: "Связь не найдена"
+        });
+      }
+      
+      // Логируем действие
+      await logActivity({
+        action: "planka_delete_link",
+        entityType: link.entityType,
+        entityId: link.entityId,
+        userId: req.session?.userId,
+        details: `Удаление связи ${link.entityType} #${link.entityId} с карточкой Planka #${link.plankaCardId}`
+      });
+      
+      // Удаляем карточку в Planka (опционально)
+      const deleteCardResult = await plankaService.deleteCard(link.plankaCardId);
+      
+      // Удаляем связь из хранилища
+      const result = await storage.deletePlankaLink(linkId);
+      
+      res.json({
+        success: result,
+        cardDeleted: deleteCardResult.success
+      });
+    } catch (error) {
+      console.error(`Ошибка при удалении связи с Planka #${req.params.linkId}:`, error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при удалении связи с Planka"
       });
     }
   });

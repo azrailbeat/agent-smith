@@ -1,319 +1,441 @@
 /**
- * API для управления подключениями к базам данных и импортом/экспортом данных
+ * API для управления базами данных и импорта/экспорта шаблонов
  */
 
-import { Router } from 'express';
-import { dbConnector, DatabaseProvider } from './services/database-connector';
-import { templateManager, TemplateType } from './services/template-manager';
-import { logActivity } from './activity-logger';
-import { z } from 'zod';
+import { Router } from "express";
+import { storage } from "./storage";
+import { DatabaseProvider, databaseConnector } from "./services/database-connector";
+import { templateManager } from "./services/template-manager";
+import { logActivity } from "./activity-logger";
+import path from "path";
+import fs from "fs";
 
-// Схема валидации для переключения провайдера
-const switchProviderSchema = z.object({
-  provider: z.enum([DatabaseProvider.LOCAL_POSTGRES, DatabaseProvider.SUPABASE])
-});
+// Папка для хранения экспортированных файлов
+const EXPORTS_DIR = path.join(__dirname, "..", "data", "exports");
+// Создаем папку, если она не существует
+if (!fs.existsSync(EXPORTS_DIR)) {
+  fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+}
 
-// Схема валидации для метаданных шаблона
-const templateMetadataSchema = z.object({
-  name: z.string().min(3).max(100),
-  description: z.string().max(500),
-  version: z.string().max(20),
-  author: z.string().max(100)
-});
-
-// Функция для регистрации API маршрутов
 export function registerDatabaseRoutes(router: Router): void {
-  // Получение текущего провайдера базы данных
-  router.get('/api/database/provider', async (req, res) => {
+  // Получение текущего провайдера БД
+  router.get("/api/database/provider", async (req, res) => {
     try {
-      const provider = dbConnector.getCurrentProvider();
-      res.json({ provider });
+      const provider = databaseConnector.getCurrentProvider();
+      
+      res.json({
+        success: true,
+        provider
+      });
     } catch (error) {
-      console.error('Ошибка при получении провайдера базы данных:', error);
-      res.status(500).json({ 
-        error: 'Database provider error',
-        message: error.message || 'Ошибка при получении провайдера базы данных'
+      console.error("Ошибка при получении провайдера БД:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении провайдера БД"
       });
     }
   });
-
-  // Переключение провайдера базы данных
-  router.post('/api/database/switch-provider', async (req, res) => {
+  
+  // Переключение провайдера БД
+  router.post("/api/database/switch-provider", async (req, res) => {
     try {
-      const { provider } = switchProviderSchema.parse(req.body);
+      const { provider, config } = req.body;
       
-      await dbConnector.switchProvider(provider);
-      
-      // Логируем активность
+      // Логируем действие
       await logActivity({
-        action: 'database_provider_switched',
-        userId: req.session?.userId || 1,
-        details: `Провайдер базы данных переключен на ${provider}`,
+        action: "database_switch",
+        entityType: "database",
+        userId: req.session?.userId,
+        details: `Переключение БД на ${provider}`,
         metadata: { provider }
       });
       
-      res.json({ 
-        success: true, 
-        provider, 
-        message: `Провайдер базы данных успешно переключен на ${provider}` 
-      });
+      // Проверяем, поддерживается ли провайдер
+      if (!Object.values(DatabaseProvider).includes(provider)) {
+        return res.status(400).json({
+          success: false,
+          error: `Неизвестный провайдер: ${provider}`
+        });
+      }
+      
+      const result = await databaseConnector.switchProvider(provider, config);
+      
+      if (result) {
+        res.json({
+          success: true,
+          provider
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: `Ошибка при переключении на ${provider}`
+        });
+      }
     } catch (error) {
-      console.error('Ошибка при переключении провайдера базы данных:', error);
-      res.status(500).json({ 
-        error: 'Database provider switch error',
-        message: error.message || 'Ошибка при переключении провайдера базы данных'
+      console.error("Ошибка при переключении провайдера БД:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при переключении провайдера БД"
       });
     }
   });
-
-  // Экспорт данных из базы
-  router.post('/api/database/export', async (req, res) => {
+  
+  // Тестирование подключения к БД
+  router.post("/api/database/test-connection", async (req, res) => {
     try {
-      const { tables } = req.body as { tables?: string[] };
+      const { provider, config } = req.body;
       
-      const exportData = await dbConnector.exportData(tables);
-      
-      // Логируем активность
+      // Логируем действие
       await logActivity({
-        action: 'database_export',
-        userId: req.session?.userId || 1,
-        details: 'Экспорт данных из базы',
+        action: "database_test",
+        entityType: "database",
+        userId: req.session?.userId,
+        details: `Тестирование подключения к ${provider}`,
+        metadata: { provider }
+      });
+      
+      const result = await databaseConnector.testConnection(provider, config);
+      
+      res.json({
+        success: true,
+        connected: result
+      });
+    } catch (error) {
+      console.error("Ошибка при тестировании подключения к БД:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при тестировании подключения к БД"
+      });
+    }
+  });
+  
+  // Экспорт базы данных
+  router.post("/api/database/export", async (req, res) => {
+    try {
+      const { tables } = req.body;
+      
+      // Логируем действие
+      await logActivity({
+        action: "database_export",
+        entityType: "database",
+        userId: req.session?.userId,
+        details: "Экспорт базы данных",
         metadata: { tables }
       });
       
-      res.json({ 
-        success: true, 
-        data: exportData,
-        tables: tables || 'all',
-        timestamp: new Date().toISOString()
+      const data = await databaseConnector.exportData(tables);
+      
+      // Сохраняем в файл
+      const filename = `db_export_${new Date().toISOString().replace(/:/g, "-")}.json`;
+      const filePath = path.join(EXPORTS_DIR, filename);
+      
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+      
+      res.json({
+        success: true,
+        filename,
+        data
       });
     } catch (error) {
-      console.error('Ошибка при экспорте данных из базы:', error);
-      res.status(500).json({ 
-        error: 'Database export error',
-        message: error.message || 'Ошибка при экспорте данных из базы'
+      console.error("Ошибка при экспорте данных:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при экспорте данных"
       });
     }
   });
-
-  // Импорт данных в базу
-  router.post('/api/database/import', async (req, res) => {
+  
+  // Импорт базы данных
+  router.post("/api/database/import", async (req, res) => {
     try {
-      const { data } = req.body as { data: Record<string, any[]> };
+      const { data } = req.body;
       
-      if (!data || typeof data !== 'object') {
-        return res.status(400).json({ error: 'Invalid data format' });
-      }
-      
-      await dbConnector.importData(data);
-      
-      // Логируем активность
+      // Логируем действие
       await logActivity({
-        action: 'database_import',
-        userId: req.session?.userId || 1,
-        details: 'Импорт данных в базу',
+        action: "database_import",
+        entityType: "database",
+        userId: req.session?.userId,
+        details: "Импорт базы данных",
         metadata: { tables: Object.keys(data) }
       });
       
-      res.json({ 
-        success: true, 
-        message: 'Данные успешно импортированы',
-        tables: Object.keys(data),
-        timestamp: new Date().toISOString()
+      const result = await databaseConnector.importData(data);
+      
+      res.json({
+        success: result
       });
     } catch (error) {
-      console.error('Ошибка при импорте данных в базу:', error);
-      res.status(500).json({ 
-        error: 'Database import error',
-        message: error.message || 'Ошибка при импорте данных в базу'
+      console.error("Ошибка при импорте данных:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при импорте данных"
       });
     }
   });
 
+  // Маршруты для управления шаблонами
+  
   // Получение списка шаблонов
-  router.get('/api/templates', async (req, res) => {
+  router.get("/api/templates", async (req, res) => {
     try {
-      const templates = await templateManager.getTemplates();
-      res.json(templates);
+      const templates = templateManager.getAvailableTemplates();
+      
+      res.json({
+        success: true,
+        templates
+      });
     } catch (error) {
-      console.error('Ошибка при получении списка шаблонов:', error);
-      res.status(500).json({ 
-        error: 'Templates fetch error',
-        message: error.message || 'Ошибка при получении списка шаблонов'
+      console.error("Ошибка при получении списка шаблонов:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при получении списка шаблонов"
       });
     }
   });
-
+  
   // Получение конкретного шаблона
-  router.get('/api/templates/:filename', async (req, res) => {
+  router.get("/api/templates/:filename", async (req, res) => {
     try {
       const { filename } = req.params;
-      const template = await templateManager.getTemplate(filename);
+      
+      const template = templateManager.loadTemplateFromFile(filename);
+      
+      res.json({
+        success: true,
+        template
+      });
+    } catch (error) {
+      console.error(`Ошибка при получении шаблона ${req.params.filename}:`, error);
+      res.status(404).json({
+        success: false,
+        error: "Шаблон не найден"
+      });
+    }
+  });
+  
+  // Создание шаблона агента
+  router.post("/api/templates/agent/:id", async (req, res) => {
+    try {
+      const agentId = parseInt(req.params.id);
+      const { exportDependencies, exportIntegrations } = req.body;
+      
+      if (isNaN(agentId)) {
+        return res.status(400).json({
+          success: false,
+          error: "Некорректный ID агента"
+        });
+      }
+      
+      // Логируем действие
+      await logActivity({
+        action: "template_create",
+        entityType: "agent",
+        entityId: agentId,
+        userId: req.session?.userId,
+        details: `Создание шаблона агента #${agentId}`,
+        metadata: { exportDependencies, exportIntegrations }
+      });
+      
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({
+          success: false,
+          error: "Агент не найден"
+        });
+      }
+      
+      const template = await templateManager.exportAgent(agentId, {
+        exportDependencies,
+        exportIntegrations
+      });
       
       if (!template) {
-        return res.status(404).json({ error: 'Template not found' });
-      }
-      
-      res.json(template);
-    } catch (error) {
-      console.error('Ошибка при получении шаблона:', error);
-      res.status(500).json({ 
-        error: 'Template fetch error',
-        message: error.message || 'Ошибка при получении шаблона'
-      });
-    }
-  });
-
-  // Создание шаблона
-  router.post('/api/templates', async (req, res) => {
-    try {
-      const {
-        templateType,
-        name,
-        description,
-        version,
-        author,
-      } = req.body;
-      
-      // Проверяем корректность типа шаблона
-      if (!templateType || (
-          !Object.values(TemplateType).includes(templateType) &&
-          !Array.isArray(templateType)
-        )) {
-        return res.status(400).json({
-          error: 'Invalid template type',
-          validTypes: Object.values(TemplateType)
+        return res.status(500).json({
+          success: false,
+          error: "Ошибка при создании шаблона"
         });
       }
       
-      // Проверяем метаданные
-      const metadata = templateMetadataSchema.parse({
-        name,
-        description,
-        version,
-        author
-      });
+      // Сохраняем шаблон в файл
+      const filename = `agent_${agent.name.replace(/\s+/g, "_").toLowerCase()}.json`;
+      const filePath = templateManager.saveTemplateToFile(template, filename);
       
-      // Создаем шаблон
-      const filename = await templateManager.createTemplate(
-        templateType,
-        metadata,
-        req.session?.userId || 1
-      );
-      
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         filename,
-        message: 'Шаблон успешно создан'
+        template
       });
     } catch (error) {
-      console.error('Ошибка при создании шаблона:', error);
-      res.status(500).json({ 
-        error: 'Template creation error',
-        message: error.message || 'Ошибка при создании шаблона'
+      console.error("Ошибка при создании шаблона агента:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при создании шаблона агента"
       });
     }
   });
-
-  // Импорт шаблона
-  router.post('/api/templates/:filename/import', async (req, res) => {
+  
+  // Импорт шаблона агента
+  router.post("/api/templates/import/:filename", async (req, res) => {
     try {
       const { filename } = req.params;
+      const { overwriteExisting, importDependencies } = req.body;
       
-      const imported = await templateManager.importTemplate(
-        filename,
-        req.session?.userId || 1
-      );
+      // Логируем действие
+      await logActivity({
+        action: "template_import",
+        entityType: "template",
+        userId: req.session?.userId,
+        details: `Импорт шаблона ${filename}`,
+        metadata: { filename, overwriteExisting, importDependencies }
+      });
       
-      if (!imported) {
-        return res.status(400).json({ error: 'Failed to import template' });
+      const template = templateManager.loadTemplateFromFile(filename);
+      
+      let result;
+      
+      switch (template.type) {
+        case "agent":
+          result = await templateManager.importAgent(template, {
+            overwriteExisting,
+            importDependencies
+          });
+          break;
+        case "organization_structure":
+          result = await templateManager.importOrgStructure(template, {
+            overwriteExisting
+          });
+          break;
+        case "system_setting":
+          result = await templateManager.importSystemSettings(template);
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            error: `Неподдерживаемый тип шаблона: ${template.type}`
+          });
       }
       
-      res.json({ 
-        success: true, 
-        message: 'Шаблон успешно импортирован'
+      res.json({
+        success: true,
+        result
       });
     } catch (error) {
-      console.error('Ошибка при импорте шаблона:', error);
-      res.status(500).json({ 
-        error: 'Template import error',
-        message: error.message || 'Ошибка при импорте шаблона'
+      console.error(`Ошибка при импорте шаблона ${req.params.filename}:`, error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при импорте шаблона"
       });
     }
   });
-
+  
   // Удаление шаблона
-  router.delete('/api/templates/:filename', async (req, res) => {
+  router.delete("/api/templates/:filename", async (req, res) => {
     try {
       const { filename } = req.params;
       
-      const deleted = await templateManager.deleteTemplate(
-        filename,
-        req.session?.userId || 1
-      );
-      
-      if (!deleted) {
-        return res.status(400).json({ error: 'Failed to delete template' });
-      }
-      
-      res.json({ 
-        success: true, 
-        message: 'Шаблон успешно удален'
+      // Логируем действие
+      await logActivity({
+        action: "template_delete",
+        entityType: "template",
+        userId: req.session?.userId,
+        details: `Удаление шаблона ${filename}`
       });
-    } catch (error) {
-      console.error('Ошибка при удалении шаблона:', error);
-      res.status(500).json({ 
-        error: 'Template deletion error',
-        message: error.message || 'Ошибка при удалении шаблона'
-      });
-    }
-  });
-
-  // Экспорт конкретного типа данных как шаблон
-  router.post('/api/export/:type', async (req, res) => {
-    try {
-      const { type } = req.params;
       
-      // Проверяем корректность типа
-      if (!Object.values(TemplateType).includes(type as TemplateType)) {
-        return res.status(400).json({
-          error: 'Invalid export type',
-          validTypes: Object.values(TemplateType)
+      const templatesDir = path.join(__dirname, "..", "data", "templates");
+      const filePath = path.join(templatesDir, filename.endsWith(".json") ? filename : `${filename}.json`);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          error: "Шаблон не найден"
         });
       }
       
-      const {
-        name,
-        description,
-        version,
-        author,
-      } = req.body;
+      fs.unlinkSync(filePath);
       
-      // Проверяем метаданные
-      const metadata = templateMetadataSchema.parse({
-        name,
-        description,
-        version,
-        author
-      });
-      
-      // Создаем шаблон указанного типа
-      const filename = await templateManager.createTemplate(
-        type as TemplateType,
-        metadata,
-        req.session?.userId || 1
-      );
-      
-      res.json({ 
-        success: true, 
-        filename,
-        message: `Данные типа ${type} успешно экспортированы как шаблон`
+      res.json({
+        success: true
       });
     } catch (error) {
-      console.error('Ошибка при экспорте данных как шаблона:', error);
-      res.status(500).json({ 
-        error: 'Export error',
-        message: error.message || 'Ошибка при экспорте данных как шаблона'
+      console.error(`Ошибка при удалении шаблона ${req.params.filename}:`, error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при удалении шаблона"
+      });
+    }
+  });
+  
+  // Экспорт организационной структуры
+  router.post("/api/templates/org-structure", async (req, res) => {
+    try {
+      const options = req.body;
+      
+      // Логируем действие
+      await logActivity({
+        action: "template_create",
+        entityType: "org_structure",
+        userId: req.session?.userId,
+        details: "Создание шаблона организационной структуры"
+      });
+      
+      const template = await templateManager.exportOrgStructure(options);
+      
+      if (!template) {
+        return res.status(500).json({
+          success: false,
+          error: "Ошибка при создании шаблона"
+        });
+      }
+      
+      // Сохраняем шаблон в файл
+      const filename = `org_structure_${new Date().toISOString().replace(/:/g, "-")}.json`;
+      const filePath = templateManager.saveTemplateToFile(template, filename);
+      
+      res.json({
+        success: true,
+        filename,
+        template
+      });
+    } catch (error) {
+      console.error("Ошибка при создании шаблона организационной структуры:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при создании шаблона организационной структуры"
+      });
+    }
+  });
+  
+  // Резервное копирование всех шаблонов
+  router.post("/api/templates/backup", async (req, res) => {
+    try {
+      const options = req.body;
+      
+      // Логируем действие
+      await logActivity({
+        action: "template_backup",
+        entityType: "template",
+        userId: req.session?.userId,
+        details: "Создание резервной копии всех шаблонов"
+      });
+      
+      const backupDir = await templateManager.exportAllTemplates(options);
+      
+      if (!backupDir) {
+        return res.status(500).json({
+          success: false,
+          error: "Ошибка при создании резервной копии"
+        });
+      }
+      
+      res.json({
+        success: true,
+        backupDir
+      });
+    } catch (error) {
+      console.error("Ошибка при создании резервной копии шаблонов:", error);
+      res.status(500).json({
+        success: false,
+        error: "Ошибка при создании резервной копии шаблонов"
       });
     }
   });

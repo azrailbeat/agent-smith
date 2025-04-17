@@ -1,472 +1,486 @@
 /**
- * Сервис для управления шаблонами, импорта и экспорта настроек системы
+ * Менеджер шаблонов для импорта/экспорта агентов, правил и организационной структуры
  */
 
-import fs from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
-import { dbConnector } from './database-connector';
-import { logActivity } from '../activity-logger';
 import { storage } from '../storage';
+import { databaseConnector } from './database-connector';
 
-// Типы экспортируемых данных
+// Logging utilities
+const logger = {
+  info: (message: string) => console.log(`[Template Manager] ${message}`),
+  error: (message: string) => console.error(`[Template Manager Error] ${message}`),
+  warn: (message: string) => console.warn(`[Template Manager Warning] ${message}`)
+};
+
 export enum TemplateType {
-  AGENTS = 'agents',
-  ORG_STRUCTURE = 'org_structure',
-  TASK_RULES = 'task_rules',
-  SYSTEM_SETTINGS = 'system_settings',
-  ALL = 'all'
+  AGENT = 'agent',
+  MINISTRY = 'ministry',
+  DEPARTMENT = 'department',
+  POSITION = 'position',
+  TASK_RULE = 'task_rule',
+  SYSTEM_SETTING = 'system_setting',
+  ORGANIZATION_STRUCTURE = 'organization_structure' // Включает департаменты, позиции и правила
 }
 
-// Интерфейс для метаданных шаблона
-export interface TemplateMetadata {
-  name: string;
-  description: string;
+export interface ExportOptions {
+  exportDependencies?: boolean;
+  exportIntegrations?: boolean;
+  prettyPrint?: boolean;
+}
+
+export interface ImportOptions {
+  overwriteExisting?: boolean;
+  importDependencies?: boolean;
+}
+
+export interface TemplateExport {
+  type: TemplateType;
   version: string;
-  createdAt: string;
-  author: string;
-  templateType: TemplateType | TemplateType[];
+  exportDate: string;
+  data: any;
+  dependencies?: {
+    agents?: any[];
+    ministries?: any[];
+    departments?: any[];
+    positions?: any[];
+    taskRules?: any[];
+    integrations?: any[];
+    settings?: any[];
+  };
 }
 
-// Интерфейс шаблона
-export interface Template {
-  metadata: TemplateMetadata;
-  data: Record<string, any>;
-}
-
-// Класс для управления шаблонами и экспортом/импортом настроек
 export class TemplateManager {
   private static instance: TemplateManager;
   private templatesDir: string;
-
-  // Получение экземпляра синглтона
+  
+  private constructor() {
+    this.templatesDir = path.join(__dirname, '..', '..', 'data', 'templates');
+    // Создаем директорию, если она не существует
+    if (!fs.existsSync(this.templatesDir)) {
+      fs.mkdirSync(this.templatesDir, { recursive: true });
+    }
+  }
+  
   public static getInstance(): TemplateManager {
     if (!TemplateManager.instance) {
       TemplateManager.instance = new TemplateManager();
     }
     return TemplateManager.instance;
   }
-
-  // Приватный конструктор для синглтона
-  private constructor() {
-    this.templatesDir = path.join(process.cwd(), 'data', 'templates');
-    this.ensureTemplatesDirExists();
-  }
-
-  // Создание директории для шаблонов, если она не существует
-  private async ensureTemplatesDirExists(): Promise<void> {
+  
+  /**
+   * Экспорт агента в JSON шаблон
+   */
+  public async exportAgent(agentId: number, options: ExportOptions = {}): Promise<TemplateExport | null> {
     try {
-      await fs.mkdir(this.templatesDir, { recursive: true });
-    } catch (error) {
-      console.error('Ошибка при создании директории для шаблонов:', error);
-    }
-  }
-
-  // Экспорт настроек агентов
-  public async exportAgents(): Promise<any> {
-    const agents = await storage.getAgents();
-    const integrations = await storage.getIntegrations();
-    
-    return {
-      agents,
-      integrations
-    };
-  }
-
-  // Экспорт организационной структуры
-  public async exportOrgStructure(): Promise<any> {
-    const departments = await storage.getDepartments();
-    const positions = await storage.getPositions();
-    
-    return {
-      departments,
-      positions
-    };
-  }
-
-  // Экспорт правил распределения задач
-  public async exportTaskRules(): Promise<any> {
-    const taskRules = await storage.getTaskRules();
-    
-    return {
-      taskRules
-    };
-  }
-
-  // Экспорт системных настроек
-  public async exportSystemSettings(): Promise<any> {
-    const settings = await storage.getSystemSettings();
-    const statuses = await storage.getSystemStatuses();
-    
-    return {
-      settings,
-      statuses
-    };
-  }
-
-  // Экспорт всех настроек системы
-  public async exportAll(): Promise<any> {
-    const agents = await this.exportAgents();
-    const orgStructure = await this.exportOrgStructure();
-    const taskRules = await this.exportTaskRules();
-    const systemSettings = await this.exportSystemSettings();
-    
-    return {
-      agents,
-      orgStructure,
-      taskRules,
-      systemSettings
-    };
-  }
-
-  // Экспорт по указанному типу
-  public async exportByType(type: TemplateType): Promise<any> {
-    switch (type) {
-      case TemplateType.AGENTS:
-        return this.exportAgents();
-      case TemplateType.ORG_STRUCTURE:
-        return this.exportOrgStructure();
-      case TemplateType.TASK_RULES:
-        return this.exportTaskRules();
-      case TemplateType.SYSTEM_SETTINGS:
-        return this.exportSystemSettings();
-      case TemplateType.ALL:
-        return this.exportAll();
-      default:
-        throw new Error(`Неизвестный тип шаблона: ${type}`);
-    }
-  }
-
-  // Создание и сохранение шаблона
-  public async createTemplate(
-    templateType: TemplateType | TemplateType[],
-    metadata: Omit<TemplateMetadata, 'templateType' | 'createdAt'>,
-    userId: number
-  ): Promise<string> {
-    try {
-      // Создаем метаданные шаблона
-      const fullMetadata: TemplateMetadata = {
-        ...metadata,
-        templateType,
-        createdAt: new Date().toISOString()
-      };
-
-      // Получаем данные в зависимости от типа шаблона
-      let data: Record<string, any> = {};
-
-      if (Array.isArray(templateType)) {
-        // Если указано несколько типов
-        for (const type of templateType) {
-          const typeData = await this.exportByType(type);
-          data[type] = typeData;
-        }
-      } else if (templateType === TemplateType.ALL) {
-        // Если экспортируем все
-        data = await this.exportAll();
-      } else {
-        // Если один конкретный тип
-        data = await this.exportByType(templateType);
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        logger.error(`Агент с ID ${agentId} не найден`);
+        return null;
       }
-
-      // Формируем полный шаблон
-      const template: Template = {
-        metadata: fullMetadata,
-        data
+      
+      const template: TemplateExport = {
+        type: TemplateType.AGENT,
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        data: { ...agent }
       };
-
-      // Генерируем имя файла
-      const filename = `${fullMetadata.name.replace(/\s+/g, '_')}_${Date.now()}.json`;
-      const filePath = path.join(this.templatesDir, filename);
-
-      // Сохраняем шаблон в файл
-      await fs.writeFile(filePath, JSON.stringify(template, null, 2), 'utf-8');
-
-      // Логируем активность
-      await logActivity({
-        action: 'template_created',
-        userId,
-        details: `Создан шаблон: ${fullMetadata.name}`,
-        metadata: { templateType, filename }
-      });
-
-      return filename;
-    } catch (error) {
-      console.error('Ошибка при создании шаблона:', error);
-      throw error;
-    }
-  }
-
-  // Получение списка доступных шаблонов
-  public async getTemplates(): Promise<{ filename: string; metadata: TemplateMetadata }[]> {
-    try {
-      const files = await fs.readdir(this.templatesDir);
-      const templates = [];
-
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(this.templatesDir, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const template = JSON.parse(content) as Template;
-          
-          templates.push({
-            filename: file,
-            metadata: template.metadata
-          });
+      
+      // Добавляем зависимости, если указано
+      if (options.exportDependencies) {
+        const dependencies: any = {};
+        
+        // Министерство, если есть
+        if (agent.ministryId) {
+          const ministry = await storage.getMinistry(agent.ministryId);
+          if (ministry) {
+            dependencies.ministries = [ministry];
+          }
+        }
+        
+        // Тип агента, если есть
+        if (agent.typeId) {
+          const agentType = await storage.getAgentType(agent.typeId);
+          if (agentType) {
+            dependencies.agentTypes = [agentType];
+          }
+        }
+        
+        template.dependencies = dependencies;
+      }
+      
+      // Экспорт интеграций
+      if (options.exportIntegrations && agent.modelId) {
+        const integration = await storage.getIntegration(agent.modelId);
+        if (integration) {
+          if (!template.dependencies) {
+            template.dependencies = {};
+          }
+          // Маскируем API ключи для безопасности
+          const safeIntegration = { ...integration, apiKey: '***' };
+          template.dependencies.integrations = [safeIntegration];
         }
       }
-
-      return templates;
+      
+      return template;
     } catch (error) {
-      console.error('Ошибка при получении списка шаблонов:', error);
-      return [];
-    }
-  }
-
-  // Получение конкретного шаблона по имени файла
-  public async getTemplate(filename: string): Promise<Template | null> {
-    try {
-      const filePath = path.join(this.templatesDir, filename);
-      const content = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(content) as Template;
-    } catch (error) {
-      console.error(`Ошибка при получении шаблона ${filename}:`, error);
+      logger.error(`Ошибка при экспорте агента: ${error.message}`);
       return null;
     }
   }
-
-  // Импорт шаблона
-  public async importTemplate(filename: string, userId: number): Promise<boolean> {
+  
+  /**
+   * Экспорт организационной структуры (департаменты, позиции, правила)
+   */
+  public async exportOrgStructure(options: ExportOptions = {}): Promise<TemplateExport | null> {
     try {
-      const template = await this.getTemplate(filename);
-      if (!template) {
-        throw new Error(`Шаблон не найден: ${filename}`);
-      }
-
-      const { metadata, data } = template;
-      let imported = false;
-
-      // Определяем, какие типы данных импортировать
-      const typesToImport = Array.isArray(metadata.templateType)
-        ? metadata.templateType
-        : [metadata.templateType];
-
-      // Импортируем каждый тип данных
-      for (const type of typesToImport) {
-        if (type === TemplateType.ALL || typesToImport.includes(TemplateType.ALL)) {
-          // Импортируем все типы данных
-          if (data.agents) await this.importAgents(data.agents, userId);
-          if (data.orgStructure) await this.importOrgStructure(data.orgStructure, userId);
-          if (data.taskRules) await this.importTaskRules(data.taskRules, userId);
-          if (data.systemSettings) await this.importSystemSettings(data.systemSettings, userId);
-          imported = true;
-          break;
-        } else {
-          // Импортируем конкретный тип
-          switch (type) {
-            case TemplateType.AGENTS:
-              await this.importAgents(data, userId);
-              break;
-            case TemplateType.ORG_STRUCTURE:
-              await this.importOrgStructure(data, userId);
-              break;
-            case TemplateType.TASK_RULES:
-              await this.importTaskRules(data, userId);
-              break;
-            case TemplateType.SYSTEM_SETTINGS:
-              await this.importSystemSettings(data, userId);
-              break;
-          }
-          imported = true;
+      const departments = await storage.getDepartments();
+      const positions = await storage.getPositions();
+      const taskRules = await storage.getTaskRules();
+      
+      const template: TemplateExport = {
+        type: TemplateType.ORGANIZATION_STRUCTURE,
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        data: {
+          departments,
+          positions,
+          taskRules
         }
-      }
-
-      // Логируем активность
-      await logActivity({
-        action: 'template_imported',
-        userId,
-        details: `Импортирован шаблон: ${metadata.name}`,
-        metadata: { templateType: metadata.templateType, filename }
-      });
-
-      return imported;
+      };
+      
+      return template;
     } catch (error) {
-      console.error(`Ошибка при импорте шаблона ${filename}:`, error);
+      logger.error(`Ошибка при экспорте организационной структуры: ${error.message}`);
+      return null;
+    }
+  }
+  
+  /**
+   * Экспорт настроек системы
+   */
+  public async exportSystemSettings(options: ExportOptions = {}): Promise<TemplateExport | null> {
+    try {
+      const settings = await storage.getSystemSettings();
+      
+      const template: TemplateExport = {
+        type: TemplateType.SYSTEM_SETTING,
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        data: settings
+      };
+      
+      return template;
+    } catch (error) {
+      logger.error(`Ошибка при экспорте настроек системы: ${error.message}`);
+      return null;
+    }
+  }
+  
+  /**
+   * Сохранение шаблона в файл
+   */
+  public saveTemplateToFile(template: TemplateExport, filename: string): string {
+    try {
+      if (!filename.endsWith('.json')) {
+        filename += '.json';
+      }
+      
+      const filePath = path.join(this.templatesDir, filename);
+      const jsonData = JSON.stringify(template, null, 2);
+      
+      fs.writeFileSync(filePath, jsonData, 'utf8');
+      logger.info(`Шаблон сохранен в ${filePath}`);
+      
+      return filePath;
+    } catch (error) {
+      logger.error(`Ошибка при сохранении шаблона в файл: ${error.message}`);
       throw error;
     }
   }
-
-  // Импорт агентов
-  private async importAgents(data: any, userId: number): Promise<void> {
-    if (data.agents && Array.isArray(data.agents)) {
-      // Сначала удаляем существующих агентов
-      // В реальной системе нужно добавить дополнительные проверки и подтверждения
-      
-      // Импортируем новых агентов
-      for (const agent of data.agents) {
-        // Проверяем, существует ли агент с таким именем
-        const existingAgent = await storage.getAgentByName(agent.name);
-        
-        if (existingAgent) {
-          // Обновляем существующего агента
-          await storage.updateAgent(existingAgent.id, { ...agent, id: existingAgent.id });
-        } else {
-          // Создаем нового агента
-          const { id, ...agentData } = agent; // Удаляем id из данных
-          await storage.createAgent(agentData);
-        }
-      }
-    }
-
-    if (data.integrations && Array.isArray(data.integrations)) {
-      // Импортируем интеграции
-      for (const integration of data.integrations) {
-        // Проверяем, существует ли интеграция с таким именем
-        const existingIntegration = await storage.getIntegrationByName(integration.name);
-        
-        if (existingIntegration) {
-          // Обновляем существующую интеграцию
-          await storage.updateIntegration(existingIntegration.id, { ...integration, id: existingIntegration.id });
-        } else {
-          // Создаем новую интеграцию
-          const { id, ...integrationData } = integration; // Удаляем id из данных
-          await storage.createIntegration(integrationData);
-        }
-      }
-    }
-
-    // Логируем активность
-    await logActivity({
-      action: 'agents_imported',
-      userId,
-      details: 'Импортированы агенты и интеграции'
-    });
-  }
-
-  // Импорт организационной структуры
-  private async importOrgStructure(data: any, userId: number): Promise<void> {
-    if (data.departments && Array.isArray(data.departments)) {
-      // Импортируем отделы
-      for (const department of data.departments) {
-        const existingDepartment = await storage.getDepartmentByName(department.name);
-        
-        if (existingDepartment) {
-          // Обновляем существующий отдел
-          await storage.updateDepartment(existingDepartment.id, { ...department, id: existingDepartment.id });
-        } else {
-          // Создаем новый отдел
-          const { id, ...departmentData } = department;
-          await storage.createDepartment(departmentData);
-        }
-      }
-    }
-
-    if (data.positions && Array.isArray(data.positions)) {
-      // Импортируем должности
-      for (const position of data.positions) {
-        const existingPosition = await storage.getPositionByName(position.name);
-        
-        if (existingPosition) {
-          // Обновляем существующую должность
-          await storage.updatePosition(existingPosition.id, { ...position, id: existingPosition.id });
-        } else {
-          // Создаем новую должность
-          const { id, ...positionData } = position;
-          await storage.createPosition(positionData);
-        }
-      }
-    }
-
-    // Логируем активность
-    await logActivity({
-      action: 'org_structure_imported',
-      userId,
-      details: 'Импортирована организационная структура'
-    });
-  }
-
-  // Импорт правил распределения задач
-  private async importTaskRules(data: any, userId: number): Promise<void> {
-    if (data.taskRules && Array.isArray(data.taskRules)) {
-      // Импортируем правила распределения задач
-      for (const rule of data.taskRules) {
-        const existingRule = await storage.getTaskRuleByName(rule.name);
-        
-        if (existingRule) {
-          // Обновляем существующее правило
-          await storage.updateTaskRule(existingRule.id, { ...rule, id: existingRule.id });
-        } else {
-          // Создаем новое правило
-          const { id, ...ruleData } = rule;
-          await storage.createTaskRule(ruleData);
-        }
-      }
-    }
-
-    // Логируем активность
-    await logActivity({
-      action: 'task_rules_imported',
-      userId,
-      details: 'Импортированы правила распределения задач'
-    });
-  }
-
-  // Импорт системных настроек
-  private async importSystemSettings(data: any, userId: number): Promise<void> {
-    if (data.settings && Array.isArray(data.settings)) {
-      // Импортируем системные настройки
-      for (const setting of data.settings) {
-        await storage.updateSystemSetting(setting.key, setting.value);
-      }
-    }
-
-    if (data.statuses && Array.isArray(data.statuses)) {
-      // Импортируем статусы системы
-      for (const status of data.statuses) {
-        await storage.updateSystemStatus(status.serviceName, {
-          serviceName: status.serviceName,
-          status: status.status,
-          details: status.details,
-          lastChecked: new Date()
-        });
-      }
-    }
-
-    // Логируем активность
-    await logActivity({
-      action: 'system_settings_imported',
-      userId,
-      details: 'Импортированы системные настройки'
-    });
-  }
-
-  // Удаление шаблона
-  public async deleteTemplate(filename: string, userId: number): Promise<boolean> {
+  
+  /**
+   * Загрузка шаблона из файла
+   */
+  public loadTemplateFromFile(filename: string): TemplateExport {
     try {
-      const filePath = path.join(this.templatesDir, filename);
-      
-      // Проверяем, существует ли файл
-      try {
-        await fs.access(filePath);
-      } catch {
-        throw new Error(`Шаблон не найден: ${filename}`);
+      if (!filename.endsWith('.json')) {
+        filename += '.json';
       }
-
-      // Удаляем файл
-      await fs.unlink(filePath);
-
-      // Логируем активность
-      await logActivity({
-        action: 'template_deleted',
-        userId,
-        details: `Удален шаблон: ${filename}`
+      
+      const filePath = path.join(this.templatesDir, filename);
+      const jsonData = fs.readFileSync(filePath, 'utf8');
+      
+      return JSON.parse(jsonData) as TemplateExport;
+    } catch (error) {
+      logger.error(`Ошибка при загрузке шаблона из файла: ${error.message}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * Получение списка доступных шаблонов
+   */
+  public getAvailableTemplates(): { name: string, type: TemplateType }[] {
+    try {
+      const files = fs.readdirSync(this.templatesDir).filter(file => file.endsWith('.json'));
+      
+      const templates = [];
+      for (const file of files) {
+        try {
+          const filePath = path.join(this.templatesDir, file);
+          const jsonData = fs.readFileSync(filePath, 'utf8');
+          const template = JSON.parse(jsonData) as TemplateExport;
+          
+          templates.push({
+            name: file.replace('.json', ''),
+            type: template.type
+          });
+        } catch (e) {
+          // Игнорируем невалидные файлы
+          logger.warn(`Невалидный файл шаблона: ${file}`);
+        }
+      }
+      
+      return templates;
+    } catch (error) {
+      logger.error(`Ошибка при получении списка шаблонов: ${error.message}`);
+      return [];
+    }
+  }
+  
+  /**
+   * Импорт агента из шаблона
+   */
+  public async importAgent(template: TemplateExport, options: ImportOptions = {}): Promise<number | null> {
+    try {
+      if (template.type !== TemplateType.AGENT) {
+        throw new Error('Неверный тип шаблона для импорта агента');
+      }
+      
+      const agentData = template.data;
+      
+      // Проверяем, существует ли агент с таким именем
+      const existingAgent = await storage.getAgentByName(agentData.name);
+      
+      if (existingAgent) {
+        if (options.overwriteExisting) {
+          // Обновляем существующего агента
+          await storage.updateAgent(existingAgent.id, {
+            ...agentData,
+            id: existingAgent.id // Сохраняем оригинальный ID
+          });
+          logger.info(`Агент ${agentData.name} обновлен`);
+          return existingAgent.id;
+        } else {
+          logger.warn(`Агент с именем ${agentData.name} уже существует`);
+          return null;
+        }
+      }
+      
+      // Импортируем зависимости, если указано
+      if (options.importDependencies && template.dependencies) {
+        // Импорт интеграций (только если не существуют)
+        if (template.dependencies.integrations) {
+          for (const integration of template.dependencies.integrations) {
+            const existingIntegration = await storage.getIntegrationByName(integration.name);
+            
+            if (!existingIntegration) {
+              // Не импортируем скрытые API ключи
+              if (integration.apiKey === '***') {
+                integration.apiKey = '';
+              }
+              await storage.createIntegration(integration);
+              logger.info(`Интеграция ${integration.name} создана`);
+            }
+          }
+        }
+        
+        // Импорт министерств
+        if (template.dependencies.ministries) {
+          for (const ministry of template.dependencies.ministries) {
+            const existingMinistry = await storage.getMinistryByName(ministry.name);
+            
+            if (!existingMinistry) {
+              await storage.createMinistry(ministry);
+              logger.info(`Министерство ${ministry.name} создано`);
+            }
+          }
+        }
+        
+        // Импорт типов агентов
+        if (template.dependencies.agentTypes) {
+          for (const agentType of template.dependencies.agentTypes) {
+            const existingType = await storage.getAgentTypeByName(agentType.name);
+            
+            if (!existingType) {
+              await storage.createAgentType(agentType);
+              logger.info(`Тип агента ${agentType.name} создан`);
+            }
+          }
+        }
+      }
+      
+      // Создаем агента
+      const newAgent = await storage.createAgent({
+        ...agentData,
+        id: undefined // Удаляем ID, чтобы не было конфликта
       });
-
+      
+      logger.info(`Агент ${newAgent.name} импортирован с ID ${newAgent.id}`);
+      return newAgent.id;
+    } catch (error) {
+      logger.error(`Ошибка при импорте агента: ${error.message}`);
+      return null;
+    }
+  }
+  
+  /**
+   * Импорт организационной структуры из шаблона
+   */
+  public async importOrgStructure(template: TemplateExport, options: ImportOptions = {}): Promise<boolean> {
+    try {
+      if (template.type !== TemplateType.ORGANIZATION_STRUCTURE) {
+        throw new Error('Неверный тип шаблона для импорта организационной структуры');
+      }
+      
+      const { departments, positions, taskRules } = template.data;
+      
+      // Импорт департаментов
+      if (departments && Array.isArray(departments)) {
+        for (const department of departments) {
+          const existingDepartment = await storage.getDepartmentByName(department.name);
+          
+          if (existingDepartment) {
+            if (options.overwriteExisting) {
+              await storage.updateDepartment(existingDepartment.id, department);
+              logger.info(`Департамент ${department.name} обновлен`);
+            }
+          } else {
+            await storage.createDepartment(department);
+            logger.info(`Департамент ${department.name} создан`);
+          }
+        }
+      }
+      
+      // Импорт позиций
+      if (positions && Array.isArray(positions)) {
+        for (const position of positions) {
+          const existingPosition = await storage.getPositionByName(position.name);
+          
+          if (existingPosition) {
+            if (options.overwriteExisting) {
+              await storage.updatePosition(existingPosition.id, position);
+              logger.info(`Позиция ${position.name} обновлена`);
+            }
+          } else {
+            await storage.createPosition(position);
+            logger.info(`Позиция ${position.name} создана`);
+          }
+        }
+      }
+      
+      // Импорт правил задач
+      if (taskRules && Array.isArray(taskRules)) {
+        for (const rule of taskRules) {
+          const existingRule = await storage.getTaskRuleByName(rule.name);
+          
+          if (existingRule) {
+            if (options.overwriteExisting) {
+              await storage.updateTaskRule(existingRule.id, rule);
+              logger.info(`Правило ${rule.name} обновлено`);
+            }
+          } else {
+            await storage.createTaskRule(rule);
+            logger.info(`Правило ${rule.name} создано`);
+          }
+        }
+      }
+      
       return true;
     } catch (error) {
-      console.error(`Ошибка при удалении шаблона ${filename}:`, error);
+      logger.error(`Ошибка при импорте организационной структуры: ${error.message}`);
       return false;
+    }
+  }
+  
+  /**
+   * Импорт настроек системы из шаблона
+   */
+  public async importSystemSettings(template: TemplateExport, options: ImportOptions = {}): Promise<boolean> {
+    try {
+      if (template.type !== TemplateType.SYSTEM_SETTING) {
+        throw new Error('Неверный тип шаблона для импорта настроек системы');
+      }
+      
+      const settings = template.data;
+      
+      if (Array.isArray(settings)) {
+        for (const setting of settings) {
+          await storage.updateSystemSetting(setting.key, setting.value);
+          logger.info(`Настройка ${setting.key} импортирована`);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error(`Ошибка при импорте настроек системы: ${error.message}`);
+      return false;
+    }
+  }
+  
+  /**
+   * Экспорт всех шаблонов для резервного копирования
+   */
+  public async exportAllTemplates(options: ExportOptions = {}): Promise<string | null> {
+    try {
+      const backupDir = path.join(this.templatesDir, 'backup', new Date().toISOString().replace(/:/g, '-'));
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+      
+      // Экспорт агентов
+      const agents = await storage.getAgents();
+      for (const agent of agents) {
+        const template = await this.exportAgent(agent.id, options);
+        if (template) {
+          const filename = `agent_${agent.name.replace(/\s+/g, '_').toLowerCase()}.json`;
+          const filePath = path.join(backupDir, filename);
+          fs.writeFileSync(filePath, JSON.stringify(template, null, 2), 'utf8');
+        }
+      }
+      
+      // Экспорт организационной структуры
+      const orgStructure = await this.exportOrgStructure(options);
+      if (orgStructure) {
+        const filePath = path.join(backupDir, 'org_structure.json');
+        fs.writeFileSync(filePath, JSON.stringify(orgStructure, null, 2), 'utf8');
+      }
+      
+      // Экспорт настроек системы
+      const systemSettings = await this.exportSystemSettings(options);
+      if (systemSettings) {
+        const filePath = path.join(backupDir, 'system_settings.json');
+        fs.writeFileSync(filePath, JSON.stringify(systemSettings, null, 2), 'utf8');
+      }
+      
+      // Обновляем системный статус с информацией о последнем бэкапе
+      await storage.updateSystemStatus('BackupService', {
+        serviceName: 'BackupService', 
+        status: 100, 
+        details: `Резервное копирование выполнено: ${new Date().toISOString()}`,
+        lastChecked: new Date()
+      });
+      
+      logger.info(`Полное резервное копирование выполнено в ${backupDir}`);
+      return backupDir;
+    } catch (error) {
+      logger.error(`Ошибка при создании резервной копии: ${error.message}`);
+      return null;
     }
   }
 }
 
-// Экспорт экземпляра синглтона
 export const templateManager = TemplateManager.getInstance();

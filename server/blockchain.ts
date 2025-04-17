@@ -1,8 +1,10 @@
-import { InsertBlockchainRecord } from '@shared/schema';
-import { storage } from './storage';
-import { logActivity } from './activity-logger';
+/**
+ * Blockchain Service
+ * Handles all blockchain-related operations for secure and immutable records
+ */
 
-// Определяем типы данных блокчейн транзакций
+import { storage } from './storage';
+
 export enum BlockchainRecordType {
   CITIZEN_REQUEST = 'citizen_request',
   TASK = 'task',
@@ -11,7 +13,6 @@ export enum BlockchainRecordType {
   USER_ACTION = 'user_action'
 }
 
-// Определяем интерфейс данных для записи в блокчейн
 export interface BlockchainData {
   entityId: number;
   entityType: string;
@@ -21,108 +22,180 @@ export interface BlockchainData {
   ipfsHash?: string;
 }
 
-// Функция для записи данных в блокчейн через Moralis API
+/**
+ * Записывает данные в блокчейн
+ * @param data Данные для записи
+ * @returns Хеш транзакции в блокчейне
+ */
 export async function recordToBlockchain(data: BlockchainData): Promise<string> {
   try {
-    const { entityId, entityType, action, userId, metadata } = data;
+    const now = new Date();
     
-    console.log(`Recording to blockchain: ${entityType} #${entityId}, action: ${action}`);
-    
-    // Создаем данные для записи в блокчейн
-    const transactionData = {
-      entity_id: entityId,
-      entity_type: entityType,
-      action: action,
-      user_id: userId || 0,
-      timestamp: new Date().toISOString(),
-      metadata: metadata || {}
-    };
-    
-    // В реальном приложении здесь был бы вызов Moralis API
+    // Проверяем, что есть API ключ для Moralis
     const moralisApiKey = process.env.MORALIS_API_KEY;
     if (!moralisApiKey) {
-      throw new Error('Moralis API key not found');
+      console.warn('Морально API ключ не найден в переменных окружения');
+      return await simulateBlockchainRecord();
     }
     
-    // Имитация вызова Moralis API и получения хэша транзакции
-    const transactionHash = await simulateMoralisApiCall(transactionData, moralisApiKey);
+    // Определяем тип записи на основе типа сущности
+    let recordType: string;
+    switch (data.entityType) {
+      case 'citizen_request':
+        recordType = BlockchainRecordType.CITIZEN_REQUEST;
+        break;
+      case 'task':
+        recordType = BlockchainRecordType.TASK;
+        break;
+      case 'document':
+        recordType = BlockchainRecordType.DOCUMENT;
+        break;
+      case 'activity':
+        recordType = data.action.includes('user') 
+          ? BlockchainRecordType.USER_ACTION 
+          : BlockchainRecordType.SYSTEM_EVENT;
+        break;
+      default:
+        recordType = BlockchainRecordType.SYSTEM_EVENT;
+    }
     
-    // Сохраняем запись о транзакции в нашей БД
-    const blockchainRecord: InsertBlockchainRecord = {
-      entityId: entityId,
-      entityType: entityType,
-      transactionHash: transactionHash,
-      timestamp: new Date(),
-      data: JSON.stringify(transactionData),
-      chainId: '1',
-      status: 'confirmed'
+    // Создаем запись в локальной базе данных
+    const blockchainRecord = {
+      createdAt: now,
+      confirmedAt: null, // Будет обновлено после подтверждения транзакции
+      title: `${data.entityType} #${data.entityId}: ${data.action}`,
+      recordType,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      status: 'pending',
+      transactionHash: '', // Будет обновлено после получения хеша
+      metadata: data.metadata || {},
+      userId: data.userId
     };
     
-    // Сохраняем в БД
-    const savedRecord = await storage.createBlockchainRecord(blockchainRecord);
+    const record = await storage.createBlockchainRecord(blockchainRecord);
     
-    // Логируем активность
-    await logActivity({
-      action: 'blockchain_record',
-      entityType: entityType,
-      entityId: entityId,
-      userId: userId || 0,
-      details: `Recorded transaction for ${entityType} #${entityId} with hash ${transactionHash}`
-    });
+    // Подготавливаем данные для отправки в Moralis API
+    const blockchainData = {
+      ...data,
+      timestamp: now.toISOString(),
+      recordId: record.id
+    };
     
-    return transactionHash;
+    try {
+      // Вызываем Moralis API для записи в блокчейн
+      const transactionHash = await simulateMoralisApiCall(blockchainData, moralisApiKey);
+      
+      // Обновляем запись с хешем транзакции
+      await storage.updateBlockchainRecord(record.id, {
+        ...record,
+        transactionHash,
+        status: 'confirmed',
+        confirmedAt: new Date()
+      });
+      
+      console.log(`Данные успешно записаны в блокчейн, хеш транзакции: ${transactionHash}`);
+      return transactionHash;
+    } catch (error) {
+      console.error('Ошибка при записи в блокчейн:', error);
+      
+      // Обновляем запись с ошибкой
+      await storage.updateBlockchainRecord(record.id, {
+        ...record,
+        status: 'failed',
+        metadata: {
+          ...record.metadata,
+          error: error.message
+        }
+      });
+      
+      throw error;
+    }
   } catch (error) {
-    console.error('Error recording to blockchain:', error);
+    console.error('Ошибка при подготовке данных для блокчейна:', error);
     throw error;
   }
 }
 
-// Функция для симуляции вызова Moralis API в режиме разработки
+/**
+ * Симулирует вызов Moralis API для блокчейн транзакций
+ * В реальной имплементации будет заменено на настоящий вызов API
+ */
 async function simulateMoralisApiCall(data: any, apiKey: string): Promise<string> {
-  // Логируем использование реального ключа, но не показываем его значение
-  console.log(`Using Moralis API key: ${apiKey ? '[REDACTED]' : 'Not provided'}`);
-  
-  // В реальном приложении здесь был бы код для вызова Moralis API
-  // Например, использование Moralis SDK для записи транзакции в блокчейн
-  
-  // Имитация задержки сети
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Генерируем псевдослучайный хэш транзакции
-  const randomBytes = new Array(32).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-  return `0x${randomBytes}`;
+  // Для тестирования просто возвращаем случайный хеш транзакции
+  // В реальном коде здесь будет вызов API Moralis или другого блокчейн-сервиса
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Генерируем случайный хеш транзакции
+      const hash = '0x' + Array.from({ length: 64 }, () => 
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      
+      resolve(hash);
+    }, 1000); // Имитируем задержку сети
+  });
 }
 
-// Функция для проверки статуса транзакции в блокчейне по хэшу
+/**
+ * Симулирует запись в блокчейн, когда API ключ не настроен
+ */
+async function simulateBlockchainRecord(): Promise<string> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const hash = 'simulated_' + Date.now() + '_' + 
+        Math.random().toString(36).substring(2, 15);
+      resolve(hash);
+    }, 500);
+  });
+}
+
+/**
+ * Получить статус транзакции в блокчейне
+ * @param transactionHash Хеш транзакции
+ */
 export async function getTransactionStatus(transactionHash: string): Promise<{
-  status: 'pending' | 'confirmed' | 'failed';
-  blockNumber?: number;
+  status: string;
   timestamp?: Date;
+  blockNumber?: number;
+  gasUsed?: number;
 }> {
-  try {
-    // В реальном приложении здесь был бы вызов Moralis API для проверки статуса транзакции
+  // Проверяем, есть ли запись в локальной базе данных
+  const records = await storage.getBlockchainRecordByHash(transactionHash);
+  if (records.length > 0) {
+    const record = records[0];
+    return {
+      status: record.status,
+      timestamp: record.confirmedAt || record.createdAt
+    };
+  }
+  
+  // Если API ключ Moralis настроен, можно запросить статус через API
+  const moralisApiKey = process.env.MORALIS_API_KEY;
+  if (moralisApiKey && !transactionHash.startsWith('simulated_')) {
+    // Здесь должен быть запрос к API Moralis
+    // return await moralisApiGetTransactionStatus(transactionHash, moralisApiKey);
     
-    // Для демонстрации всегда возвращаем "подтверждено"
+    // Пока возвращаем заглушку
     return {
       status: 'confirmed',
-      blockNumber: Math.floor(Math.random() * 10000000) + 10000000,
-      timestamp: new Date()
+      timestamp: new Date(),
+      blockNumber: Math.floor(Math.random() * 1000000),
+      gasUsed: Math.floor(Math.random() * 100000)
     };
-  } catch (error) {
-    console.error('Error checking transaction status:', error);
-    throw error;
   }
+  
+  // Возвращаем заглушку для симулированных транзакций
+  return {
+    status: 'simulated',
+    timestamp: new Date()
+  };
 }
 
-// Функция для получения всех транзакций по ID и типу сущности
+/**
+ * Получить все транзакции для конкретной сущности
+ * @param entityType Тип сущности
+ * @param entityId ID сущности
+ */
 export async function getEntityTransactions(entityType: string, entityId: number): Promise<any[]> {
-  try {
-    const records = await storage.getBlockchainRecords();
-    return records.filter(record => 
-      record.entityType === entityType && record.entityId === entityId
-    );
-  } catch (error) {
-    console.error('Error getting entity transactions:', error);
-    throw error;
-  }
+  return await storage.getBlockchainRecordsByEntity(entityType, entityId);
 }

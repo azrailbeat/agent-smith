@@ -4,7 +4,7 @@
  */
 
 import { storage } from './storage';
-import { insertActivitySchema } from '@shared/schema';
+import { recordToBlockchain } from './blockchain';
 
 /**
  * Типы активностей в системе
@@ -38,32 +38,43 @@ export interface ActivityData {
  */
 export async function logActivity(data: ActivityData): Promise<void> {
   try {
-    const { action, entityType, entityId, userId, details, metadata } = data;
+    const timestamp = new Date();
     
-    console.log(`Logging activity: ${action}, entityType: ${entityType || 'none'}, entityId: ${entityId || 0}, userId: ${userId || 0}`);
-    
-    // Форматируем метаданные как строку JSON, если они есть
-    const jsonMetadata = metadata ? metadata : null;
-    
-    // Сохраняем в хранилище
-    await storage.createActivity({
-      // Совместимость со старым интерфейсом
-      actionType: action,
-      description: details || `${action} for ${entityType} #${entityId}`,
-      userId: userId || null,
-      relatedId: entityId || null,
-      relatedType: entityType || null,
-      blockchainHash: null,
-      
-      // Новые поля для расширенной функциональности
-      entityType: entityType || null,
-      entityId: entityId || null,
-      metadata: jsonMetadata,
-      action: action // Дублирование для совместимости
+    // Создаем запись активности
+    const activityRecord = await storage.createActivity({
+      timestamp,
+      action: data.action,
+      actionType: determineActivityType(data.action),
+      entityType: data.entityType || null,
+      entityId: data.entityId || null,
+      userId: data.userId || null,
+      description: data.details || `Action: ${data.action}`,
+      metadata: data.metadata || {}
     });
+    
+    // Логируем в консоль для отладки
+    console.log(`Activity logged: [${data.action}] ${data.details || ''} by user ${data.userId || 'system'}`);
+    
+    // Если действие связано с блокчейном, записываем в блокчейн
+    if (data.action.includes('blockchain') || shouldRecordToBlockchain(data)) {
+      try {
+        const blockchainHash = await recordToBlockchain({
+          entityId: data.entityId || activityRecord.id,
+          entityType: data.entityType || 'activity',
+          action: data.action,
+          userId: data.userId,
+          metadata: data.metadata
+        });
+        
+        // Добавляем хэш блокчейна к записи активности
+        await addBlockchainHashToActivity(activityRecord.id, blockchainHash);
+      } catch (error) {
+        console.error('Failed to record activity to blockchain:', error);
+      }
+    }
+    
   } catch (error) {
     console.error('Error logging activity:', error);
-    // Не прерываем выполнение основного кода, даже если логирование не удалось
   }
 }
 
@@ -72,12 +83,7 @@ export async function logActivity(data: ActivityData): Promise<void> {
  * @param limit Ограничение количества записей
  */
 export async function getRecentActivities(limit: number = 50): Promise<any[]> {
-  try {
-    return await storage.getRecentActivities(limit);
-  } catch (error) {
-    console.error('Error getting recent activities:', error);
-    return [];
-  }
+  return await storage.getActivities(limit);
 }
 
 /**
@@ -86,18 +92,7 @@ export async function getRecentActivities(limit: number = 50): Promise<any[]> {
  * @param entityId ID сущности
  */
 export async function getEntityActivities(entityType: string, entityId: number): Promise<any[]> {
-  try {
-    const activities = await storage.getActivities();
-    
-    // Проверяем как новые, так и старые поля для полной совместимости
-    return activities.filter(activity => 
-      (activity.entityType === entityType && activity.entityId === entityId) ||
-      (activity.relatedType === entityType && activity.relatedId === entityId)
-    );
-  } catch (error) {
-    console.error('Error getting entity activities:', error);
-    return [];
-  }
+  return await storage.getActivitiesByEntity(entityType, entityId);
 }
 
 /**
@@ -105,13 +100,7 @@ export async function getEntityActivities(entityType: string, entityId: number):
  * @param userId ID пользователя
  */
 export async function getUserActivities(userId: number): Promise<any[]> {
-  try {
-    const activities = await storage.getActivities();
-    return activities.filter(activity => activity.userId === userId);
-  } catch (error) {
-    console.error('Error getting user activities:', error);
-    return [];
-  }
+  return await storage.getActivitiesByUser(userId);
 }
 
 /**
@@ -120,17 +109,12 @@ export async function getUserActivities(userId: number): Promise<any[]> {
  * @param blockchainHash Хэш транзакции в блокчейне
  */
 export async function addBlockchainHashToActivity(activityId: number, blockchainHash: string): Promise<void> {
-  try {
-    const activities = await storage.getActivities();
-    const activity = activities.find(a => a.id === activityId);
-    
-    if (activity) {
-      // Обновляем активность в реальной базе данных
-      // В данном примере у нас нет метода обновления активности, поэтому просто логируем
-      console.log(`[Simulated] Added blockchain hash ${blockchainHash} to activity #${activityId}`);
-    }
-  } catch (error) {
-    console.error('Error adding blockchain hash to activity:', error);
+  const activity = await storage.getActivity(activityId);
+  if (activity) {
+    await storage.updateActivity(activityId, {
+      ...activity,
+      blockchainHash
+    });
   }
 }
 
@@ -141,20 +125,58 @@ export async function addBlockchainHashToActivity(activityId: number, blockchain
  * @param userId ID пользователя (если есть)
  */
 export async function logError(error: Error, context: string, userId?: number): Promise<void> {
-  try {
-    await logActivity({
-      action: 'system_error',
-      entityType: 'error',
-      details: `Error in ${context}: ${error.message}`,
-      userId: userId,
-      metadata: {
-        errorType: error.name,
-        stack: error.stack,
-        context
-      }
-    });
-  } catch (logError) {
-    console.error('Failed to log error:', logError);
-    console.error('Original error:', error);
+  await logActivity({
+    action: 'system_error',
+    details: `Error in ${context}: ${error.message}`,
+    userId,
+    metadata: {
+      errorName: error.name,
+      errorStack: error.stack,
+      context
+    }
+  });
+}
+
+/**
+ * Определяет тип активности на основе названия действия
+ * @param action Название действия
+ */
+function determineActivityType(action: string): string {
+  if (action.includes('login') || action.includes('auth')) {
+    return ActivityType.USER_LOGIN;
+  } else if (action.includes('logout')) {
+    return ActivityType.USER_LOGOUT;
+  } else if (action.includes('create')) {
+    return ActivityType.ENTITY_CREATE;
+  } else if (action.includes('update') || action.includes('edit') || action.includes('change')) {
+    return ActivityType.ENTITY_UPDATE;
+  } else if (action.includes('delete') || action.includes('remove')) {
+    return ActivityType.ENTITY_DELETE;
+  } else if (action.includes('blockchain')) {
+    return ActivityType.BLOCKCHAIN_RECORD;
+  } else if (action.includes('ai_') || action.includes('ml_') || action.includes('gpt_')) {
+    return ActivityType.AI_PROCESSING;
+  } else {
+    return ActivityType.SYSTEM_EVENT;
   }
+}
+
+/**
+ * Определяет, нужно ли записывать действие в блокчейн
+ * @param data Данные действия
+ */
+function shouldRecordToBlockchain(data: ActivityData): boolean {
+  // Определяем важные действия, которые нужно записывать в блокчейн
+  const criticalEntityTypes = ['citizen_request', 'document', 'legal_act', 'contract'];
+  const criticalActions = ['approve', 'reject', 'sign', 'finalize', 'publish'];
+  
+  if (data.entityType && criticalEntityTypes.includes(data.entityType)) {
+    return true;
+  }
+  
+  if (data.action && criticalActions.some(action => data.action.includes(action))) {
+    return true;
+  }
+  
+  return false;
 }
