@@ -28,6 +28,7 @@ import {
 import { registerSystemRoutes } from "./system-api";
 import { initializeSettings } from "./services/system-settings";
 import { getTaskRules, saveTaskRule, getTaskRuleById, deleteTaskRule, processRequestByOrgStructure } from "./services/org-structure";
+import { agentService, AgentTaskType, AgentEntityType } from "./services/agent-service";
 import { z } from "zod";
 import { 
   insertTaskSchema, 
@@ -1199,6 +1200,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       Контактная информация:
       ФИО: ${request.fullName}
       Контакты: ${request.contactInfo}`;
+      
+      // Обрабатываем запрос с использованием организационной структуры
+      const fullText = `${request.subject || ''} ${request.description || ''}`;
+      const orgStructureResult = await processRequestByOrgStructure(id, fullText);
+      
+      // Обновляем обращение, если оно было успешно обработано по организационной структуре
+      if (orgStructureResult.processed) {
+        await storage.updateCitizenRequest(id, {
+          assignedTo: orgStructureResult.rule?.positionId || null,
+          departmentId: orgStructureResult.rule?.departmentId || null,
+          status: 'assigned',
+          // Добавляем информацию о правиле распределения
+          metadata: {
+            ...request.metadata,
+            orgStructureRule: orgStructureResult.rule?.id,
+            orgStructureRuleName: orgStructureResult.rule?.name,
+            autoAssigned: true
+          }
+        });
+        
+        // Логируем активность назначения по организационной структуре
+        await logActivity({
+          action: 'auto_assign',
+          entityType: 'citizen_request',
+          entityId: id,
+          details: `Обращение автоматически назначено согласно правилу "${orgStructureResult.rule?.name}"`,
+          metadata: {
+            ruleId: orgStructureResult.rule?.id,
+            departmentId: orgStructureResult.rule?.departmentId,
+            positionId: orgStructureResult.rule?.positionId
+          }
+        });
+      }
       
       // Обрабатываем запрос с помощью AI-агента - сначала классификация
       const classificationResult = await agentService.processRequest({
