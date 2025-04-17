@@ -1030,11 +1030,13 @@ const AIAgentsPage = () => {
                       </CardContent>
                       <CardFooter className="flex justify-between border-t pt-4 bg-neutral-50">
                         <Button variant="outline" size="sm" onClick={() => handleEditAgent(agent)}>
-                          Редактировать
+                          <Edit className="h-4 w-4 mr-1 sm:mr-2" />
+                          <span className="hidden xs:inline">Редактировать</span>
                         </Button>
                         <div className="flex space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => handleEditSystemPrompt(agent)}>
-                            <Edit className="h-4 w-4" />
+                            <FileStack className="h-4 w-4" />
+                            <span className="hidden sm:inline ml-1">Промпт</span>
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleToggleAgentStatus(agent)}>
                             {agent.isActive ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
