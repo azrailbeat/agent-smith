@@ -469,3 +469,38 @@ export const citizenRequestsRelations = relations(citizenRequests, ({ one }) => 
 
 export type CitizenRequest = typeof citizenRequests.$inferSelect;
 export type InsertCitizenRequest = z.infer<typeof insertCitizenRequestSchema>;
+
+// Schema для связей с Planka
+export const plankaLinks = pgTable("planka_links", {
+  id: serial("id").primaryKey(),
+  entityType: text("entity_type").notNull(), // citizen_request, task, document
+  entityId: integer("entity_id").notNull(),
+  cardId: text("card_id").notNull(), // ID карточки в Planka
+  boardId: text("board_id").notNull(), // ID доски в Planka
+  listId: text("list_id").notNull(), // ID списка в Planka
+  projectId: text("project_id").notNull(), // ID проекта в Planka
+  createdBy: integer("created_by"), // Пользователь, создавший связь
+  createdAt: timestamp("created_at").defaultNow(),
+  lastSyncedAt: timestamp("last_synced_at"),
+});
+
+export const insertPlankaLinkSchema = createInsertSchema(plankaLinks).pick({
+  entityType: true,
+  entityId: true,
+  cardId: true,
+  boardId: true,
+  listId: true,
+  projectId: true,
+  createdBy: true,
+  lastSyncedAt: true,
+});
+
+export const plankaLinksRelations = relations(plankaLinks, ({ one }) => ({
+  createdUser: one(users, {
+    fields: [plankaLinks.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export type PlankaLink = typeof plankaLinks.$inferSelect;
+export type InsertPlankaLink = z.infer<typeof insertPlankaLinkSchema>;
