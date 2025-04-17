@@ -138,4 +138,23 @@ html {
     from { transform: translateX(100%); }
     to { transform: translateX(0); }
   }
+  
+  /* Стили для модальных окон на мобильных устройствах */
+  @media (max-width: 640px) {
+    .DialogContent {
+      width: calc(100% - 32px) !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+      padding: 16px !important;
+    }
+    
+    .DialogFooter {
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+    
+    .DialogFooter > button {
+      width: 100% !important;
+    }
+  }
 }

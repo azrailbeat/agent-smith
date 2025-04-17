@@ -142,7 +142,7 @@ function App() {
           )}
           
           <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${
-            isMobile ? 'ml-0' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
+            isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
           }`}>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
               <Router />
