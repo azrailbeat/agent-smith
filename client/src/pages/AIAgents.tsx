@@ -1435,7 +1435,7 @@ const AIAgentsPage = () => {
       
       {/* Диалог создания/редактирования агента */}
       <Dialog open={showAgentDialog} onOpenChange={setShowAgentDialog}>
-        <DialogContent className="w-[calc(100%-32px)] max-w-lg mx-auto">
+        <DialogContent className="w-[calc(100%-32px)] max-w-lg mx-auto h-[80vh] sm:h-auto overflow-y-auto pb-20 sm:pb-0">
           <DialogHeader>
             <DialogTitle>{editingAgent?.id ? 'Редактирование агента' : 'Новый агент'}</DialogTitle>
             <DialogDescription>
@@ -1600,7 +1600,7 @@ const AIAgentsPage = () => {
       
       {/* Диалог редактирования системного промпта */}
       <Dialog open={showPromptDialog} onOpenChange={setShowPromptDialog}>
-        <DialogContent className="w-[calc(100%-32px)] max-w-xl mx-auto">
+        <DialogContent className="w-[calc(100%-32px)] max-w-xl mx-auto h-[80vh] sm:h-auto overflow-y-auto pb-20 sm:pb-0">
           <DialogHeader>
             <DialogTitle>Системный промпт для агента "{editingAgent?.name}"</DialogTitle>
             <DialogDescription>
@@ -1639,7 +1639,7 @@ const AIAgentsPage = () => {
       
       {/* Диалог назначения задачи агенту */}
       <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-        <DialogContent className="w-[calc(100%-32px)] max-w-lg mx-auto">
+        <DialogContent className="w-[calc(100%-32px)] max-w-lg mx-auto h-[80vh] sm:h-auto overflow-y-auto pb-20 sm:pb-0">
           <DialogHeader>
             <DialogTitle>Назначение задачи агенту</DialogTitle>
             <DialogDescription>

@@ -141,20 +141,46 @@ html {
   
   /* Стили для модальных окон на мобильных устройствах */
   @media (max-width: 640px) {
-    .DialogContent {
+    .DialogContent, [role="dialog"] > div {
       width: calc(100% - 32px) !important;
       max-width: 100% !important;
       margin: 0 auto !important;
       padding: 16px !important;
+      max-height: 80vh !important;
+      overflow-y: auto !important;
+      position: relative !important;
     }
-    
+
+    /* Фиксированные кнопки внизу */
     .DialogFooter {
       flex-direction: column !important;
       gap: 12px !important;
+      margin-top: 16px !important;
+      position: sticky !important;
+      bottom: 0 !important;
+      background-color: white !important;
+      padding-top: 8px !important;
+      border-top: 1px solid #f1f1f1 !important;
+      z-index: 10 !important;
     }
     
     .DialogFooter > button {
       width: 100% !important;
     }
+    
+    .space-y-4 {
+      margin-bottom: 8px !important;
+    }
+    
+    /* Обеспечиваем достаточное пространство для прокрутки */
+    [role="dialog"] {
+      padding-bottom: 70px !important;
+    }
+  }
+  
+  /* Глобальные стили для диалоговых окон */
+  [role="dialog"] {
+    overflow-y: auto !important;
+    max-height: 90vh !important;
   }
 }
