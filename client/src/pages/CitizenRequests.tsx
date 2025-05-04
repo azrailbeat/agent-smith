@@ -1067,7 +1067,7 @@ const CitizenRequests = () => {
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   setSelectedRequest(request);
-                                                  setIsDetailsOpen(true);
+                                                  setIsViewDetailsOpen(true);
                                                 }}
                                               >
                                                 Подробнее
