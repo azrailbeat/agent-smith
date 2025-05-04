@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText, Mic } from "lucide-react";
 import { Integration, Agent } from "@shared/schema";
+import { SecretField } from "@/components/ui/secret-field";
+import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
 
 // Integration form for add/edit
 interface IntegrationFormProps {
@@ -22,12 +24,13 @@ interface IntegrationFormProps {
 }
 
 const IntegrationForm = ({ integration, onSubmit, onCancel }: IntegrationFormProps) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: integration?.name || "",
     type: integration?.type || "",
     apiUrl: integration?.apiUrl || "",
     apiKey: integration?.apiKey || "",
-    isActive: integration?.isActive || true,
+    isActive: integration?.isActive !== false, // Используем boolean вместо literal true
     config: integration?.config ? JSON.stringify(integration.config, null, 2) : "{}"
   });
 
@@ -104,13 +107,24 @@ const IntegrationForm = ({ integration, onSubmit, onCancel }: IntegrationFormPro
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="apiKey">API ключ</Label>
-        <Input 
-          id="apiKey" 
-          name="apiKey" 
-          type="password"
-          value={formData.apiKey} 
-          onChange={handleChange} 
+        <SecretField
+          label="API ключ"
+          name="apiKey"
+          value={formData.apiKey}
+          onChange={(value) => setFormData(prev => ({ ...prev, apiKey: value }))}
+          description="Ключ API используется для аутентификации в сервисе"
+          showCopyButton={true}
+          showRotateButton={true}
+          onRotate={async () => {
+            // В реальном приложении здесь была бы логика обновления ключа
+            // Предупреждаем, что это тестовая функция
+            const { toast } = useToast();
+            toast({
+              title: "Тестовая функция",
+              description: "В рабочей версии здесь будет интеграция с HashiCorp Vault"
+            });
+            return "new-api-key-" + Math.random().toString(36).substring(2, 10);
+          }}
         />
       </div>
 
@@ -156,13 +170,14 @@ interface AgentFormProps {
 }
 
 const AgentForm = ({ agent, integrations, onSubmit, onCancel }: AgentFormProps) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: agent?.name || "",
     type: agent?.type || "",
     description: agent?.description || "",
     modelId: agent?.modelId || "",
     systemPrompt: agent?.systemPrompt || "",
-    isActive: agent?.isActive || true,
+    isActive: agent?.isActive !== false, // Используем boolean вместо literal true
     config: agent?.config ? JSON.stringify(agent.config, null, 2) : '{\n  "temperature": 0.7,\n  "maxTokens": 2048\n}'
   });
 
