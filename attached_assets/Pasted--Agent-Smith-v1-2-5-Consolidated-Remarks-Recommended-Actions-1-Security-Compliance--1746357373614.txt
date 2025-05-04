@@ -1,0 +1,68 @@
+# Agent Smith v1.2.5 – Consolidated Remarks & Recommended Actions
+
+## 1  Security & Compliance
+
+* **Plain‑text secrets in UI** – Moralis API keys, Hyperledger URLs and other tokens are visible.
+  *Action:* introduce a `SecretField` component that masks values by default and backs them with HashiCorp Vault.
+* **No multi‑factor update flow** for critical keys.
+  *Action:* require role‑based approval + OTP before any secret is revealed or rotated.
+
+## 2  Workflow Rules Engine
+
+* **No rule priority / collision handling** – overlapping keyword sets may assign tasks to multiple departments.
+  *Action:* add an explicit `weight` / `order` field or drag‑to‑sort list; log the rule that fired.
+* **No sandbox test** – admins cannot validate a rule before activating.
+  *Action:* “Test rule” button that runs the filter against recent tasks.
+
+## 3  RAG Data Management
+
+* **UI exposes RAG config but has zero data sources** – creates dead‑end experience.
+  *Action:* file uploader (PDF, CSV) + connector picker (S3, SQL, SharePoint) that pipelines into Milvus.
+* **Prompt versioning missing** – cannot track changes to system prompts.
+  *Action:* store prompt revisions with timestamp & diff; add revert button.
+
+## 4  Monitoring & FinOps
+
+* **No cost / usage metrics per agent** – hard to budget or throttle.
+  *Action:* push vLLM/Ray token counts to ClickHouse → Grafana dashboard.
+* **LLM pool health not exposed** – risk of silent 429 / latency spikes.
+  *Action:* surface queue length, GPU util, HPA status in Analytics/Health widget.
+
+## 5  Bulk Operations & Productivity
+
+* **No multi‑select in Kanban boards** – operators must process tickets one‑by‑one.
+  *Action:* checkbox column + bulk actions (Close, Reassign, Export).
+* **Org import absent** – large hierarchies require manual entry.
+  *Action:* CSV/LDAP sync wizard.
+
+## 6  Access Control Transparency
+
+* **Role badges absent** – users can’t see who is admin vs. viewer.
+  *Action:* display RBAC badge next to avatar; gate sensitive screens with OPA policies.
+
+## 7  DAO Governance UX
+
+* **Gas / network information hidden** – voting modal lacks tx‑fee, network‑id, contract URL.
+  *Action:* show tx hash, gas estimate and link to explorer before confirm.
+
+## 8  LLM Performance & Capacity
+
+* **Autoscaling blind‑spot** – no alerting on GPU saturation or Ray back‑pressure.
+  *Action:* set Prometheus alerts for >80 % GPU or queue >N tasks; auto‑scale Ray workers.
+
+## 9  Mobile & Accessibility
+
+* **Drag‑and‑drop not touch‑friendly** – tablets in field offices will struggle.
+  *Action:* implement touch handlers; ensure WCAG AA contrast ratios.
+
+## 10  Misc. UX Enhancements
+
+* Global date filter on dashboard for trend analysis > 30 days.
+* Quick‑“Ping” buttons on every integration row to validate connectivity.
+* Health widget aggregating Besu, Milvus, Vault, GPU across cluster.
+
+---
+
+**Effort Estimate:** \~11 developer‑days (2 sprints, 3 engineers) to clear P0–P1 items.
+
+**Compliance Impact:** Vault integration + audit‑trail enhancements close the remaining SOC 2 CC6/CC7 and ISO 27001 A.9, A.12 gaps.
