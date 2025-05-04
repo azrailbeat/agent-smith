@@ -881,8 +881,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Agent routes
   app.get('/api/agents', async (req, res) => {
     try {
-      const agents = await storage.getAgents();
-      res.json(agents);
+      const allAgents = await storage.getAgents();
+      // Фильтруем только 4 ключевых агента
+      const allowedTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+      const filteredAgents = allAgents.filter(agent => allowedTypes.includes(agent.type));
+      res.json(filteredAgents);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -908,6 +911,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/agents/type/:type', async (req, res) => {
     const { type } = req.params;
+    const allowedTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+    
+    // Проверяем, является ли тип разрешенным
+    if (!allowedTypes.includes(type)) {
+      return res.status(404).json({ error: 'Тип агента не найден или не разрешен' });
+    }
     
     try {
       const agents = await storage.getAgentsByType(type);
