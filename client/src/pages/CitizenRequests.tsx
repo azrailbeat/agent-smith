@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { ALLOWED_AGENT_TYPES } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1875,8 +1876,7 @@ const CitizenRequests = () => {
                               {availableAgents
                                 .filter(agent => {
                                   // Фильтруем только активные и разрешенные типы агентов
-                                  const allowedTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
-                                  return agent.isActive && allowedTypes.includes(agent.type);
+                                  return agent.isActive && ALLOWED_AGENT_TYPES.includes(agent.type);
                                 })
                                 .map(agent => (
                                   <Button 

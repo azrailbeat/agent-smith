@@ -43,6 +43,7 @@ import {
   insertAgentSchema,
   insertCitizenRequestSchema
 } from "@shared/schema";
+import { ALLOWED_AGENT_TYPES } from "@shared/constants";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -882,9 +883,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/agents', async (req, res) => {
     try {
       const allAgents = await storage.getAgents();
-      // Фильтруем только 4 ключевых агента
-      const allowedTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
-      const filteredAgents = allAgents.filter(agent => allowedTypes.includes(agent.type));
+      // Фильтруем только разрешенные типы агентов
+      const filteredAgents = allAgents.filter(agent => ALLOWED_AGENT_TYPES.includes(agent.type));
       res.json(filteredAgents);
     } catch (error) {
       res.status(500).json({ error: error.message });
