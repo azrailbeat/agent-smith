@@ -1640,7 +1640,10 @@ const CitizenRequests = () => {
       </Dialog>
       
       {/* Диалог с детальной информацией по обращению */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+      <Dialog open={selectedRequest !== null && isDetailsOpen} onOpenChange={(open) => {
+        setIsDetailsOpen(open);
+        if (!open) setSelectedRequest(null);
+      }}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto">
           {selectedRequest && (
             <>
