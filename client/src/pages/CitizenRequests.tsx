@@ -1886,36 +1886,112 @@ const CitizenRequests = () => {
                                         description: `Отправка запроса к "${agent.name}"...`
                                       });
                                       
-                                      // Имитация ответа
-                                      setTimeout(() => {
+                                      // Обработка обращения с использованием правил организационной структуры
+                                      toast({
+                                        title: "Обработка запроса", 
+                                        description: "Анализ обращения с использованием правил орг.структуры..."
+                                      });
+                                      
+                                      // Используем асинхронные запросы в правильном контексте
+                                      const processWithRules = () => {
                                         if (selectedRequest) {
                                           const updatedRequest = {...selectedRequest};
+                                          const requestText = updatedRequest.description || updatedRequest.content || "";
                                           
-                                          if (agent.type === 'citizen_requests') {
-                                            // Формируем ответ на основе текста обращения
-                                            const requestText = updatedRequest.description || updatedRequest.content || "";
+                                          // Получаем правила распределения
+                                          apiRequest('GET', '/api/task-rules')
+                                            .then(rulesResponse => rulesResponse.json())
+                                            .then(organizationRules => {
                                             
-                                            if(requestText.toLowerCase().includes('социальн') && requestText.toLowerCase().includes('помощ')) {
-                                              updatedRequest.aiSuggestion = "Уважаемый заявитель, по вашему обращению о социальной помощи сообщаем, что согласно Закону РК 'О государственной адресной социальной помощи', срок рассмотрения заявления составляет 10 рабочих дней с момента регистрации. Рекомендуем вам дополнительно предоставить справку о доходах и составе семьи для ускорения процесса. Предварительное решение: положительное.";
-                                            } else if(requestText.toLowerCase().includes('несудим')) {
-                                              updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25. Предварительное решение: положительное.";
+                                            // Ищем подходящее правило
+                                            const requestTextLower = requestText.toLowerCase();
+                                            let matchedRule = null;
+                                            
+                                            // Определяем правило по ключевым словам
+                                            if (requestTextLower.includes('социальн') && requestTextLower.includes('помощ')) {
+                                              matchedRule = organizationRules.find((rule: any) => 
+                                                rule.keywords && rule.keywords.some((kw: string) => 
+                                                  kw.toLowerCase().includes('социал')));
+                                                  
+                                              updatedRequest.aiSuggestion = "Уважаемый заявитель, по вашему обращению о социальной помощи сообщаем, что согласно Закону РК 'О государственной адресной социальной помощи', срок рассмотрения заявления составляет 10 рабочих дней с момента регистрации. Рекомендуем вам дополнительно предоставить справку о доходах и составе семьи для ускорения процесса.";
+                                            } else if(requestTextLower.includes('несудим')) {
+                                              matchedRule = organizationRules.find((rule: any) => 
+                                                rule.keywords && rule.keywords.some((kw: string) => 
+                                                  kw.toLowerCase().includes('мвд') || kw.toLowerCase().includes('справк')));
+                                                  
+                                              updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25.";
                                             } else {
-                                              updatedRequest.aiSuggestion = "На основе анализа вашего обращения рекомендуем предоставить дополнительные документы, подтверждающие указанные обстоятельства. Срок рассмотрения составляет до 15 рабочих дней согласно действующему законодательству РК. Необходима дополнительная консультация специалиста.";
+                                              updatedRequest.aiSuggestion = "На основе анализа вашего обращения рекомендуем предоставить дополнительные документы, подтверждающие указанные обстоятельства. Срок рассмотрения составляет до 15 рабочих дней согласно действующему законодательству РК.";
                                             }
-                                          } else if (agent.type === 'meeting_protocols') {
-                                            updatedRequest.aiSuggestion = "Запрос относится к департаменту документационного обеспечения. Рекомендуется перенаправить запрос для обработки специалистом данного департамента.";
-                                          } else if (agent.type === 'blockchain') {
-                                            updatedRequest.blockchainHash = "0x8f4e1a3b2c7d6e9f0a1b2c3d4e5f6a7b8c9d0e1f";
-                                          }
-                                          
-                                          setSelectedRequest(updatedRequest);
-                                          
-                                          toast({
-                                            title: "Ответ получен",
-                                            description: `Получен ответ от "${agent.name}"`
-                                          });
+                                            
+                                            // Добавляем информацию о правиле и маршрутизации
+                                            if (matchedRule) {
+                                              updatedRequest.aiSuggestion += `\n\nСогласно правилам орг.структуры, ваше обращение направлено в департамент: ${matchedRule.departmentName || 'Профильный департамент'}. Предварительное решение: положительное.`;
+                                            } else {
+                                              updatedRequest.aiSuggestion += "\n\nОбращение требует дополнительной консультации специалиста.";
+                                            }
+                                            
+                                            // Обновляем данные и показываем уведомление
+                                            setSelectedRequest(updatedRequest);
+                                            
+                                            toast({
+                                              title: "Ответ получен",
+                                              description: `Получен ответ от "${agent.name}"`
+                                            });
+                                            
+                                            })
+                                            .catch(error => {
+                                              console.error("Ошибка при обработке с правилами орг.структуры:", error);
+                                              
+                                              // Запасной вариант - базовый ответ
+                                              const requestText = updatedRequest.description || updatedRequest.content || "";
+                                              if(requestText.toLowerCase().includes('социальн') && requestText.toLowerCase().includes('помощ')) {
+                                                updatedRequest.aiSuggestion = "Уважаемый заявитель, по вашему обращению о социальной помощи сообщаем, что согласно Закону РК 'О государственной адресной социальной помощи', срок рассмотрения заявления составляет 10 рабочих дней с момента регистрации.";
+                                              } else if(requestText.toLowerCase().includes('несудим')) {
+                                                updatedRequest.aiSuggestion = "На основе анализа документа, рекомендуется выдача справки о несудимости в стандартном порядке. Заявителю необходимо предоставить удостоверение личности и заполнить заявление по форме D-25.";
+                                              } else {
+                                                updatedRequest.aiSuggestion = "На основе анализа вашего обращения рекомендуем предоставить дополнительные документы, подтверждающие указанные обстоятельства. Срок рассмотрения составляет до 15 рабочих дней согласно действующему законодательству РК.";
+                                              }
+                                              
+                                              setSelectedRequest(updatedRequest);
+                                              toast({
+                                                title: "Ответ получен",
+                                                description: `Получен базовый ответ (ошибка при получении правил)`
+                                              });
+                                            });
                                         }
-                                      }, 1500);
+                                      };
+                                      
+                                      // Запускаем обработку
+                                      if (agent.type === 'citizen_requests') {
+                                        processWithRules();
+                                      } else if (agent.type === 'meeting_protocols') {
+                                        setTimeout(() => {
+                                          if (selectedRequest) {
+                                            const updatedRequest = {...selectedRequest};
+                                            updatedRequest.aiSuggestion = "Запрос относится к департаменту документационного обеспечения. Рекомендуется перенаправить запрос для обработки специалистом данного департамента.";
+                                            setSelectedRequest(updatedRequest);
+                                            
+                                            toast({
+                                              title: "Ответ получен",
+                                              description: `Получен ответ от "${agent.name}"`
+                                            });
+                                          }
+                                        }, 1500);
+                                      } else if (agent.type === 'blockchain') {
+                                        setTimeout(() => {
+                                          if (selectedRequest) {
+                                            const updatedRequest = {...selectedRequest};
+                                            updatedRequest.blockchainHash = "0x8f4e1a3b2c7d6e9f0a1b2c3d4e5f6a7b8c9d0e1f";
+                                            setSelectedRequest(updatedRequest);
+                                            
+                                            toast({
+                                              title: "Ответ получен",
+                                              description: `Получен ответ от "${agent.name}"`
+                                            });
+                                          }
+                                        }, 1500);
+                                      }
                                     }}
                                   >
                                     {agent.type === 'citizen_requests' && <User className="h-4 w-4 mr-2" />}
