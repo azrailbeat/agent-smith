@@ -1,11 +1,30 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CircleAlert, Database, Server, Cpu, BarChart } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AlertCircle, RefreshCw, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 interface ServiceStatus {
   serviceName: string;
@@ -33,274 +52,326 @@ interface ModelUsage {
  * Отображает статус и производительность LLM сервисов
  */
 export const LLMMonitoring = () => {
-  // Запрос статуса LLM сервисов
-  const { data: services = [], isLoading: isLoadingServices } = useQuery<ServiceStatus[]>({
-    queryKey: ['/api/system/llm-status'],
-    // В демо-режиме используем тестовые данные
-    queryFn: async () => {
-      try {
-        const response = await apiRequest('GET', '/api/system/llm-status');
-        return await response.json();
-      } catch (error) {
-        console.error('Failed to fetch LLM status');
-        return [];
-      }
-    },
-    refetchInterval: 30000 // Обновляем каждые 30 секунд
-  });
+  const [services, setServices] = useState<ServiceStatus[]>([]);
+  const [modelUsage, setModelUsage] = useState<ModelUsage[]>([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [isLoadingUsage, setIsLoadingUsage] = useState(true);
+  const [refreshTimestamp, setRefreshTimestamp] = useState(new Date());
 
-  // Запрос использования моделей
-  const { data: usage = [], isLoading: isLoadingUsage } = useQuery<ModelUsage[]>({
-    queryKey: ['/api/system/llm-usage'],
-    queryFn: async () => {
+  // Загрузка данных о статусе сервисов
+  useEffect(() => {
+    const fetchServicesStatus = async () => {
+      setIsLoadingServices(true);
       try {
-        const response = await apiRequest('GET', '/api/system/llm-usage');
-        return await response.json();
+        const response = await axios.get('/api/system/llm-status');
+        setServices(response.data);
       } catch (error) {
-        console.error('Failed to fetch LLM usage');
-        return [];
+        console.error('Ошибка при загрузке статуса сервисов:', error);
+      } finally {
+        setIsLoadingServices(false);
       }
-    },
-    refetchInterval: 60000 // Обновляем каждую минуту
-  });
+    };
 
-  // Функция для получения цвета статуса
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'healthy':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'degraded':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'down':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+    const fetchModelUsage = async () => {
+      setIsLoadingUsage(true);
+      try {
+        const response = await axios.get('/api/system/llm-usage');
+        setModelUsage(response.data);
+      } catch (error) {
+        console.error('Ошибка при загрузке данных по использованию моделей:', error);
+      } finally {
+        setIsLoadingUsage(false);
+      }
+    };
+
+    fetchServicesStatus();
+    fetchModelUsage();
+  }, [refreshTimestamp]);
+
+  // Обновление данных
+  const handleRefresh = () => {
+    setRefreshTimestamp(new Date());
+  };
+
+  // Очистка кэша
+  const handleClearCache = async () => {
+    try {
+      const response = await axios.post('/api/system/llm-maintenance', { action: 'clear_cache' });
+      if (response.data.success) {
+        alert(response.data.message);
+        handleRefresh();
+      }
+    } catch (error) {
+      console.error('Ошибка при очистке кэша:', error);
     }
   };
 
-  // Функция для получения имени статуса
-  const getStatusName = (status: string): string => {
-    switch (status) {
-      case 'healthy':
-        return 'Работает';
-      case 'degraded':
-        return 'Замедление';
-      case 'down':
-        return 'Недоступен';
-      default:
-        return 'Неизвестно';
+  // Перезапуск сервисов
+  const handleRestartServices = async () => {
+    try {
+      const response = await axios.post('/api/system/llm-maintenance', { action: 'restart_services' });
+      if (response.data.success) {
+        alert(response.data.message);
+        handleRefresh();
+      }
+    } catch (error) {
+      console.error('Ошибка при перезапуске сервисов:', error);
     }
   };
 
-  // Функция для преобразования числа в форматированную строку
-  const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('ru-RU').format(num);
+  // Получение иконки статуса
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'degraded':
+        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+      case 'down':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return <AlertCircle className="h-5 w-5 text-gray-500" />;
+    }
   };
 
-  // Функция форматирования денежных значений
-  const formatCurrency = (num: number): string => {
-    return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'USD' }).format(num);
+  // Форматирование даты
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('ru-RU');
+    } catch (e) {
+      return dateString;
+    }
   };
+
+  // Форматирование числа токенов
+  const formatTokens = (tokens: number) => {
+    if (tokens >= 1000000) {
+      return `${(tokens / 1000000).toFixed(1)} млн`;
+    } else if (tokens >= 1000) {
+      return `${(tokens / 1000).toFixed(1)} тыс`;
+    }
+    return tokens.toString();
+  };
+
+  // Подготовка данных для графиков
+  const usageChartData = modelUsage.map(item => ({
+    name: item.model,
+    tokens: item.tokensUsed,
+    cost: item.cost,
+    requests: item.requestCount
+  }));
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Статус LLM сервисов */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Server className="mr-2 h-5 w-5" /> Статус LLM сервисов
-            </CardTitle>
-            <CardDescription>
-              Текущий статус и производительность сервисов искусственного интеллекта
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {isLoadingServices ? (
-                <div className="flex items-center justify-center p-4">
-                  <svg className="animate-spin h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+      {/* Заголовок и кнопки действий */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">Общий статус LLM сервисов</h3>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Обновить
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleClearCache}>
+            Очистить кэш
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRestartServices}>
+            Перезапустить сервисы
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="status" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="status">Статус сервисов</TabsTrigger>
+          <TabsTrigger value="usage">Использование</TabsTrigger>
+          <TabsTrigger value="performance">Производительность</TabsTrigger>
+        </TabsList>
+
+        {/* Вкладка статуса сервисов */}
+        <TabsContent value="status">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {isLoadingServices ? (
+              <div className="col-span-3 flex justify-center items-center h-40">
+                <div className="text-center">
+                  <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-2"></div>
+                  <p>Загрузка данных...</p>
                 </div>
-              ) : services.length > 0 ? (
-                services.map((service, index) => (
-                  <div key={index} className="rounded-lg border p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="font-medium">{service.serviceName}</div>
-                      <Badge className={getStatusColor(service.status)}>
-                        {getStatusName(service.status)}
-                      </Badge>
+              </div>
+            ) : (
+              services.map((service) => (
+                <Card key={service.serviceName} className={`
+                  ${service.status === 'healthy' ? 'border-green-200' : ''}
+                  ${service.status === 'degraded' ? 'border-amber-200' : ''}
+                  ${service.status === 'down' ? 'border-red-200' : ''}
+                `}>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg">{service.serviceName}</CardTitle>
+                      {getStatusIcon(service.status)}
                     </div>
-
-                    {service.details && (
-                      <div className="space-y-3 mt-2">
-                        {service.details.queueLength !== undefined && (
-                          <div>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span>Количество запросов в очереди</span>
-                              <span className="font-medium">{service.details.queueLength}</span>
-                            </div>
-                            <Progress value={Math.min(service.details.queueLength * 10, 100)} className="h-2" />
+                    <CardDescription>
+                      Последнее обновление: {formatDate(service.lastUpdated)}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {service.details?.avgResponseTime !== undefined && (
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm text-muted-foreground">Среднее время ответа</span>
+                            <span className="font-medium">{service.details.avgResponseTime} сек</span>
                           </div>
-                        )}
-
-                        {service.details.gpuUtilization !== undefined && (
-                          <div>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span>Загрузка GPU</span>
-                              <span className="font-medium">{service.details.gpuUtilization}%</span>
-                            </div>
-                            <Progress 
-                              value={service.details.gpuUtilization} 
-                              className={`h-2 ${service.details.gpuUtilization > 80 ? 'bg-red-500' : service.details.gpuUtilization > 60 ? 'bg-yellow-500' : 'bg-green-500'}`} 
-                            />
-                          </div>
-                        )}
-
-                        {service.details.avgResponseTime !== undefined && (
-                          <div className="flex justify-between text-sm">
-                            <span>Среднее время ответа</span>
-                            <span className="font-medium">{service.details.avgResponseTime.toFixed(2)} сек</span>
-                          </div>
-                        )}
-
-                        {service.details.requestsPerMinute !== undefined && (
-                          <div className="flex justify-between text-sm">
-                            <span>Запросов в минуту</span>
-                            <span className="font-medium">{service.details.requestsPerMinute.toFixed(2)}</span>
-                          </div>
-                        )}
-
-                        {service.details.latestError && (
-                          <div className="mt-2 p-2 bg-red-50 text-red-800 text-sm rounded border border-red-200">
-                            <div className="flex items-start">
-                              <CircleAlert className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0" />
-                              <span>{service.details.latestError}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="text-xs text-muted-foreground mt-3">
-                      Обновлено: {new Date(service.lastUpdated).toLocaleString('ru-RU')}
+                          <Progress value={Math.min(service.details.avgResponseTime * 50, 100)} className="h-2" />
+                        </div>
+                      )}
+                      
+                      {service.details?.requestsPerMinute !== undefined && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Запросов в минуту</span>
+                          <span>{service.details.requestsPerMinute}</span>
+                        </div>
+                      )}
+                      
+                      {service.details?.queueLength !== undefined && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Длина очереди</span>
+                          <span>{service.details.queueLength}</span>
+                        </div>
+                      )}
+                      
+                      {service.details?.gpuUtilization !== undefined && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Загрузка GPU</span>
+                          <span>{service.details.gpuUtilization}%</span>
+                        </div>
+                      )}
+                      
+                      {service.details?.latestError && (
+                        <div className="mt-2 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-200">
+                          {service.details.latestError}
+                        </div>
+                      )}
                     </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Вкладка использования моделей */}
+        <TabsContent value="usage">
+          <Card>
+            <CardHeader>
+              <CardTitle>Статистика использования моделей</CardTitle>
+              <CardDescription>Данные о токенах, запросах и расходах на каждую модель</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingUsage ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="text-center">
+                    <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-2"></div>
+                    <p>Загрузка данных...</p>
                   </div>
-                ))
+                </div>
               ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  Информация о сервисах недоступна
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Модель</TableHead>
+                        <TableHead className="text-right">Токены</TableHead>
+                        <TableHead className="text-right">Запросы</TableHead>
+                        <TableHead className="text-right">Кост</TableHead>
+                        <TableHead className="text-right">Время ответа</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {modelUsage.map((model) => (
+                        <TableRow key={model.model}>
+                          <TableCell className="font-medium">{model.model}</TableCell>
+                          <TableCell className="text-right">{formatTokens(model.tokensUsed)}</TableCell>
+                          <TableCell className="text-right">{model.requestCount}</TableCell>
+                          <TableCell className="text-right">${model.cost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{model.avgResponseTime.toFixed(2)} сек</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="mt-8 h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={usageChartData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis yAxisId="left" orientation="left" />
+                        <YAxis yAxisId="right" orientation="right" />
+                        <Tooltip />
+                        <Legend />
+                        <Bar yAxisId="left" dataKey="tokens" name="Токены" fill="#8884d8" />
+                        <Bar yAxisId="right" dataKey="cost" name="Затраты ($)" fill="#82ca9d" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Вкладка производительности */}
+        <TabsContent value="performance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Производительность моделей</CardTitle>
+              <CardDescription>Данные о времени ответа и количестве запросов</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingUsage ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="text-center">
+                    <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-2"></div>
+                    <p>Загрузка данных...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={usageChartData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="requests" name="Количество запросов" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               )}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              <Server className="mr-2 h-4 w-4" /> Проверить сервисы
-            </Button>
-          </CardFooter>
-        </Card>
 
-        {/* Использование и расходы */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart className="mr-2 h-5 w-5" /> Использование и расходы
-            </CardTitle>
-            <CardDescription>
-              Статистика использования моделей и расходы на токены
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {isLoadingUsage ? (
-                <div className="flex items-center justify-center p-4">
-                  <svg className="animate-spin h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-              ) : usage.length > 0 ? (
+              <div className="mt-6">
+                <h4 className="font-medium mb-2">Статистика производительности по моделям</h4>
                 <div className="space-y-4">
-                  {usage.map((model, index) => (
-                    <div key={index} className="p-4 rounded-lg border">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-medium">{model.model}</h4>
-                        <Badge variant="outline">{formatNumber(model.requestCount)} запросов</Badge>
+                  {modelUsage.map((model) => (
+                    <div key={model.model}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span>{model.model}</span>
+                        <span className="text-sm text-muted-foreground">Среднее время ответа: {model.avgResponseTime.toFixed(2)} сек</span>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div>
-                          <div className="text-sm text-muted-foreground">Токенов использовано</div>
-                          <div className="font-semibold">{formatNumber(model.tokensUsed)}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Стоимость</div>
-                          <div className="font-semibold">{formatCurrency(model.cost)}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Ср. время ответа</div>
-                          <div className="font-semibold">{model.avgResponseTime.toFixed(2)} сек</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Цена за 1K токенов</div>
-                          <div className="font-semibold">
-                            {formatCurrency(model.tokensUsed > 0 ? (model.cost / model.tokensUsed) * 1000 : 0)}
-                          </div>
-                        </div>
-                      </div>
+                      <Progress value={100 - (model.avgResponseTime / 3 * 100)} className="h-2" />
                     </div>
                   ))}
-
-                  {/* Суммарная статистика */}
-                  <div className="p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
-                    <div className="font-medium text-lg mb-2">Итого за период</div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Всего запросов</div>
-                        <div className="font-semibold">
-                          {formatNumber(usage.reduce((acc, model) => acc + model.requestCount, 0))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Всего токенов</div>
-                        <div className="font-semibold">
-                          {formatNumber(usage.reduce((acc, model) => acc + model.tokensUsed, 0))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Общая стоимость</div>
-                        <div className="font-semibold text-primary">
-                          {formatCurrency(usage.reduce((acc, model) => acc + model.cost, 0))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Ср. время ответа</div>
-                        <div className="font-semibold">
-                          {usage.length > 0
-                            ? (usage.reduce((acc, model) => acc + model.avgResponseTime, 0) / usage.length).toFixed(2)
-                            : '0.00'} сек
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  Информация об использовании недоступна
-                </div>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              <Cpu className="mr-2 h-4 w-4" /> Подробная статистика
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

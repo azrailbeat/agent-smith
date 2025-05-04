@@ -1,4 +1,4 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -27,6 +27,7 @@ import {
 import { registerSystemRoutes } from "./system-api";
 import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
+import { registerLLMMonitoringRoutes } from "./monitoring/llm-monitoring";
 import { initializeSettings } from "./services/system-settings";
 import { getTaskRules, saveTaskRule, getTaskRuleById, deleteTaskRule, processRequestByOrgStructure } from "./services/org-structure";
 import { agentService, AgentTaskType, AgentEntityType } from "./services/agent-service";
@@ -84,6 +85,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Регистрация системных маршрутов
   registerSystemRoutes(app);
+  
+  // Регистрация маршрутов мониторинга LLM
+  const llmMonitoringRouter = express.Router();
+  registerLLMMonitoringRoutes(llmMonitoringRouter);
+  app.use(llmMonitoringRouter);
   
   // API routes
   app.get('/api/health', (req, res) => {
