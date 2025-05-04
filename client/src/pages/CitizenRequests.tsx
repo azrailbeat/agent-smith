@@ -602,6 +602,8 @@ const CitizenRequests = () => {
     }
     
     saveRequestMutation.mutate(currentRequest);
+    // Закрываем диалог подтверждения сразу после отправки
+    setIsDetailsOpen(false);
   };
 
   // Отображение статуса обращения
