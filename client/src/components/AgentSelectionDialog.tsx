@@ -223,7 +223,7 @@ const AgentSelectionDialog: React.FC<AgentSelectionDialogProps> = ({
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
                 {agents && agents
-                  .filter((agent: Agent) => agent.isActive)
+                  .filter((agent: Agent) => agent.isActive && (agent.type === 'citizen_requests' || agent.type === 'blockchain'))
                   .map((agent: Agent) => (
                     <Card 
                       key={agent.id} 
