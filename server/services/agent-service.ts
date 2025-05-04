@@ -134,12 +134,12 @@ export class AgentService {
         });
         
         // Получаем созданных агентов
-        const createdAgents = await storage.getAgents();
-        agents = createdAgents;
+        agents = await storage.getAgents(); // Присваиваем агентов напрямую в классовую переменную
       }
       
       // Кэшируем агентов по типу для быстрого доступа
-      agents.forEach(agent => {
+      const agentList = await storage.getAgents(); // Получаем агентов непосредственно из хранилища
+      agentList.forEach(agent => {
         if (agent.isActive) {
           this.agentCache.set(agent.type, agent);
         }
