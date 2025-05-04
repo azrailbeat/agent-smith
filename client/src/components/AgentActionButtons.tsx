@@ -124,7 +124,7 @@ const AgentActionButtons: React.FC<AgentActionButtonsProps> = ({
   const { toast } = useToast();
 
   // Загрузка списка агентов
-  const { data: agents, isLoading: isAgentsLoading } = useQuery({
+  const { data: allAgents = [], isLoading: isAgentsLoading } = useQuery({
     queryKey: ['agents'],
     queryFn: async () => {
       const response = await fetch('/api/agents');
@@ -133,6 +133,13 @@ const AgentActionButtons: React.FC<AgentActionButtonsProps> = ({
       }
       return response.json();
     }
+  });
+  
+  // Фильтруем только по разрешенным типам агентов
+  const allowedAgentTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+  const agents = allAgents.filter(agent => {
+    // Проверяем, что агент активен и принадлежит к разрешенному типу
+    return agent.isActive && allowedAgentTypes.includes(agent.type);
   });
 
   // Загрузка настроек кнопок
