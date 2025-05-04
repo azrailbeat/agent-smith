@@ -972,13 +972,47 @@ const CitizenRequests = () => {
                   // Обновляем состояние доски
                   setKanbanBoard(newBoard);
                   
-                  // Обновляем статус обращения в базе данных (в реальном приложении)
-                  // updateRequestStatus({ id: requestId, status: destination.droppableId });
-                  
-                  // Обновляем локальное состояние обращений
+                  // Обновляем статус обращения в базе данных
+                  const newStatus = destination.droppableId;
+                  // Получим обращение из локального состояния
                   const request = requests.find(r => r.id === requestId);
+                  
+                  // Отправляем запрос на обновление статуса
                   if (request) {
-                    request.status = destination.droppableId as any;
+                    // Обновляем локальное состояние
+                    request.status = newStatus as any;
+                    
+                    // Отправляем API запрос на обновление
+                    apiRequest('PATCH', `/api/citizen-requests/${requestId}`, {
+                      status: newStatus
+                    }).then(() => {
+                      toast({
+                        title: "Статус обновлен",
+                        description: `Статус обращения изменен на "${newStatus === 'pending' ? 'Ожидает' : newStatus === 'in_progress' ? 'В работе' : newStatus === 'completed' ? 'Выполнено' : 'Отклонено'}"`
+                      });
+                      
+                      // Обновляем кэш данных
+                      queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
+                      
+                      // Если обращение перемещено в статус «Выполнено»
+                      if (newStatus === 'completed' && request.assignedTo) {
+                        // Отправляем уведомление
+                        toast({
+                          title: "Обращение выполнено",
+                          description: "Результат работы зафиксирован в блокчейне"
+                        });
+                        
+                        // Записываем в блокчейн
+                        saveToBlockchain(requestId);
+                      }
+                    }).catch(error => {
+                      console.error('Error updating request status:', error);
+                      toast({
+                        title: "Ошибка",
+                        description: "Не удалось обновить статус обращения",
+                        variant: "destructive"
+                      });
+                    });
                   }
                 }}
               >
@@ -1033,9 +1067,9 @@ const CitizenRequests = () => {
                                       <Card className="overflow-hidden shadow-sm">
                                         <div className="p-4">
                                           <div>
-                                            <h3 className="text-sm font-semibold line-clamp-1">{request.title}</h3>
+                                            <h3 className="text-sm font-semibold line-clamp-1">{request.subject || request.title || "Без заголовка"}</h3>
                                             <div className="flex items-center flex-wrap gap-2 mt-1">
-                                              <Badge variant="outline">{CATEGORIES.find(c => c.id === request.category)?.name || request.category}</Badge>
+                                              <Badge variant="outline">{CATEGORIES.find(c => c.id === request.requestType || request.category)?.name || request.requestType || request.category || "Общее"}</Badge>
                                               {renderPriorityBadge(request.priority)}
                                             </div>
                                             {request.citizenInfo?.name && (
