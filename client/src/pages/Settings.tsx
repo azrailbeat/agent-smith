@@ -621,6 +621,7 @@ const Settings = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="integrations">Внешние интеграции</TabsTrigger>
           <TabsTrigger value="agents">AI Агенты</TabsTrigger>
+          <TabsTrigger value="monitoring">Мониторинг LLM</TabsTrigger>
         </TabsList>
         
         {/* Integrations Tab */}
@@ -1175,6 +1176,24 @@ const Settings = () => {
         </TabsContent>
         
         {/* Agents Tab */}
+        <TabsContent value="monitoring">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Мониторинг LLM и аналитика</h2>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Мониторинг производительности и использования LLM-моделей</CardTitle>
+              <CardDescription>
+                Данные о статусе, производительности и затратах на использование AI моделей
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LLMMonitoring />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="agents">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">AI Агенты</h2>
