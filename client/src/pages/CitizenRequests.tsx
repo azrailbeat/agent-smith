@@ -584,6 +584,10 @@ const CitizenRequests = () => {
     });
     setIsRecording(false);
     setRecordingTime(0);
+    // Закрываем все диалоги
+    setIsDetailsOpen(false);
+    setIsViewDetailsOpen(false);
+    setShowSummaryDialog(false);
     if (recordingInterval.current) {
       clearInterval(recordingInterval.current);
       recordingInterval.current = null;
