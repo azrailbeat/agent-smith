@@ -119,6 +119,7 @@ const CitizenRequests = () => {
     contactInfo: "",
   });
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [activeTab, setActiveTab] = useState("new");
@@ -1640,8 +1641,8 @@ const CitizenRequests = () => {
       </Dialog>
       
       {/* Диалог с детальной информацией по обращению */}
-      <Dialog open={selectedRequest !== null && isDetailsOpen} onOpenChange={(open) => {
-        setIsDetailsOpen(open);
+      <Dialog open={selectedRequest !== null && isViewDetailsOpen} onOpenChange={(open) => {
+        setIsViewDetailsOpen(open);
         if (!open) setSelectedRequest(null);
       }}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto">
