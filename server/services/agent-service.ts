@@ -73,51 +73,93 @@ export class AgentService {
    */
   async initialize() {
     try {
-      // Получаем всех агентов из хранилища
-      let agents = await storage.getAgents();
-      
-      // Если агенты не найдены, создаем тестовых агентов
-      if (!agents || agents.length === 0) {
-        console.log("No agents found, creating default agents...");
-        // Создаем стандартного агента для обращений граждан
-        await storage.createAgent({
-          name: "AgentSmith",
-          type: "citizen_requests",
-          description: "Агент для обработки обращений граждан",
-          systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение на основе правил организационной структуры. ВАЖНО: Ваши ответы должны быть строго по теме обращения и соответствовать контексту.",
-          modelId: 1,
-          isActive: true,
-          config: {
-            temperature: 0.3,
-            maxTokens: 1500,
-            isDefault: true,
-            departmentId: 1,
-            capabilities: ["classification", "summarization", "response_generation"],
-            integrationIds: [1]
+      // Очищаем все предыдущие агенты - подход "чистого старта"
+      const existingAgents = await storage.getAgents();
+      if (existingAgents && existingAgents.length > 0) {
+        for (const agent of existingAgents) {
+          try {
+            await storage.deleteAgent(agent.id);
+          } catch (error) {
+            console.warn(`Не удалось удалить агента ${agent.id}:`, error);
           }
-        });
-        
-        // Создаем агента для блокчейн записей через Moralis
-        await storage.createAgent({
-          name: "BlockchainAgent",
-          type: "blockchain",
-          description: "Агент для записи данных в блокчейн через Moralis",
-          systemPrompt: "Вы эксперт по блокчейн технологиям и смарт-контрактам. Ваша задача - обрабатывать запросы на сохранение данных в блокчейне и создавать хеши транзакций.",
-          modelId: 1,
-          isActive: true,
-          config: {
-            temperature: 0.1,
-            maxTokens: 1000,
-            isDefault: false,
-            departmentId: 5,
-            capabilities: ["data_analysis", "validation"],
-            integrationIds: [3]
-          }
-        });
-        
-        // Получаем созданных агентов
-        agents = await storage.getAgents(); // Присваиваем агентов напрямую в классовую переменную
+        }
       }
+
+      console.log("No agents found, creating default agents...");
+      // Создаем только 4 ключевых агентов
+      
+      // 1. Агент для обработки обращений граждан
+      await storage.createAgent({
+        name: "AgentSmith",
+        type: "citizen_requests",
+        description: "Агент для обработки обращений граждан",
+        systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение на основе правил организационной структуры. ВАЖНО: Ваши ответы должны быть строго по теме обращения и соответствовать контексту.",
+        modelId: 1,
+        isActive: true,
+        config: {
+          temperature: 0.3,
+          maxTokens: 1500,
+          isDefault: true,
+          departmentId: 1,
+          capabilities: ["classification", "summarization", "response_generation"],
+          integrationIds: [1]
+        }
+      });
+      
+      // 2. Блокчейн агент для записи транзакций
+      await storage.createAgent({
+        name: "BlockchainAgent",
+        type: "blockchain",
+        description: "Агент для записи данных в блокчейн через Moralis",
+        systemPrompt: "Вы эксперт по блокчейн технологиям и смарт-контрактам. Ваша задача - обрабатывать запросы на сохранение данных в блокчейне и создавать хеши транзакций.",
+        modelId: 1,
+        isActive: true,
+        config: {
+          temperature: 0.1,
+          maxTokens: 1000,
+          isDefault: false,
+          departmentId: 5,
+          capabilities: ["data_analysis", "validation"],
+          integrationIds: [3]
+        }
+      });
+
+      // 3. Агент для анализа документов
+      await storage.createAgent({
+        name: "DocumentAI",
+        type: "document_processing",
+        description: "Анализирует и структурирует документы",
+        systemPrompt: "Вы - эксперт по анализу и обработке документов. Ваша задача - анализировать структуру и юридическую корректность документов, извлекать важную информацию и готовить краткие резюме.",
+        modelId: 1,
+        isActive: true,
+        config: {
+          temperature: 0.1,
+          maxTokens: 2048,
+          departmentId: 3,
+          capabilities: ["document_analysis", "summarization"],
+          integrationIds: [1]
+        }
+      });
+
+      // 4. Агент для протоколов совещаний
+      await storage.createAgent({
+        name: "ProtocolMaster",
+        type: "meeting_protocols",
+        description: "Анализирует записи и протоколы совещаний",
+        systemPrompt: "Вы - эксперт по анализу записей совещаний и протоколов. Ваша задача - определять ключевые моменты, решения и задачи, упомянутые на совещаниях, и создавать четкие протоколы и планы действий.",
+        modelId: 1,
+        isActive: true,
+        config: {
+          temperature: 0.2,
+          maxTokens: 2048,
+          departmentId: 2,
+          capabilities: ["transcription", "summarization", "classification"],
+          integrationIds: [1]
+        }
+      });
+      
+      // Получаем созданных агентов
+      const agents = await storage.getAgents();
       
       // Кэшируем агентов по типу для быстрого доступа
       const agentList = await storage.getAgents(); // Получаем агентов непосредственно из хранилища

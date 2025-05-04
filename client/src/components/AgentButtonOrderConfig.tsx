@@ -186,8 +186,12 @@ const AgentButtonOrderConfig: React.FC<AgentButtonOrderConfigProps> = ({
         });
       }
       
-      // Создаем полную конфигурацию для всех агентов
-      const fullConfig = agents.map((agent: Agent, index: number) => {
+      // Фильтруем агентов только по разрешенным типам
+      const allowedAgentTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+      const filteredAgents = agents.filter((agent: Agent) => allowedAgentTypes.includes(agent.type));
+
+      // Создаем полную конфигурацию только для разрешенных агентов
+      const fullConfig = filteredAgents.map((agent: Agent, index: number) => {
         const existingConfig = configMap.get(agent.id);
         
         return {
