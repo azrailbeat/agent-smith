@@ -74,7 +74,7 @@ export class AgentService {
   async initialize() {
     try {
       // Получаем всех агентов из хранилища
-      const agents = await storage.getAgents();
+      let agents = await storage.getAgents();
       
       // Если агенты не найдены, создаем тестовых агентов
       if (!agents || agents.length === 0) {
@@ -84,17 +84,17 @@ export class AgentService {
           name: "AgentSmith",
           type: "citizen_requests",
           description: "Агент для обработки обращений граждан",
-          systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение.",
-          model: "gpt-4o",
-          temperature: 0.3,
-          maxTokens: 1500,
+          systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение. ВАЖНО: Ваши ответы должны быть строго по теме обращения и соответствовать контексту.",
+          modelId: 1,
           isActive: true,
-          createdAt: new Date(),
-          isDefault: true,
-          departmentId: 1,
-          capabilities: ["classification", "summarization", "response_generation"],
-          integrationIds: [1],
-          metadata: {}
+          config: {
+            temperature: 0.3,
+            maxTokens: 1500,
+            isDefault: true,
+            departmentId: 1,
+            capabilities: ["classification", "summarization", "response_generation"],
+            integrationIds: [1]
+          }
         });
         
         // Создаем агента для протоколов совещаний
@@ -103,16 +103,16 @@ export class AgentService {
           type: "meeting_protocols",
           description: "Агент для обработки протоколов совещаний",
           systemPrompt: "Вы эксперт по анализу и обработке протоколов совещаний. Выделяйте ключевые моменты и формируйте решения и задачи.",
-          model: "claude-3-7-sonnet-20250219", 
-          temperature: 0.2,
-          maxTokens: 2000,
+          modelId: 2,
           isActive: true,
-          createdAt: new Date(),
-          isDefault: false,
-          departmentId: 2,
-          capabilities: ["summarization", "transcription", "data_analysis"],
-          integrationIds: [2],
-          metadata: {}
+          config: {
+            temperature: 0.2,
+            maxTokens: 2000,
+            isDefault: false,
+            departmentId: 2,
+            capabilities: ["summarization", "transcription", "data_analysis"],
+            integrationIds: [2]
+          }
         });
         
         // Создаем агента для документов
