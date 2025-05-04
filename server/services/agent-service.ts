@@ -76,6 +76,68 @@ export class AgentService {
       // Получаем всех агентов из хранилища
       const agents = await storage.getAgents();
       
+      // Если агенты не найдены, создаем тестовых агентов
+      if (!agents || agents.length === 0) {
+        console.log("No agents found, creating default agents...");
+        // Создаем стандартного агента для обращений граждан
+        await storage.createAgent({
+          name: "AgentSmith",
+          type: "citizen_requests",
+          description: "Агент для обработки обращений граждан",
+          systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение.",
+          model: "gpt-4o",
+          temperature: 0.3,
+          maxTokens: 1500,
+          isActive: true,
+          createdAt: new Date(),
+          isDefault: true,
+          departmentId: 1,
+          capabilities: ["classification", "summarization", "response_generation"],
+          integrationIds: [1],
+          metadata: {}
+        });
+        
+        // Создаем агента для протоколов совещаний
+        await storage.createAgent({
+          name: "ProtocolAgent",
+          type: "meeting_protocols",
+          description: "Агент для обработки протоколов совещаний",
+          systemPrompt: "Вы эксперт по анализу и обработке протоколов совещаний. Выделяйте ключевые моменты и формируйте решения и задачи.",
+          model: "claude-3-7-sonnet-20250219", 
+          temperature: 0.2,
+          maxTokens: 2000,
+          isActive: true,
+          createdAt: new Date(),
+          isDefault: false,
+          departmentId: 2,
+          capabilities: ["summarization", "transcription", "data_analysis"],
+          integrationIds: [2],
+          metadata: {}
+        });
+        
+        // Создаем агента для документов
+        await storage.createAgent({
+          name: "DocumentAnalyst",
+          type: "document_analysis",
+          description: "Агент для анализа и обработки документов",
+          systemPrompt: "Вы эксперт по анализу документов и извлечению ключевой информации.",
+          model: "gpt-4o",
+          temperature: 0.1,
+          maxTokens: 3000,
+          isActive: true,
+          createdAt: new Date(),
+          isDefault: false,
+          departmentId: 3,
+          capabilities: ["document_analysis", "data_analysis", "summarization"],
+          integrationIds: [1],
+          metadata: {}
+        });
+        
+        // Получаем созданных агентов
+        const createdAgents = await storage.getAgents();
+        agents = createdAgents;
+      }
+      
       // Кэшируем агентов по типу для быстрого доступа
       agents.forEach(agent => {
         if (agent.isActive) {
@@ -84,7 +146,47 @@ export class AgentService {
       });
       
       // Получаем все интеграции
-      const integrations = await storage.getIntegrations();
+      let integrations = await storage.getIntegrations();
+      
+      // Если интеграции не найдены, создаем тестовые интеграции
+      if (!integrations || integrations.length === 0) {
+        console.log("No integrations found, creating default integrations...");
+        // Создаем интеграцию с OpenAI
+        await storage.createIntegration({
+          name: "OpenAI GPT-4o",
+          type: "openai",
+          apiKey: process.env.OPENAI_API_KEY || "sk-demo-key-for-testing",
+          apiUrl: "https://api.openai.com/v1",
+          isActive: true,
+          createdAt: new Date(),
+          isDefault: true,
+          settings: {
+            defaultModel: "gpt-4o",
+            maxTokens: 4000,
+            defaultTemp: 0.7
+          }
+        });
+        
+        // Создаем интеграцию с Anthropic
+        await storage.createIntegration({
+          name: "Anthropic Claude",
+          type: "anthropic",
+          apiKey: process.env.ANTHROPIC_API_KEY || "sk-ant-demo-key-for-testing",
+          apiUrl: "https://api.anthropic.com/v1",
+          isActive: true,
+          createdAt: new Date(),
+          isDefault: false,
+          settings: {
+            defaultModel: "claude-3-7-sonnet-20250219",
+            maxTokens: 4000,
+            defaultTemp: 0.5
+          }
+        });
+        
+        // Получаем созданные интеграции
+        const createdIntegrations = await storage.getIntegrations();
+        integrations = createdIntegrations;
+      }
       
       // Кэшируем активные интеграции
       integrations.forEach(integration => {
@@ -324,17 +426,30 @@ export class AgentService {
         `Вы государственный служащий, эксперт по обработке обращений граждан.
          Ваша задача - дать четкий, вежливый и полезный ответ на обращение гражданина.
          Ответ должен быть в соответствии с законодательством Республики Казахстан.
-         Используйте официальный, но дружелюбный тон. Не используйте жаргон или сложную терминологию.`;
+         Используйте официальный, но дружелюбный тон. Не используйте жаргон или сложную терминологию.
+
+         ВАЖНО: Ответ должен напрямую относиться к сути обращения. Не давайте информацию, не связанную с темой обращения.
+         Например, если гражданин спрашивает о проблеме с ЭЦП, не давайте информацию о справке о несудимости.
+         Ваш ответ должен содержать конкретные шаги или рекомендации по решению проблемы, описанной в обращении.`;
       
       const userPrompt = `Пожалуйста, сформируйте ответ на следующее обращение гражданина:
       
-      ${input.content}
+      Обращение: "${input.content}"
       
       ${input.metadata?.classification ? `Классификация обращения: ${input.metadata.classification}` : ''}
       
-      Пожалуйста, сформируйте полный и информативный ответ, который решает проблему гражданина.`;
+      Ваш ответ должен быть:
+      1. Непосредственно связан с темой обращения
+      2. Содержать конкретные рекомендации по решению проблемы
+      3. Содержать информацию о том, куда может обратиться гражданин за дополнительной помощью
       
+      Сейчас ваша роль – специалист по обработке обращений граждан, который должен дать полный и информативный ответ, решающий проблему гражданина.
+
+      Сформулируйте ответ в формате официального ответа на обращение гражданина.`;
+      
+      console.log("Generating response to citizen request with prompt:", userPrompt);
       const response = await processUserMessage(systemPrompt, userPrompt);
+      console.log("Generated response:", response);
       
       return {
         success: true,
