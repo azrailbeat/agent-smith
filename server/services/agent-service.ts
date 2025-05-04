@@ -84,7 +84,7 @@ export class AgentService {
           name: "AgentSmith",
           type: "citizen_requests",
           description: "Агент для обработки обращений граждан",
-          systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение. ВАЖНО: Ваши ответы должны быть строго по теме обращения и соответствовать контексту.",
+          systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение на основе правил организационной структуры. ВАЖНО: Ваши ответы должны быть строго по теме обращения и соответствовать контексту.",
           modelId: 1,
           isActive: true,
           config: {
@@ -97,40 +97,22 @@ export class AgentService {
           }
         });
         
-        // Создаем агента для протоколов совещаний
+        // Создаем агента для блокчейн записей через Moralis
         await storage.createAgent({
-          name: "ProtocolAgent",
-          type: "meeting_protocols",
-          description: "Агент для обработки протоколов совещаний",
-          systemPrompt: "Вы эксперт по анализу и обработке протоколов совещаний. Выделяйте ключевые моменты и формируйте решения и задачи.",
-          modelId: 2,
+          name: "BlockchainAgent",
+          type: "blockchain",
+          description: "Агент для записи данных в блокчейн через Moralis",
+          systemPrompt: "Вы эксперт по блокчейн технологиям и смарт-контрактам. Ваша задача - обрабатывать запросы на сохранение данных в блокчейне и создавать хеши транзакций.",
+          modelId: 1,
           isActive: true,
           config: {
-            temperature: 0.2,
-            maxTokens: 2000,
+            temperature: 0.1,
+            maxTokens: 1000,
             isDefault: false,
-            departmentId: 2,
-            capabilities: ["summarization", "transcription", "data_analysis"],
-            integrationIds: [2]
+            departmentId: 5,
+            capabilities: ["data_analysis", "validation"],
+            integrationIds: [3]
           }
-        });
-        
-        // Создаем агента для документов
-        await storage.createAgent({
-          name: "DocumentAnalyst",
-          type: "document_analysis",
-          description: "Агент для анализа и обработки документов",
-          systemPrompt: "Вы эксперт по анализу документов и извлечению ключевой информации.",
-          model: "gpt-4o",
-          temperature: 0.1,
-          maxTokens: 3000,
-          isActive: true,
-          createdAt: new Date(),
-          isDefault: false,
-          departmentId: 3,
-          capabilities: ["document_analysis", "data_analysis", "summarization"],
-          integrationIds: [1],
-          metadata: {}
         });
         
         // Получаем созданных агентов
@@ -158,7 +140,6 @@ export class AgentService {
           apiKey: process.env.OPENAI_API_KEY || "sk-demo-key-for-testing",
           apiUrl: "https://api.openai.com/v1",
           isActive: true,
-          createdAt: new Date(),
           isDefault: true,
           settings: {
             defaultModel: "gpt-4o",
@@ -167,19 +148,17 @@ export class AgentService {
           }
         });
         
-        // Создаем интеграцию с Anthropic
+        // Создаем интеграцию с Moralis
         await storage.createIntegration({
-          name: "Anthropic Claude",
-          type: "anthropic",
-          apiKey: process.env.ANTHROPIC_API_KEY || "sk-ant-demo-key-for-testing",
-          apiUrl: "https://api.anthropic.com/v1",
+          name: "Moralis API",
+          type: "moralis",
+          apiKey: process.env.MORALIS_API_KEY || "moralis-demo-key-for-testing",
+          apiUrl: "https://deep-index.moralis.io/api/v2",
           isActive: true,
-          createdAt: new Date(),
           isDefault: false,
           settings: {
-            defaultModel: "claude-3-7-sonnet-20250219",
-            maxTokens: 4000,
-            defaultTemp: 0.5
+            chainId: "0x1",
+            network: "ethereum"
           }
         });
         
