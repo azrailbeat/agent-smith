@@ -911,10 +911,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/agents/type/:type', async (req, res) => {
     const { type } = req.params;
-    const allowedTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
     
     // Проверяем, является ли тип разрешенным
-    if (!allowedTypes.includes(type)) {
+    if (!ALLOWED_AGENT_TYPES.includes(type)) {
       return res.status(404).json({ error: 'Тип агента не найден или не разрешен' });
     }
     
