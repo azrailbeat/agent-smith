@@ -23,9 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import AgentButtonOrderConfig from "./AgentButtonOrderConfig";
 import RAGSourceSelector from "./RAGSourceSelector";
-
-// Разрешенные типы агентов для тестирования
-const ALLOWED_AGENT_TYPES = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+import { ALLOWED_AGENT_TYPES } from "@shared/constants";
 
 interface Agent {
   id: number;
