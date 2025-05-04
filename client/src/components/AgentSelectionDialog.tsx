@@ -154,9 +154,8 @@ const AgentSelectionDialog: React.FC<AgentSelectionDialogProps> = ({
   // Выбрать всех агентов
   const selectAll = () => {
     if (agents) {
-      const allowedAgentTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
       const allAgentIds = agents
-        .filter((agent: Agent) => agent.isActive && allowedAgentTypes.includes(agent.type))
+        .filter((agent: Agent) => agent.isActive && ALLOWED_AGENT_TYPES.includes(agent.type))
         .map((agent: Agent) => agent.id);
       setSelected(allAgentIds);
     }
@@ -227,10 +226,7 @@ const AgentSelectionDialog: React.FC<AgentSelectionDialogProps> = ({
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
                 {agents && agents
-                  .filter((agent: Agent) => {
-                    const allowedAgentTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
-                    return agent.isActive && allowedAgentTypes.includes(agent.type);
-                  })
+                  .filter((agent: Agent) => agent.isActive && ALLOWED_AGENT_TYPES.includes(agent.type))
                   .map((agent: Agent) => (
                     <Card 
                       key={agent.id} 

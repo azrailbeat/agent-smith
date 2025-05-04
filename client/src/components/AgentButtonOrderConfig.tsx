@@ -41,6 +41,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Разрешенные типы агентов для тестирования
+const ALLOWED_AGENT_TYPES = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+
 type Agent = {
   id: number;
   name: string;
@@ -187,8 +190,7 @@ const AgentButtonOrderConfig: React.FC<AgentButtonOrderConfigProps> = ({
       }
       
       // Фильтруем агентов только по разрешенным типам
-      const allowedAgentTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
-      const filteredAgents = agents.filter((agent: Agent) => allowedAgentTypes.includes(agent.type));
+      const filteredAgents = agents.filter((agent: Agent) => ALLOWED_AGENT_TYPES.includes(agent.type));
 
       // Создаем полную конфигурацию только для разрешенных агентов
       const fullConfig = filteredAgents.map((agent: Agent, index: number) => {
