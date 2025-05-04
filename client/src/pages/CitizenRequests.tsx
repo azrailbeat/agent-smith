@@ -1873,7 +1873,11 @@ const CitizenRequests = () => {
                           {availableAgents && availableAgents.length > 0 ? (
                             <>
                               {availableAgents
-                                .filter(agent => agent.isActive)
+                                .filter(agent => {
+                                  // Фильтруем только активные и разрешенные типы агентов
+                                  const allowedTypes = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
+                                  return agent.isActive && allowedTypes.includes(agent.type);
+                                })
                                 .map(agent => (
                                   <Button 
                                     key={agent.id}
