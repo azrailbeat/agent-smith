@@ -1089,6 +1089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Organization structure and task rules API
+  // Task Rules routes
   app.get('/api/task-rules', async (req, res) => {
     try {
       const rules = await getTaskRules();
@@ -1161,6 +1162,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting task rule:', error);
       res.status(500).json({ error: 'Failed to delete task rule', details: error.message });
+    }
+  });
+  
+  // Department routes
+  app.get('/api/departments', async (req, res) => {
+    try {
+      const departments = await getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      res.status(500).json({ error: 'Failed to fetch departments', details: error.message });
+    }
+  });
+  
+  app.get('/api/departments/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid department ID' });
+      }
+      
+      const department = await getDepartmentById(id);
+      if (!department) {
+        return res.status(404).json({ error: 'Department not found' });
+      }
+      
+      res.json(department);
+    } catch (error) {
+      console.error('Error fetching department:', error);
+      res.status(500).json({ error: 'Failed to fetch department', details: error.message });
+    }
+  });
+  
+  app.post('/api/departments', async (req, res) => {
+    try {
+      const department = req.body;
+      const savedDepartment = await saveDepartment(department);
+      res.status(201).json(savedDepartment);
+    } catch (error) {
+      console.error('Error creating department:', error);
+      res.status(500).json({ error: 'Failed to create department', details: error.message });
+    }
+  });
+  
+  app.patch('/api/departments/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid department ID' });
+      }
+      
+      const department = { ...req.body, id };
+      const savedDepartment = await saveDepartment(department);
+      res.json(savedDepartment);
+    } catch (error) {
+      console.error('Error updating department:', error);
+      res.status(500).json({ error: 'Failed to update department', details: error.message });
+    }
+  });
+  
+  // Position routes
+  app.get('/api/positions', async (req, res) => {
+    try {
+      const positions = await getPositions();
+      res.json(positions);
+    } catch (error) {
+      console.error('Error fetching positions:', error);
+      res.status(500).json({ error: 'Failed to fetch positions', details: error.message });
+    }
+  });
+  
+  app.get('/api/positions/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid position ID' });
+      }
+      
+      const position = await getPositionById(id);
+      if (!position) {
+        return res.status(404).json({ error: 'Position not found' });
+      }
+      
+      res.json(position);
+    } catch (error) {
+      console.error('Error fetching position:', error);
+      res.status(500).json({ error: 'Failed to fetch position', details: error.message });
+    }
+  });
+  
+  app.post('/api/positions', async (req, res) => {
+    try {
+      const position = req.body;
+      const savedPosition = await savePosition(position);
+      res.status(201).json(savedPosition);
+    } catch (error) {
+      console.error('Error creating position:', error);
+      res.status(500).json({ error: 'Failed to create position', details: error.message });
+    }
+  });
+  
+  app.patch('/api/positions/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid position ID' });
+      }
+      
+      const position = { ...req.body, id };
+      const savedPosition = await savePosition(position);
+      res.json(savedPosition);
+    } catch (error) {
+      console.error('Error updating position:', error);
+      res.status(500).json({ error: 'Failed to update position', details: error.message });
     }
   });
   

@@ -446,35 +446,86 @@ export class DatabaseStorage implements IStorage {
     return updatedPosition;
   }
 
-  // Task Rule operations
-  async getTaskRules(): Promise<any[]> {
-    // We don't have a task_rules table yet, so this is a placeholder
-    return [];
+  // Task Rule operations (Organizational Rules)
+  async getTaskRules(): Promise<OrganizationalRule[]> {
+    return await db.select().from(organizationalRules);
   }
 
-  async getTaskRule(id: number): Promise<any | undefined> {
-    // Placeholder
-    return undefined;
+  async getTaskRule(id: number): Promise<OrganizationalRule | undefined> {
+    const [rule] = await db.select().from(organizationalRules).where(eq(organizationalRules.id, id));
+    return rule;
   }
 
-  async getTaskRuleByName(name: string): Promise<any | undefined> {
-    // Placeholder
-    return undefined;
+  async getTaskRuleByName(name: string): Promise<OrganizationalRule | undefined> {
+    const [rule] = await db.select().from(organizationalRules).where(eq(organizationalRules.name, name));
+    return rule;
   }
 
-  async createTaskRule(rule: any): Promise<any> {
-    // Placeholder
-    return { id: 1, ...rule };
+  async createTaskRule(rule: Partial<OrganizationalRule>): Promise<OrganizationalRule> {
+    const [newRule] = await db.insert(organizationalRules).values({
+      ...rule,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    
+    // Log the activity
+    await this.createActivity({
+      actionType: 'rule_created',
+      description: `Создано правило распределения "${newRule.name}"`,
+      entityType: 'organizational_rule',
+      entityId: newRule.id,
+      action: 'create'
+    });
+    
+    return newRule;
   }
 
-  async updateTaskRule(id: number, rule: any): Promise<any | undefined> {
-    // Placeholder
-    return { id, ...rule };
+  async updateTaskRule(id: number, updateData: Partial<OrganizationalRule>): Promise<OrganizationalRule | undefined> {
+    const [updatedRule] = await db.update(organizationalRules)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
+      .where(eq(organizationalRules.id, id))
+      .returning();
+    
+    if (updatedRule) {
+      // Log the activity
+      await this.createActivity({
+        actionType: 'rule_updated',
+        description: `Обновлено правило распределения "${updatedRule.name}"`,
+        entityType: 'organizational_rule',
+        entityId: updatedRule.id,
+        action: 'update'
+      });
+    }
+    
+    return updatedRule;
   }
 
   async deleteTaskRule(id: number): Promise<boolean> {
-    // Placeholder
-    return true;
+    // First get the rule to log its information
+    const [rule] = await db.select().from(organizationalRules).where(eq(organizationalRules.id, id));
+    
+    try {
+      const result = await db.delete(organizationalRules).where(eq(organizationalRules.id, id));
+      
+      if (result.rowCount > 0 && rule) {
+        // Log the activity
+        await this.createActivity({
+          actionType: 'rule_deleted',
+          description: `Удалено правило распределения "${rule.name}"`,
+          entityType: 'organizational_rule',
+          entityId: id,
+          action: 'delete'
+        });
+      }
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error('Error deleting organizational rule:', error);
+      return false;
+    }
   }
 
   // System Settings operations
