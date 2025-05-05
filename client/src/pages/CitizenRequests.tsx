@@ -110,13 +110,13 @@ const CATEGORIES: RequestCategory[] = [
 const CitizenRequests = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [isAIProcessingEnabled, setIsAIProcessingEnabled] = useState(false);
+  const [isAIProcessingEnabled, setIsAIProcessingEnabled] = useState(true); // Автоматическая обработка включена по умолчанию
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
   const [aiProcessingSettings, setAiProcessingSettings] = useState({
-    useOrgStructure: true,
-    useAgentRules: true,
-    autoClassify: false,  // Отключена по умолчанию
-    autoRespond: false
+    useOrgStructure: true,   // Использование правил орг. структуры
+    useAgentRules: true,    // Использование правил AI агентов
+    autoClassify: true,     // Автоматическая классификация включена
+    autoRespond: true       // Автоматические ответы включены
   });
   const [currentRequest, setCurrentRequest] = useState<Partial<CitizenRequest>>({
     subject: "",
