@@ -38,6 +38,7 @@ import {
   File,
   Briefcase,
   Code,
+  Layers,
   Headphones,
   Bot,
   Building,
@@ -493,6 +494,15 @@ export default function OrganizationalStructure() {
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button 
+            onClick={createDefaultOrgStructure} 
+            disabled={isCreatingDefault || departments.length > 0} 
+            variant="outline"
+            className="space-x-1"
+          >
+            <Layers className="h-4 w-4" />
+            <span>{isCreatingDefault ? 'Создание...' : 'Создать базовую структуру'}</span>
+          </Button>
           <Button variant="outline" onClick={() => setShowDepartmentDialog(true)} className="space-x-1">
             <Building className="h-4 w-4" />
             <span>Создать департамент</span>
