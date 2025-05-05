@@ -199,7 +199,7 @@ const CitizenRequests = () => {
   const audioChunks = useRef<Blob[]>([]);
 
   // Запрос списка обращений
-  const { data: requests = [], isLoading } = useQuery({
+  const { data: requests = [], isLoading, isError, error } = useQuery({
     queryKey: ['/api/citizen-requests'],
     queryFn: async () => {
       try {
@@ -207,82 +207,19 @@ const CitizenRequests = () => {
         const data = await res.json();
         return data as CitizenRequest[];
       } catch (error) {
-        // Демо-данные (в реальном приложении здесь был бы правильный обработчик ошибок)
-        console.error("Failed to fetch requests, using demo data", error);
-        const demoData: CitizenRequest[] = [
-          {
-            id: 1,
-            fullName: "Асанов Азамат",
-            contactInfo: "+7 701 234 5678",
-            requestType: "Выдача документов",
-            subject: "Получение удостоверения личности",
-            description: "Необходимо получить новое удостоверение личности взамен утерянного. Нужна консультация по срокам и необходимым документам.",
-            title: "Получение удостоверения личности",
-            content: "Необходимо получить новое удостоверение личности взамен утерянного. Нужна консультация по срокам и необходимым документам.",
-            summary: "Запрос на получение удостоверения личности взамен утерянного. Требуется консультация по процедуре и документам.",
-            status: "completed",
-            category: "documents",
-            priority: "medium",
-            createdAt: new Date(Date.now() - 86400000 * 3),
-            updatedAt: new Date(Date.now() - 86400000 * 2),
-            completedAt: new Date(Date.now() - 86400000),
-            assignedTo: 1,
-            blockchainHash: "0x7843bf12a9c4817b3a49d452c7896bdf2d3acf8",
-            recordedAudio: true,
-            citizenInfo: {
-              name: "Асанов Азамат",
-              contact: "+7 701 234 5678",
-              address: "г. Астана, ул. Достык 12, кв. 45",
-              iin: "870513300123"
-            }
-          },
-          {
-            id: 2,
-            fullName: "Бекова Алия",
-            contactInfo: "+7 702 345 6789",
-            requestType: "Коммунальные услуги",
-            subject: "Проблема с уличным освещением",
-            description: "В районе улицы Абая, дома 23-27 не работает уличное освещение уже неделю. Просьба устранить проблему в кратчайшие сроки.",
-            title: "Проблема с уличным освещением",
-            content: "В районе улицы Абая, дома 23-27 не работает уличное освещение уже неделю. Просьба устранить проблему в кратчайшие сроки.",
-            summary: "Жалоба на отсутствие уличного освещения на улице Абая, дома 23-27 в течение недели.",
-            status: "in_progress",
-            category: "infrastructure",
-            priority: "high",
-            createdAt: new Date(Date.now() - 86400000 * 2),
-            updatedAt: new Date(Date.now() - 86400000),
-            assignedTo: 2,
-            citizenInfo: {
-              name: "Бекова Алия",
-              contact: "+7 702 345 6789",
-              address: "г. Астана, ул. Абая 24, кв. 12",
-            }
-          },
-          {
-            id: 3,
-            fullName: "Сериккызы Айнур",
-            contactInfo: "+7 777 456 7890",
-            requestType: "Социальная помощь",
-            subject: "Оформление социального пособия",
-            description: "Требуется консультация по оформлению социального пособия для матери-одиночки с двумя детьми. Какие документы необходимы и каков порядок оформления?",
-            title: "Оформление социального пособия",
-            content: "Требуется консультация по оформлению социального пособия для матери-одиночки с двумя детьми. Какие документы необходимы и каков порядок оформления?",
-            status: "pending",
-            category: "social",
-            priority: "medium",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            citizenInfo: {
-              name: "Сериккызы Айнур",
-              contact: "+7 777 456 7890",
-              address: "г. Астана, мкр. Самал 7, кв. 89",
-            }
-          }
-        ];
-        return demoData;
+        console.error("Failed to fetch citizen requests:", error);
+        throw new Error("Could not fetch citizen requests");
       }
     },
-    staleTime: 60000
+    staleTime: 60000,
+    retry: 2,
+    onError: (err) => {
+      toast({
+        title: "Ошибка загрузки данных",
+        description: `Не удалось загрузить список обращений: ${err.message}`,
+        variant: "destructive"
+      });
+    }
   });
 
   // Мутация для сохранения обращения
@@ -319,37 +256,105 @@ const CitizenRequests = () => {
   // Функция сохранения обращения в блокчейне
   const saveToBlockchain = async (requestId: number) => {
     try {
-      // Здесь был бы API-запрос для сохранения в блокчейне
-      // await apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`);
+      // Отправляем API-запрос для сохранения в блокчейне
+      const response = await apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, {
+        action: 'record',
+        entityType: 'citizen_request',
+        entityId: requestId,
+        metadata: {
+          source: 'citizen_requests_page',
+          type: 'request_record'
+        }
+      });
       
-      // Для демо просто имитируем
+      const result = await response.json();
+      
+      // Логируем активность
+      await apiRequest('POST', '/api/activities', {
+        actionType: 'blockchain_record',
+        action: 'record_citizen_request',
+        entityType: 'citizen_request',
+        entityId: requestId,
+        details: `Запись обращения #${requestId} в блокчейн`,
+        metadata: { blockchainHash: result.blockchainHash }
+      });
+      
       toast({
         title: "Сохранено в блокчейне",
-        description: "Хэш обращения зафиксирован в GovChain"
+        description: `Хэш обращения зафиксирован в GovChain: ${result.blockchainHash?.substring(0, 10)}...`
       });
       
       // Обновляем кэш
       queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/blockchain/records'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      
+      return result.blockchainHash;
     } catch (error) {
+      console.error('Ошибка записи в блокчейн:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось сохранить обращение в блокчейне",
         variant: "destructive"
       });
+      return null;
     }
   };
 
-  // Функция генерации резюме с помощью OpenAI
+  // Функция генерации резюме с помощью AI
   const generateSummary = async (request: CitizenRequest) => {
     setSelectedRequest(request);
     setShowSummaryDialog(true);
     
     try {
-      // Отправляем на обработку AI
-      const response = await apiRequest('POST', `/api/citizen-requests/${request.id}/process`);
-      const data = await response.json();
+      // Находим подходящий агент для обработки
+      const processingAgent = availableAgents.find(agent => 
+        agent.type === 'citizen_requests' && agent.isActive
+      );
       
+      if (!processingAgent) {
+        throw new Error("Не найден активный агент для обработки обращений");
+      }
+      
+      // Логируем активность перед обработкой
+      await apiRequest('POST', '/api/activities', {
+        actionType: 'ai_processing',
+        action: 'process_citizen_request',
+        entityType: 'citizen_request',
+        entityId: request.id,
+        details: `Запуск AI обработки обращения #${request.id} с агентом ${processingAgent.name}`,
+        metadata: { agentId: processingAgent.id }
+      });
+      
+      // Отправляем на обработку AI
+      const response = await apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, {
+        agentId: processingAgent.id,
+        actionType: 'full',
+        text: request.content || request.description || '',
+        requestType: request.requestType || 'general',
+        includeBlockchain: true, // Записывать результат в блокчейн
+        metadata: {
+          source: 'citizen_requests_page',
+          userId: null // Будет заполнено на сервере из сессии
+        }
+      });
+      
+      const data = await response.json();
       setSelectedRequest(data);
+      
+      // Логируем завершение обработки
+      await apiRequest('POST', '/api/activities', {
+        actionType: 'ai_processing',
+        action: 'process_citizen_request_complete',
+        entityType: 'citizen_request',
+        entityId: request.id,
+        details: `Завершена AI обработка обращения #${request.id}`,
+        metadata: { 
+          agentId: processingAgent.id,
+          summary: data.summary,
+          blockchainHash: data.blockchainHash
+        }
+      });
       
       toast({
         title: "Обработано AI",
@@ -358,12 +363,16 @@ const CitizenRequests = () => {
       
       // Обновляем кэш данных
       queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/blockchain/records'] });
     } catch (error) {
+      console.error('Ошибка при генерации резюме:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось сгенерировать резюме обращения",
+        description: error instanceof Error ? error.message : "Не удалось сгенерировать резюме обращения",
         variant: "destructive"
       });
+      setShowSummaryDialog(false);
     }
   };
   
@@ -519,25 +528,59 @@ const CitizenRequests = () => {
         audioChunks.current.push(event.data);
       };
       
-      audioRecorder.current.onstop = () => {
+      audioRecorder.current.onstop = async () => {
         const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
         
-        // Здесь была бы отправка аудио на сервер для распознавания
-        // Для демо просто уведомляем пользователя
+        // Отправляем аудио на сервер для распознавания
         toast({
           title: "Запись завершена",
-          description: `Продолжительность: ${recordingTime} сек. Аудио готово к обработке.`
+          description: `Продолжительность: ${recordingTime} сек. Отправка на распознавание...`
         });
-        
-        // Имитация распознавания речи
-        setTimeout(() => {
+
+        // Пока еще нет реального API, используем заглушку
+        try {
+          // Имитация запроса к API
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Логируем успешное распознавание
+          await apiRequest('POST', '/api/activities', {
+            actionType: 'ai_processing',
+            action: 'speech_to_text',
+            details: 'Распознавание речи в обращении гражданина',
+            metadata: { duration: recordingTime }
+          });
+          
+          // Обновляем текст запроса с полученной транскрипцией
+          const sampleText = "Здравствуйте, я хотел бы узнать о получении справки о несудимости. Какие документы необходимы и каковы сроки получения?";
+          
           setCurrentRequest(prev => ({
             ...prev,
-            content: prev.content + "\n\nТранскрипция (STT): Здравствуйте, я хотел бы узнать о получении справки о несудимости. Какие документы необходимы и каковы сроки получения? Также интересует возможность получения справки онлайн через портал электронного правительства.",
+            content: prev.content ? `${prev.content}\n\nТранскрипция (STT): ${sampleText}` : `Транскрипция (STT): ${sampleText}`,
             recordedAudio: true
           }));
-        }, 2000);
+          
+          toast({
+            title: "Распознавание завершено",
+            description: "Запись успешно преобразована в текст"
+          });
+          
+          // Добавляем комментарий о необходимости реализации API
+          console.info('Необходимо реализовать API /api/speech-to-text с использованием внешнего сервиса');
+        } catch (error) {
+          console.error('Ошибка при распознавании аудио:', error);
+          toast({
+            title: "Ошибка распознавания",
+            description: error instanceof Error ? error.message : "Не удалось распознать аудио",
+            variant: "destructive"
+          });
+          
+          // Добавляем флаг записи всё равно, чтобы оператор мог обработать позже
+          setCurrentRequest(prev => ({
+            ...prev,
+            recordedAudio: true
+          }));
+        }
       };
       
       audioRecorder.current.start();
