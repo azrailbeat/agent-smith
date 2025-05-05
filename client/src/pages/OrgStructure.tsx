@@ -52,7 +52,7 @@ export default function OrgStructurePage() {
   const queryClient = useQueryClient();
 
   // Запрос на получение всех правил
-  const { data: rules = [], isLoading } = useQuery({
+  const { data: rules = [], isLoading, isError } = useQuery({
     queryKey: ['/api/task-rules'],
     staleTime: 1000 * 60, // 1 minute
   });
@@ -101,9 +101,15 @@ export default function OrgStructurePage() {
     try {
       if (editingRule) {
         // Обновление существующего правила
+        const formattedValues = {
+          ...values,
+          keywords: values.keywords.split(',').map(k => k.trim()).filter(Boolean),
+          departmentId: parseInt(values.departmentId.toString()),
+          positionId: parseInt(values.positionId.toString())
+        };
         await apiRequest(`/api/task-rules/${editingRule.id}`, {
           method: 'PATCH',
-          data: values,
+          data: formattedValues,
         });
 
         toast({
@@ -112,7 +118,16 @@ export default function OrgStructurePage() {
         });
       } else {
         // Создание нового правила
-        await apiRequest('POST', '/api/task-rules', values);
+        const formattedValues = {
+          ...values,
+          keywords: values.keywords.split(',').map(k => k.trim()).filter(Boolean),
+          departmentId: parseInt(values.departmentId.toString()),
+          positionId: parseInt(values.positionId.toString())
+        };
+        await apiRequest('/api/task-rules', {
+          method: 'POST',
+          data: formattedValues
+        });
 
         toast({
           title: 'Правило создано',
@@ -143,7 +158,9 @@ export default function OrgStructurePage() {
     }
 
     try {
-      await apiRequest('DELETE', `/api/task-rules/${rule.id}`);
+      await apiRequest(`/api/task-rules/${rule.id}`, {
+        method: 'DELETE'
+      });
 
       toast({
         title: 'Правило удалено',
@@ -356,6 +373,20 @@ export default function OrgStructurePage() {
         <div className="flex justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
+      ) : isError ? (
+        <div className="col-span-full text-center p-8">
+          <p className="text-muted-foreground mb-4">Ошибка при загрузке правил распределения задач</p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button 
+              variant="default" 
+              onClick={createDefaultOrgStructure}
+              disabled={isCreatingDefault}
+            >
+              {isCreatingDefault ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Layers className="mr-2 h-4 w-4" />}
+              Создать базовую структуру
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rules && rules.length > 0 ? (
@@ -396,9 +427,9 @@ export default function OrgStructurePage() {
                     <div>
                       <strong className="text-sm text-muted-foreground">Ключевые слова:</strong>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {rule.keywords.map((keyword, index) => (
+                        {rule.keywords && rule.keywords.map ? rule.keywords.map((keyword, index) => (
                           <Badge key={index} variant="secondary">{keyword}</Badge>
-                        ))}
+                        )) : null}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -432,8 +463,9 @@ export default function OrgStructurePage() {
                 <Button 
                   variant="default" 
                   onClick={createDefaultOrgStructure}
+                  disabled={isCreatingDefault}
                 >
-                  <Layers className="mr-2 h-4 w-4" />
+                  {isCreatingDefault ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Layers className="mr-2 h-4 w-4" />}
                   Создать базовую структуру
                 </Button>
               </div>
