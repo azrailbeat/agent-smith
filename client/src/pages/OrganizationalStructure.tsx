@@ -1005,7 +1005,11 @@ export default function OrganizationalStructure() {
               Отмена
             </Button>
             <Button 
-              onClick={() => saveRuleMutation.mutate(currentRule)}
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('Saving rule:', currentRule);
+                saveRuleMutation.mutate(currentRule);
+              }}
               disabled={!currentRule.name}
             >
               {isEditMode ? "Сохранить" : "Создать"}
