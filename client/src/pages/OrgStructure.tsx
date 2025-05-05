@@ -78,7 +78,7 @@ export default function OrgStructurePage() {
         name: editingRule.name,
         description: editingRule.description,
         sourceType: editingRule.sourceType,
-        keywords: editingRule.keywords.join(', '),
+        keywords: editingRule.keywords && Array.isArray(editingRule.keywords) ? editingRule.keywords.join(', ') : '',
         departmentId: editingRule.departmentId.toString(),
         positionId: editingRule.positionId.toString(),
         isActive: editingRule.isActive,
@@ -103,7 +103,7 @@ export default function OrgStructurePage() {
         // Обновление существующего правила
         const formattedValues = {
           ...values,
-          keywords: values.keywords.split(',').map(k => k.trim()).filter(Boolean),
+          keywords: typeof values.keywords === 'string' ? values.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : (Array.isArray(values.keywords) ? values.keywords : []),
           departmentId: parseInt(values.departmentId.toString()),
           positionId: parseInt(values.positionId.toString())
         };
@@ -120,7 +120,7 @@ export default function OrgStructurePage() {
         // Создание нового правила
         const formattedValues = {
           ...values,
-          keywords: values.keywords.split(',').map(k => k.trim()).filter(Boolean),
+          keywords: typeof values.keywords === 'string' ? values.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : (Array.isArray(values.keywords) ? values.keywords : []),
           departmentId: parseInt(values.departmentId.toString()),
           positionId: parseInt(values.positionId.toString())
         };
