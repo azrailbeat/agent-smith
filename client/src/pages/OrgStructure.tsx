@@ -111,10 +111,7 @@ export default function OrgStructurePage() {
         });
       } else {
         // Создание нового правила
-        await apiRequest('/api/task-rules', {
-          method: 'POST',
-          data: values,
-        });
+        await apiRequest('POST', '/api/task-rules', values);
 
         toast({
           title: 'Правило создано',
@@ -145,9 +142,7 @@ export default function OrgStructurePage() {
     }
 
     try {
-      await apiRequest(`/api/task-rules/${rule.id}`, {
-        method: 'DELETE',
-      });
+      await apiRequest('DELETE', `/api/task-rules/${rule.id}`);
 
       toast({
         title: 'Правило удалено',
