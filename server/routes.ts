@@ -28,9 +28,21 @@ import { registerSystemRoutes } from "./system-api";
 import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
 import { registerLLMMonitoringRoutes } from "./monitoring/llm-monitoring";
+import {
+  getTaskRules,
+  getTaskRuleById,
+  saveTaskRule,
+  deleteTaskRule,
+  getDepartments,
+  getDepartmentById,
+  saveDepartment,
+  getPositions,
+  getPositionById,
+  savePosition,
+  processRequestByOrgStructure
+} from "./services/org-structure";
 import { initializeSettings } from "./services/system-settings";
-import { getTaskRules, saveTaskRule, getTaskRuleById, deleteTaskRule, processRequestByOrgStructure } from "./services/org-structure";
-import { agentService, AgentTaskType, AgentEntityType } from "./services/agent-service";
+import { agentService } from "./services/agent-service";
 import { databaseConnector, DatabaseProvider } from "./services/database-connector";
 import { z } from "zod";
 import { 
