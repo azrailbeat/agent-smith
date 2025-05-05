@@ -302,3 +302,103 @@ async function logActivity(action: string, description: string, metadata?: any) 
     ...metadata
   });
 }
+
+// Создание организационной структуры по умолчанию
+export async function createDefaultOrgStructure(): Promise<{ success: boolean, message: string }> {
+  try {
+    // Проверяем, есть ли уже отделы в системе
+    const existingDepartments = await storage.getDepartments();
+    if (existingDepartments.length > 0) {
+      return { 
+        success: false, 
+        message: 'Организационная структура уже существует в системе' 
+      };
+    }
+    
+    // Создаем типичные отделы государственного учреждения
+    const departments = [
+      { name: 'Руководство', description: 'Высшее руководство организации' },
+      { name: 'Канцелярия', description: 'Отдел документооборота и делопроизводства' },
+      { name: 'ИТ отдел', description: 'Отдел информационных технологий' },
+      { name: 'Кадровая служба', description: 'Отдел управления персоналом' },
+      { name: 'Юридический отдел', description: 'Правовое сопровождение деятельности' },
+      { name: 'Отдел по работе с гражданами', description: 'Обработка обращений граждан и оказание услуг' }
+    ];
+    
+    // Создаем департаменты
+    const createdDepartments: Record<string, any> = {};
+    for (const dept of departments) {
+      const department = await storage.createDepartment(dept);
+      createdDepartments[dept.name] = department;
+    }
+    
+    // Создаем должности
+    const positions = [
+      { name: 'Руководитель', departmentId: createdDepartments['Руководство'].id, level: 1, canApprove: true, canAssign: true },
+      { name: 'Заместитель руководителя', departmentId: createdDepartments['Руководство'].id, level: 2, canApprove: true, canAssign: true },
+      { name: 'Начальник отдела', departmentId: createdDepartments['Отдел по работе с гражданами'].id, level: 3, canApprove: true, canAssign: true },
+      { name: 'Главный специалист', departmentId: createdDepartments['Отдел по работе с гражданами'].id, level: 4, canApprove: false, canAssign: true },
+      { name: 'Специалист', departmentId: createdDepartments['Отдел по работе с гражданами'].id, level: 5, canApprove: false, canAssign: false },
+      { name: 'Системный администратор', departmentId: createdDepartments['ИТ отдел'].id, level: 4, canApprove: false, canAssign: true },
+      { name: 'Делопроизводитель', departmentId: createdDepartments['Канцелярия'].id, level: 5, canApprove: false, canAssign: false },
+    ];
+    
+    for (const pos of positions) {
+      await storage.createPosition(pos);
+    }
+    
+    // Создаем базовые правила распределения
+    const rules = [
+      { 
+        name: 'Запросы по ИТ-поддержке', 
+        description: 'Распределение запросов, связанных с технической поддержкой', 
+        type: 'technical', 
+        isActive: true, 
+        sourceType: 'citizen_request', 
+        keywordsList: ['компьютер', 'техника', 'принтер', 'интернет', 'сайт', 'портал', 'система', 'логин', 'пароль', 'аккаунт'], 
+        departmentId: createdDepartments['ИТ отдел'].id,
+        assignToPositionId: null,
+        assignToAgentId: null
+      },
+      { 
+        name: 'Юридические вопросы', 
+        description: 'Распределение запросов по правовым вопросам', 
+        type: 'legal', 
+        isActive: true, 
+        sourceType: 'citizen_request', 
+        keywordsList: ['закон', 'права', 'юридический', 'правовой', 'налог', 'штраф', 'договор', 'иск', 'суд', 'претензия'], 
+        departmentId: createdDepartments['Юридический отдел'].id,
+        assignToPositionId: null,
+        assignToAgentId: null
+      },
+      { 
+        name: 'Кадровые вопросы', 
+        description: 'Распределение запросов по трудоустройству и кадровой работе', 
+        type: 'hr', 
+        isActive: true, 
+        sourceType: 'citizen_request', 
+        keywordsList: ['работа', 'вакансия', 'трудоустройство', 'карьера', 'зарплата', 'отпуск', 'больничный', 'увольнение', 'стаж', 'пенсия'], 
+        departmentId: createdDepartments['Кадровая служба'].id,
+        assignToPositionId: null,
+        assignToAgentId: null
+      }
+    ];
+    
+    for (const rule of rules) {
+      await storage.createTaskRule(rule);
+    }
+    
+    await logActivity('system_setup', 'Создана базовая организационная структура по умолчанию');
+    
+    return { 
+      success: true, 
+      message: 'Организационная структура по умолчанию успешно создана' 
+    };
+  } catch (error) {
+    console.error('Ошибка при создании структуры по умолчанию:', error);
+    return { 
+      success: false, 
+      message: `Ошибка при создании структуры: ${error.message}` 
+    };
+  }
+}
