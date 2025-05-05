@@ -449,6 +449,20 @@ export default function OrganizationalStructure() {
             Создавайте правила распределения задач, управляйте отделами и должностями
           </p>
         </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={() => setShowDepartmentDialog(true)} className="space-x-1">
+            <Building className="h-4 w-4" />
+            <span>Создать департамент</span>
+          </Button>
+          <Button variant="outline" className="space-x-1">
+            <Copy className="h-4 w-4" />
+            <span>Импорт структуры</span>
+          </Button>
+          <Button onClick={() => setShowRuleDialog(true)} className="space-x-1">
+            <PlusCircle className="h-4 w-4" />
+            <span>Добавить правило</span>
+          </Button>
+        </div>
       </div>
 
       {/* Кнопки управления разделами */}
