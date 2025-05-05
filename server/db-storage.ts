@@ -1,9 +1,11 @@
 import { db } from "./db";
 import { 
   users, tasks, documents, blockchainRecords, 
-  messages, activities, systemStatus 
+  messages, activities, systemStatus, integrations,
+  agents, citizenRequests, departments, positions,
+  ministries, agentTypes, plankaLinks
 } from "@shared/schema";
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and, isNull, not } from 'drizzle-orm';
 import { IStorage } from "./storage";
 import { 
   User, InsertUser, 
@@ -12,7 +14,13 @@ import {
   BlockchainRecord, InsertBlockchainRecord,
   Message, InsertMessage,
   Activity, InsertActivity,
-  SystemStatusItem, InsertSystemStatusItem
+  SystemStatusItem, InsertSystemStatusItem,
+  Integration, InsertIntegration,
+  Agent, InsertAgent,
+  CitizenRequest, InsertCitizenRequest,
+  Ministry, InsertMinistry,
+  AgentType, InsertAgentType,
+  PlankaLink, InsertPlankaLink
 } from "@shared/schema";
 
 // Database storage implementation
@@ -218,6 +226,320 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // Integration operations
+  async getIntegrations(): Promise<Integration[]> {
+    return await db.select().from(integrations);
+  }
+
+  async getIntegration(id: number): Promise<Integration | undefined> {
+    const [integration] = await db.select().from(integrations).where(eq(integrations.id, id));
+    return integration;
+  }
+
+  async getIntegrationsByType(type: string): Promise<Integration[]> {
+    return await db.select().from(integrations).where(eq(integrations.type, type));
+  }
+
+  async getIntegrationByName(name: string): Promise<Integration | undefined> {
+    const [integration] = await db.select().from(integrations).where(eq(integrations.name, name));
+    return integration;
+  }
+
+  async createIntegration(insertIntegration: InsertIntegration): Promise<Integration> {
+    const [integration] = await db.insert(integrations).values({
+      ...insertIntegration,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return integration;
+  }
+
+  async updateIntegration(id: number, updateData: Partial<InsertIntegration>): Promise<Integration | undefined> {
+    const [updatedIntegration] = await db.update(integrations)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
+      .where(eq(integrations.id, id))
+      .returning();
+    return updatedIntegration;
+  }
+
+  async deleteIntegration(id: number): Promise<boolean> {
+    try {
+      await db.delete(integrations).where(eq(integrations.id, id));
+      return true;
+    } catch (error) {
+      console.error("Failed to delete integration:", error);
+      return false;
+    }
+  }
+
+  // Agent operations
+  async getAgents(): Promise<Agent[]> {
+    return await db.select().from(agents);
+  }
+
+  async getAgent(id: number): Promise<Agent | undefined> {
+    const [agent] = await db.select().from(agents).where(eq(agents.id, id));
+    return agent;
+  }
+
+  async getAgentsByType(type: string): Promise<Agent[]> {
+    return await db.select().from(agents).where(eq(agents.type, type));
+  }
+
+  async getAgentByName(name: string): Promise<Agent | undefined> {
+    const [agent] = await db.select().from(agents).where(eq(agents.name, name));
+    return agent;
+  }
+
+  async createAgent(insertAgent: InsertAgent): Promise<Agent> {
+    const [agent] = await db.insert(agents).values({
+      ...insertAgent,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return agent;
+  }
+
+  async updateAgent(id: number, updateData: Partial<InsertAgent>): Promise<Agent | undefined> {
+    const [updatedAgent] = await db.update(agents)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
+      .where(eq(agents.id, id))
+      .returning();
+    return updatedAgent;
+  }
+
+  async deleteAgent(id: number): Promise<boolean> {
+    try {
+      await db.delete(agents).where(eq(agents.id, id));
+      return true;
+    } catch (error) {
+      console.error("Failed to delete agent:", error);
+      return false;
+    }
+  }
+
+  // Citizen Request operations
+  async getCitizenRequests(): Promise<CitizenRequest[]> {
+    return await db.select().from(citizenRequests);
+  }
+
+  async getCitizenRequest(id: number): Promise<CitizenRequest | undefined> {
+    const [request] = await db.select().from(citizenRequests).where(eq(citizenRequests.id, id));
+    return request;
+  }
+
+  async createCitizenRequest(insertRequest: InsertCitizenRequest): Promise<CitizenRequest> {
+    const [request] = await db.insert(citizenRequests).values({
+      ...insertRequest,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return request;
+  }
+
+  async updateCitizenRequest(id: number, updateData: Partial<InsertCitizenRequest>): Promise<CitizenRequest | undefined> {
+    // If status is completed or closed, add the appropriate timestamp
+    let additionalData: any = {};
+    
+    if (updateData.status === "completed" && !updateData.completedAt) {
+      additionalData.completedAt = new Date();
+    } else if (updateData.status === "closed" && !updateData.closedAt) {
+      additionalData.closedAt = new Date();
+    }
+    
+    const [updatedRequest] = await db.update(citizenRequests)
+      .set({
+        ...updateData,
+        ...additionalData,
+        updatedAt: new Date()
+      })
+      .where(eq(citizenRequests.id, id))
+      .returning();
+    return updatedRequest;
+  }
+
+  async processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined> {
+    // This is just a placeholder - actual AI processing would be implemented in the agent service
+    // Here we just mark the request as processed
+    const request = await this.updateCitizenRequest(id, {
+      aiProcessed: true,
+      aiClassification: "Автоматически обработано",
+      aiSuggestion: "Предлагаем рассмотреть запрос в установленном порядке"
+    });
+    
+    return request;
+  }
+
+  // Department operations
+  async getDepartments(): Promise<any[]> {
+    return await db.select().from(departments);
+  }
+
+  async getDepartment(id: number): Promise<any | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.id, id));
+    return department;
+  }
+
+  async getDepartmentByName(name: string): Promise<any | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.name, name));
+    return department;
+  }
+
+  async createDepartment(department: any): Promise<any> {
+    const [newDepartment] = await db.insert(departments).values({
+      ...department,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newDepartment;
+  }
+
+  async updateDepartment(id: number, updateData: any): Promise<any | undefined> {
+    const [updatedDepartment] = await db.update(departments)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
+      .where(eq(departments.id, id))
+      .returning();
+    return updatedDepartment;
+  }
+
+  // Position operations
+  async getPositions(): Promise<any[]> {
+    return await db.select().from(positions);
+  }
+
+  async getPosition(id: number): Promise<any | undefined> {
+    const [position] = await db.select().from(positions).where(eq(positions.id, id));
+    return position;
+  }
+
+  async getPositionByName(name: string): Promise<any | undefined> {
+    const [position] = await db.select().from(positions).where(eq(positions.name, name));
+    return position;
+  }
+
+  async createPosition(position: any): Promise<any> {
+    const [newPosition] = await db.insert(positions).values({
+      ...position,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newPosition;
+  }
+
+  async updatePosition(id: number, updateData: any): Promise<any | undefined> {
+    const [updatedPosition] = await db.update(positions)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
+      .where(eq(positions.id, id))
+      .returning();
+    return updatedPosition;
+  }
+
+  // Task Rule operations
+  async getTaskRules(): Promise<any[]> {
+    // We don't have a task_rules table yet, so this is a placeholder
+    return [];
+  }
+
+  async getTaskRule(id: number): Promise<any | undefined> {
+    // Placeholder
+    return undefined;
+  }
+
+  async getTaskRuleByName(name: string): Promise<any | undefined> {
+    // Placeholder
+    return undefined;
+  }
+
+  async createTaskRule(rule: any): Promise<any> {
+    // Placeholder
+    return { id: 1, ...rule };
+  }
+
+  async updateTaskRule(id: number, rule: any): Promise<any | undefined> {
+    // Placeholder
+    return { id, ...rule };
+  }
+
+  async deleteTaskRule(id: number): Promise<boolean> {
+    // Placeholder
+    return true;
+  }
+
+  // System Settings operations
+  async getSystemSettings(): Promise<any[]> {
+    // Placeholder - we should create a system_settings table
+    return [];
+  }
+
+  async getSystemSetting(key: string): Promise<any | undefined> {
+    // Placeholder
+    return undefined;
+  }
+
+  async updateSystemSetting(key: string, value: any): Promise<any | undefined> {
+    // Placeholder
+    return { key, value };
+  }
+
+  // Planka Link operations
+  async getPlankaLinks(): Promise<any[]> {
+    return await db.select().from(plankaLinks);
+  }
+
+  async getPlankaLink(id: number): Promise<any | undefined> {
+    const [link] = await db.select().from(plankaLinks).where(eq(plankaLinks.id, id));
+    return link;
+  }
+
+  async getPlankaLinkByEntity(entityType: string, entityId: number): Promise<any[]> {
+    return await db.select().from(plankaLinks)
+      .where(and(
+        eq(plankaLinks.entityType, entityType),
+        eq(plankaLinks.entityId, entityId)
+      ));
+  }
+
+  async createPlankaLink(link: any): Promise<any> {
+    const [newLink] = await db.insert(plankaLinks).values({
+      ...link,
+      createdAt: new Date()
+    }).returning();
+    return newLink;
+  }
+
+  async updatePlankaLink(id: number, updateData: any): Promise<any | undefined> {
+    const [updatedLink] = await db.update(plankaLinks)
+      .set({
+        ...updateData,
+        lastSyncedAt: new Date()
+      })
+      .where(eq(plankaLinks.id, id))
+      .returning();
+    return updatedLink;
+  }
+
+  async deletePlankaLink(id: number): Promise<boolean> {
+    try {
+      await db.delete(plankaLinks).where(eq(plankaLinks.id, id));
+      return true;
+    } catch (error) {
+      console.error("Failed to delete planka link:", error);
+      return false;
+    }
+  }
+
   // Initialize default data
   async initializeDefaultData() {
     // Check if we have any users

@@ -11,6 +11,9 @@ import {
   CitizenRequest, InsertCitizenRequest
 } from "@shared/schema";
 
+// Import the DatabaseStorage class
+import { DatabaseStorage } from "./db-storage";
+
 // Interface for storage operations
 export interface IStorage {
   // User operations
@@ -1661,4 +1664,4 @@ export class MemStorage implements IStorage {
 }
 
 // Export storage instance
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
