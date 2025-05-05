@@ -115,7 +115,7 @@ const CitizenRequests = () => {
   const [aiProcessingSettings, setAiProcessingSettings] = useState({
     useOrgStructure: true,
     useAgentRules: true,
-    autoClassify: true,
+    autoClassify: false,  // Отключена по умолчанию
     autoRespond: false
   });
   const [currentRequest, setCurrentRequest] = useState<Partial<CitizenRequest>>({
@@ -469,13 +469,19 @@ const CitizenRequests = () => {
   
   // Функция обработки запросов согласно организационной структуре
   const handleOrganizationalProcessing = async () => {
+    // Если обработка выключена полностью, или нет запросов - выходим
     if (!isAIProcessingEnabled || !requests.length) return;
     
+    // Проверяем, что хотя бы один из параметров обработки включен
+    if (!aiProcessingSettings.useOrgStructure && 
+        !aiProcessingSettings.useAgentRules && 
+        !aiProcessingSettings.autoClassify && 
+        !aiProcessingSettings.autoRespond) {
+      console.log('Все функции AI обработки отключены в настройках');
+      return;
+    }
+    
     try {
-      // Получаем данные об организационной структуре и правилах распределения
-      const response = await apiRequest('GET', '/api/task-rules');
-      const organizationRules = await response.json();
-      
       // Для каждого нового обращения в статусе "pending"
       const pendingRequests = requests.filter(req => req.status === 'pending');
       
@@ -484,9 +490,16 @@ const CitizenRequests = () => {
         return;
       }
       
+      // Получаем данные об организационной структуре только если нужно
+      let organizationRules = [];
+      if (aiProcessingSettings.useOrgStructure) {
+        const response = await apiRequest('GET', '/api/task-rules');
+        organizationRules = await response.json();
+      }
+      
       toast({
         title: "Автоматическая обработка",
-        description: `Запущена обработка ${pendingRequests.length} обращений согласно орг. структуре`
+        description: `Запущена обработка ${pendingRequests.length} обращений`
       });
       
       // Обрабатываем каждое обращение
@@ -526,7 +539,25 @@ const CitizenRequests = () => {
   
   // Классификация обращения с использованием AI
   const classifyRequest = async (request: CitizenRequest): Promise<CitizenRequest> => {
+    // Проверяем, включена ли автоматическая классификация
+    if (!aiProcessingSettings.autoClassify) {
+      console.log('Автоматическая классификация отключена в настройках');
+      return request;
+    }
+    
     try {
+      // Находим подходящий агент для классификации, если включено использование правил AI агентов
+      if (!aiProcessingSettings.useAgentRules) {
+        console.log('Использование правил AI агентов отключено в настройках');
+        // Создаём базовую классификацию без использования агентов
+        return {
+          ...request,
+          aiClassification: request.requestType || 'general',
+          priority: request.priority || 'medium',
+          aiProcessed: true
+        };
+      }
+      
       // Находим подходящий агент для классификации
       const classificationAgent = availableAgents.find(agent => 
         agent.type === 'citizen_requests' && agent.isActive
@@ -542,7 +573,10 @@ const CitizenRequests = () => {
         agentId: classificationAgent.id,
         actionType: 'classify',
         text: request.content || request.description || '',
-        requestType: request.requestType || 'general'
+        requestType: request.requestType || 'general',
+        options: {
+          autoRespond: aiProcessingSettings.autoRespond // Передаём флаг автоматических ответов
+        }
       });
       
       const data = await response.json();
@@ -573,33 +607,45 @@ const CitizenRequests = () => {
   // Обработка обращения согласно правилу
   const processRequestWithRule = async (request: CitizenRequest, rule: any) => {
     try {
-      // 1. Обновляем статус обращения на "in_progress"
-      await apiRequest('PATCH', `/api/citizen-requests/${request.id}`, {
-        status: 'in_progress',
-        departmentId: rule.departmentId,
-        assignedTo: null // Будет назначено автоматически согласно правилу
-      });
+      // Обновляем статус обращения на "in_progress"
+      const updateData: Record<string, any> = {
+        status: 'in_progress'
+      };
       
-      // 2. Запускаем полную обработку с помощью соответствующего агента
-      const processingAgent = availableAgents.find(agent => 
-        agent.type === 'citizen_requests' && agent.isActive
-      );
-      
-      if (processingAgent) {
-        await apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, {
-          agentId: processingAgent.id,
-          actionType: 'full',
-          text: request.content || request.description || '',
-          requestType: request.requestType || 'general',
-          metadata: {
-            departmentId: rule.departmentId,
-            positionId: rule.positionId,
-            ruleName: rule.name
-          }
-        });
+      // Если включено использование правил орг. структуры, применяем департамент
+      if (aiProcessingSettings.useOrgStructure) {
+        updateData.departmentId = rule.departmentId;
+        updateData.assignedTo = rule.userId || null; // Будет назначено автоматически согласно правилу
       }
       
-      // 3. Записываем в blockchain факт обработки согласно орг. структуре
+      // Обновляем запрос
+      await apiRequest('PATCH', `/api/citizen-requests/${request.id}`, updateData);
+      
+      // Если включено использование правил AI агентов, делаем полную обработку
+      if (aiProcessingSettings.useAgentRules) {
+        const processingAgent = availableAgents.find(agent => 
+          agent.type === 'citizen_requests' && agent.isActive
+        );
+        
+        if (processingAgent) {
+          await apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, {
+            agentId: processingAgent.id,
+            actionType: 'full',
+            text: request.content || request.description || '',
+            requestType: request.requestType || 'general',
+            metadata: {
+              departmentId: rule.departmentId,
+              positionId: rule.positionId,
+              ruleName: rule.name
+            },
+            options: {
+              autoRespond: aiProcessingSettings.autoRespond // Передаём флаг автоматических ответов
+            }
+          });
+        }
+      }
+      
+      // Записываем в blockchain факт обработки согласно орг. структуре
       await saveToBlockchain(request.id);
       
     } catch (error) {
@@ -805,11 +851,17 @@ const CitizenRequests = () => {
   
   // Эффект для обработки запросов согласно оргструктуре при активации автоматической обработки
   useEffect(() => {
+    // Если включена автоматическая обработка и есть запросы
     if (isAIProcessingEnabled && requests.length > 0) {
-      // Если включена автоматическая обработка и есть запросы
-      handleOrganizationalProcessing();
+      // Проверяем, что хотя бы один из параметров обработки включен
+      if (aiProcessingSettings.useOrgStructure || 
+          aiProcessingSettings.useAgentRules || 
+          aiProcessingSettings.autoClassify || 
+          aiProcessingSettings.autoRespond) {
+        handleOrganizationalProcessing();
+      }
     }
-  }, [isAIProcessingEnabled, requests]);
+  }, [isAIProcessingEnabled, aiProcessingSettings, requests]);
 
   return (
     <>
