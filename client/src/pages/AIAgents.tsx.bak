@@ -1398,9 +1398,6 @@ const AIAgentsPage = () => {
                                   <Button variant="ghost" size="sm" onClick={() => handleToggleAgentStatus(agent)}>
                                     {agent.isActive ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
                                   </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDeleteAgent(agent.id)}>
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                  </Button>
                                 </div>
                               </CardFooter>
                             </Card>
