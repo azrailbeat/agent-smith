@@ -73,6 +73,55 @@ export class AgentService {
    */
   async initialize() {
     try {
+      // Проверяем существуют ли интеграции
+      const integrations = await storage.getIntegrations();
+      
+      // Если интеграций нет, создаем их
+      if (!integrations || integrations.length === 0) {
+        console.log("No integrations found, creating default integrations...");
+        
+        // Создаем интеграцию с OpenAI
+        await storage.createIntegration({
+          name: "OpenAI GPT-4o",
+          type: "openai",
+          apiKey: process.env.OPENAI_API_KEY || "",
+          apiUrl: "https://api.openai.com/v1",
+          isActive: true,
+          config: {
+            defaultModel: "gpt-4o",
+            maxTokens: 4000,
+            defaultTemp: 0.7
+          }
+        });
+        
+        // Создаем интеграцию с Moralis
+        await storage.createIntegration({
+          name: "Moralis API",
+          type: "moralis",
+          apiKey: process.env.MORALIS_API_KEY || "",
+          apiUrl: "https://deep-index.moralis.io/api/v2",
+          isActive: true,
+          config: {
+            chain: "eth",
+            network: "testnet"
+          }
+        });
+      }
+      
+      // Получаем обновленный список интеграций
+      const updatedIntegrations = await storage.getIntegrations();
+      
+      // Находим ID интеграций для использования в агентах
+      const openaiIntegration = updatedIntegrations.find(i => i.type === 'openai');
+      if (!openaiIntegration) {
+        throw new Error('OpenAI integration not found!');
+      }
+      
+      const moralisIntegration = updatedIntegrations.find(i => i.type === 'moralis');
+      if (!moralisIntegration) {
+        throw new Error('Moralis integration not found!');
+      }
+      
       // Очищаем все предыдущие агенты - подход "чистого старта"
       const existingAgents = await storage.getAgents();
       if (existingAgents && existingAgents.length > 0) {
@@ -94,15 +143,14 @@ export class AgentService {
         type: "citizen_requests",
         description: "Агент для обработки обращений граждан",
         systemPrompt: "Вы эксперт по работе с обращениями граждан. Ваша задача - анализировать текст обращения, классифицировать его и предложить решение на основе правил организационной структуры. ВАЖНО: Ваши ответы должны быть строго по теме обращения и соответствовать контексту.",
-        modelId: 1,
+        modelId: openaiIntegration.id,
         isActive: true,
         config: {
           temperature: 0.3,
           maxTokens: 1500,
-          isDefault: true,
           departmentId: 1,
           capabilities: ["classification", "summarization", "response_generation"],
-          integrationIds: [1]
+          integrationIds: [openaiIntegration.id]
         }
       });
       
@@ -112,15 +160,14 @@ export class AgentService {
         type: "blockchain",
         description: "Агент для записи данных в блокчейн через Moralis",
         systemPrompt: "Вы эксперт по блокчейн технологиям и смарт-контрактам. Ваша задача - обрабатывать запросы на сохранение данных в блокчейне и создавать хеши транзакций.",
-        modelId: 1,
+        modelId: openaiIntegration.id,
         isActive: true,
         config: {
           temperature: 0.1,
           maxTokens: 1000,
-          isDefault: false,
           departmentId: 5,
           capabilities: ["data_analysis", "validation"],
-          integrationIds: [3]
+          integrationIds: [moralisIntegration.id]
         }
       });
 
@@ -130,14 +177,14 @@ export class AgentService {
         type: "document_processing",
         description: "Анализирует и структурирует документы",
         systemPrompt: "Вы - эксперт по анализу и обработке документов. Ваша задача - анализировать структуру и юридическую корректность документов, извлекать важную информацию и готовить краткие резюме.",
-        modelId: 1,
+        modelId: openaiIntegration.id,
         isActive: true,
         config: {
           temperature: 0.1,
           maxTokens: 2048,
           departmentId: 3,
           capabilities: ["document_analysis", "summarization"],
-          integrationIds: [1]
+          integrationIds: [openaiIntegration.id]
         }
       });
 
@@ -147,14 +194,14 @@ export class AgentService {
         type: "meeting_protocols",
         description: "Анализирует записи и протоколы совещаний",
         systemPrompt: "Вы - эксперт по анализу записей совещаний и протоколов. Ваша задача - определять ключевые моменты, решения и задачи, упомянутые на совещаниях, и создавать четкие протоколы и планы действий.",
-        modelId: 1,
+        modelId: openaiIntegration.id,
         isActive: true,
         config: {
           temperature: 0.2,
           maxTokens: 2048,
           departmentId: 2,
           capabilities: ["transcription", "summarization", "classification"],
-          integrationIds: [1]
+          integrationIds: [openaiIntegration.id]
         }
       });
       
@@ -169,48 +216,8 @@ export class AgentService {
         }
       });
       
-      // Получаем все интеграции
-      let integrations = await storage.getIntegrations();
-      
-      // Если интеграции не найдены, создаем тестовые интеграции
-      if (!integrations || integrations.length === 0) {
-        console.log("No integrations found, creating default integrations...");
-        // Создаем интеграцию с OpenAI
-        await storage.createIntegration({
-          name: "OpenAI GPT-4o",
-          type: "openai",
-          apiKey: process.env.OPENAI_API_KEY || "sk-demo-key-for-testing",
-          apiUrl: "https://api.openai.com/v1",
-          isActive: true,
-          isDefault: true,
-          settings: {
-            defaultModel: "gpt-4o",
-            maxTokens: 4000,
-            defaultTemp: 0.7
-          }
-        });
-        
-        // Создаем интеграцию с Moralis
-        await storage.createIntegration({
-          name: "Moralis API",
-          type: "moralis",
-          apiKey: process.env.MORALIS_API_KEY || "moralis-demo-key-for-testing",
-          apiUrl: "https://deep-index.moralis.io/api/v2",
-          isActive: true,
-          isDefault: false,
-          settings: {
-            chainId: "0x1",
-            network: "ethereum"
-          }
-        });
-        
-        // Получаем созданные интеграции
-        const createdIntegrations = await storage.getIntegrations();
-        integrations = createdIntegrations;
-      }
-      
       // Кэшируем активные интеграции
-      integrations.forEach(integration => {
+      updatedIntegrations.forEach(integration => {
         if (integration.isActive) {
           this.integrationCache.set(integration.type, integration);
         }
