@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { Loader2, Plus, Save, Trash2, Edit, Star, Check, X } from 'lucide-react';
+import { Loader2, Plus, Save, Trash2, Edit, Star, Check, X, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -48,6 +48,7 @@ export default function OrgStructurePage() {
   const { toast } = useToast();
   const [openDialog, setOpenDialog] = useState(false);
   const [editingRule, setEditingRule] = useState<TaskRule | null>(null);
+  const [isCreatingDefault, setIsCreatingDefault] = useState(false);
   const queryClient = useQueryClient();
 
   // Запрос на получение всех правил
@@ -168,6 +169,42 @@ export default function OrgStructurePage() {
       case 'citizen_request': return 'Обращение гражданина';
       case 'document': return 'Документ';
       default: return type;
+    }
+  };
+  
+  // Создание базовой организационной структуры
+  const createDefaultOrgStructure = async () => {
+    try {
+      setIsCreatingDefault(true);
+      const response = await apiRequest('POST', '/api/org-structure/default');
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: 'Структура создана',
+          description: 'Базовая организационная структура успешно создана',
+        });
+        
+        // Обновляем данные на странице
+        queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/positions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/task-rules'] });
+      } else {
+        toast({
+          title: 'Внимание',
+          description: result.message || 'Организационная структура уже существует',
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при создании базовой структуры:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать базовую организационную структуру. Попробуйте еще раз.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingDefault(false);
     }
   };
 
@@ -384,13 +421,22 @@ export default function OrgStructurePage() {
           ) : (
             <div className="col-span-full text-center p-8">
               <p className="text-muted-foreground mb-4">Нет созданных правил распределения задач</p>
-              <Button 
-                variant="outline" 
-                onClick={() => { setEditingRule(null); setOpenDialog(true); }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Создать правило
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => { setEditingRule(null); setOpenDialog(true); }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Создать правило
+                </Button>
+                <Button 
+                  variant="default" 
+                  onClick={createDefaultOrgStructure}
+                >
+                  <Layers className="mr-2 h-4 w-4" />
+                  Создать базовую структуру
+                </Button>
+              </div>
             </div>
           )}
         </div>
