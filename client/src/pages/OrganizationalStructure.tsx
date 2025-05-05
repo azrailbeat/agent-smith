@@ -451,10 +451,10 @@ export default function OrganizationalStructure() {
       </div>
 
       <Tabs defaultValue="rules" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-neutral-100">
-          <TabsTrigger value="rules">Правила распределения</TabsTrigger>
-          <TabsTrigger value="departments">Отделы</TabsTrigger>
-          <TabsTrigger value="positions">Должности</TabsTrigger>
+        <TabsList className="bg-neutral-100 mb-4 w-full grid grid-cols-3 h-12 text-base">
+          <TabsTrigger value="rules" className="data-[state=active]:bg-primary data-[state=active]:text-white">Правила распределения</TabsTrigger>
+          <TabsTrigger value="departments" className="data-[state=active]:bg-primary data-[state=active]:text-white">Отделы</TabsTrigger>
+          <TabsTrigger value="positions" className="data-[state=active]:bg-primary data-[state=active]:text-white">Должности</TabsTrigger>
         </TabsList>
         
         <TabsContent value="rules" className="space-y-4">
