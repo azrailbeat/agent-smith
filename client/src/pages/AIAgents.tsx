@@ -58,12 +58,12 @@ import {
   Stethoscope,
   Briefcase,
   Camera,
+  Trash2,
   GraduationCap,
   Flame,
   BarChart2,
   Truck,
-  Database,
-  Trash2
+  Database
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
