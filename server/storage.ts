@@ -18,6 +18,7 @@ import { DatabaseStorage } from "./db-storage";
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
+  getUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
@@ -1037,6 +1038,10 @@ export class MemStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
+  }
+
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
