@@ -358,7 +358,7 @@ export default function OrgStructurePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rules.length > 0 ? (
+          {rules && rules.length > 0 ? (
             rules.map((rule: TaskRule) => (
               <Card key={rule.id} className={rule.isActive ? 'border-primary/50' : 'opacity-70'}>
                 <CardHeader className="pb-3">
