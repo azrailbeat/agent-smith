@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { ALLOWED_AGENT_TYPES } from "@shared/constants";
 
 import {
   Dialog,
@@ -29,9 +30,6 @@ interface Agent {
   isActive: boolean;
   ministryId?: number;
 }
-
-// Разрешенные типы агентов для тестирования
-const ALLOWED_AGENT_TYPES = ['citizen_requests', 'blockchain', 'document_processing', 'meeting_protocols'];
 
 interface AgentSelectionDialogProps {
   entityType: 'citizen_request' | 'meeting_protocol' | 'document';
