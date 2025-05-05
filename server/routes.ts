@@ -892,6 +892,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User API routes
+  app.get('/api/users', async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'Failed to fetch users', details: error.message });
+    }
+  });
+
+  app.get('/api/users/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ error: 'Failed to fetch user', details: error.message });
+    }
+  });
+
   // Agent routes
   app.get('/api/agents', async (req, res) => {
     try {

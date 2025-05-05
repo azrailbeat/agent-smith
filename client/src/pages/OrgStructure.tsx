@@ -26,6 +26,7 @@ interface TaskRule {
   keywords: string[];
   departmentId: number;
   positionId: number;
+  userId?: number; // ID пользователя - ответственное лицо/начальник
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -39,6 +40,7 @@ const taskRuleSchema = z.object({
   keywords: z.string().transform(val => val.split(',').map(k => k.trim()).filter(k => k)),
   departmentId: z.string().transform(val => parseInt(val)),
   positionId: z.string().transform(val => parseInt(val)),
+  userId: z.string().optional().transform(val => val ? parseInt(val) : undefined),
   isActive: z.boolean().default(true),
 });
 
@@ -54,6 +56,12 @@ export default function OrgStructurePage() {
   // Запрос на получение всех правил
   const { data: rules = [], isLoading, isError } = useQuery({
     queryKey: ['/api/task-rules'],
+    staleTime: 1000 * 60, // 1 minute
+  });
+  
+  // Запрос на получение всех пользователей
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
     staleTime: 1000 * 60, // 1 minute
   });
 
@@ -81,6 +89,7 @@ export default function OrgStructurePage() {
         keywords: editingRule.keywords && Array.isArray(editingRule.keywords) ? editingRule.keywords.join(', ') : '',
         departmentId: editingRule.departmentId.toString(),
         positionId: editingRule.positionId.toString(),
+        userId: editingRule.userId ? editingRule.userId.toString() : undefined,
         isActive: editingRule.isActive,
       });
     } else {
@@ -91,6 +100,7 @@ export default function OrgStructurePage() {
         keywords: '',
         departmentId: '0',
         positionId: '0',
+        userId: undefined,
         isActive: true,
       });
     }
@@ -337,6 +347,38 @@ export default function OrgStructurePage() {
                     )}
                   />
                 </div>
+                
+                <FormField
+                  control={form.control}
+                  name="userId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ответственное лицо/начальник</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ? field.value.toString() : ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите ответственное лицо" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Не указано</SelectItem>
+                          {users?.map((user) => (
+                            <SelectItem key={user.id} value={user.id.toString()}>
+                              {user.fullName || user.username}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Выберите ответственное лицо или начальника для данного правила
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="isActive"
