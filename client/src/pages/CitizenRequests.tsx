@@ -50,6 +50,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 // Интерфейсы для типизации
@@ -1039,11 +1040,16 @@ const CitizenRequests = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2 mr-4">
-                  <span className="text-sm">Автоматическая обработка</span>
-                  <Switch 
-                    checked={isAIProcessingEnabled}
-                    onCheckedChange={setIsAIProcessingEnabled}
-                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-2"
+                    onClick={() => setIsAISettingsOpen(true)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Настройки AI</span>
+                    {isAIProcessingEnabled && <Badge variant="secondary" className="ml-1 bg-green-100 text-green-800">Включено</Badge>}
+                  </Button>
                 </div>
                 <Button 
                   variant="default" 
@@ -2434,6 +2440,123 @@ const CitizenRequests = () => {
             >
               <Zap className="h-4 w-4 mr-2" />
               Сохранить настройки
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Диалог настроек AI обработки */}
+      <Dialog open={isAISettingsOpen} onOpenChange={setIsAISettingsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Настройки AI обработки</DialogTitle>
+            <DialogDescription>
+              Настройте параметры автоматической обработки обращений с использованием искусственного интеллекта
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="font-medium">Автоматическая обработка</Label>
+                <p className="text-sm text-muted-foreground">Включить/выключить автоматическую обработку обращений</p>
+              </div>
+              <Switch 
+                checked={isAIProcessingEnabled}
+                onCheckedChange={setIsAIProcessingEnabled}
+              />
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm">Параметры обработки</h4>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Использовать правила орг. структуры</Label>
+                  <p className="text-xs text-muted-foreground">Маршрутизация обращений по правилам ведомств</p>
+                </div>
+                <Switch 
+                  checked={aiProcessingSettings.useOrgStructure}
+                  onCheckedChange={(checked) => 
+                    setAiProcessingSettings(prev => ({ ...prev, useOrgStructure: checked }))
+                  }
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Использовать правила AI агентов</Label>
+                  <p className="text-xs text-muted-foreground">Обработка в соответствии с настройками в разделе "AI агенты"</p>
+                </div>
+                <Switch 
+                  checked={aiProcessingSettings.useAgentRules}
+                  onCheckedChange={(checked) => 
+                    setAiProcessingSettings(prev => ({ ...prev, useAgentRules: checked }))
+                  }
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Автоматическая классификация</Label>
+                  <p className="text-xs text-muted-foreground">Определять тип обращения и приоритет автоматически</p>
+                </div>
+                <Switch 
+                  checked={aiProcessingSettings.autoClassify}
+                  onCheckedChange={(checked) => 
+                    setAiProcessingSettings(prev => ({ ...prev, autoClassify: checked }))
+                  }
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Автоматические ответы</Label>
+                  <p className="text-xs text-muted-foreground">Формировать проекты ответов для простых обращений</p>
+                </div>
+                <Switch 
+                  checked={aiProcessingSettings.autoRespond}
+                  onCheckedChange={(checked) => 
+                    setAiProcessingSettings(prev => ({ ...prev, autoRespond: checked }))
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAISettingsOpen(false)}>Отмена</Button>
+            <Button onClick={() => {
+              // Активировать обработку, если она была выключена, но пользователь включил какие-то параметры
+              if (!isAIProcessingEnabled && 
+                  (aiProcessingSettings.useOrgStructure || 
+                   aiProcessingSettings.useAgentRules || 
+                   aiProcessingSettings.autoClassify || 
+                   aiProcessingSettings.autoRespond)) {
+                setIsAIProcessingEnabled(true);
+              }
+              
+              // Если все параметры выключены, то выключаем и общую обработку
+              if (isAIProcessingEnabled && 
+                  !aiProcessingSettings.useOrgStructure && 
+                  !aiProcessingSettings.useAgentRules && 
+                  !aiProcessingSettings.autoClassify && 
+                  !aiProcessingSettings.autoRespond) {
+                setIsAIProcessingEnabled(false);
+              }
+              
+              toast({
+                title: "Настройки сохранены",
+                description: isAIProcessingEnabled 
+                  ? "Автоматическая обработка обращений включена"
+                  : "Автоматическая обработка обращений отключена"
+              });
+              
+              setIsAISettingsOpen(false);
+            }}>
+              Сохранить
             </Button>
           </DialogFooter>
         </DialogContent>
