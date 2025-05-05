@@ -98,10 +98,53 @@ interface Agent {
 export default function OrganizationalStructure() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("rules");
+  const [isCreatingDefault, setIsCreatingDefault] = useState(false);
 
   // Функция для обработки переключения вкладок
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+  
+  // Функция создания структуры по умолчанию
+  const createDefaultOrgStructure = async () => {
+    try {
+      setIsCreatingDefault(true);
+      const response = await fetch('/api/org-structure/default', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: 'Успешно',
+          description: result.message,
+          variant: 'default',
+        });
+        // Обновляем списки после создания структуры
+        queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/positions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/task-rules'] });
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при создании структуры:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать структуру по умолчанию',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingDefault(false);
+    }
   };
   
   // Состояние для диалогов

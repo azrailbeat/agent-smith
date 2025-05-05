@@ -39,7 +39,8 @@ import {
   getPositions,
   getPositionById,
   savePosition,
-  processRequestByOrgStructure
+  processRequestByOrgStructure,
+  createDefaultOrgStructure
 } from "./services/org-structure";
 import { initializeSettings } from "./services/system-settings";
 import { agentService } from "./services/agent-service";
@@ -1185,6 +1186,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching departments:', error);
       res.status(500).json({ error: 'Failed to fetch departments', details: error.message });
+    }
+  });
+  
+  // Создание структуры по умолчанию
+  app.post('/api/org-structure/default', async (req, res) => {
+    try {
+      const result = await createDefaultOrgStructure();
+      res.json(result);
+    } catch (error) {
+      console.error('Error creating default organizational structure:', error);
+      res.status(500).json({ 
+        error: 'Failed to create default organizational structure', 
+        details: error.message 
+      });
     }
   });
   
