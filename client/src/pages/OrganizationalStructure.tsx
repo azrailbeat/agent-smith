@@ -98,6 +98,11 @@ interface Agent {
 export default function OrganizationalStructure() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("rules");
+
+  // Функция для обработки переключения вкладок
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
   
   // Состояние для диалогов
   const [showRuleDialog, setShowRuleDialog] = useState(false);
@@ -444,17 +449,80 @@ export default function OrganizationalStructure() {
             Создавайте правила распределения задач, управляйте отделами и должностями
           </p>
         </div>
-        <Button onClick={() => setShowRuleDialog(true)} className="space-x-1">
-          <PlusCircle className="h-4 w-4" />
-          <span>Добавить правило</span>
-        </Button>
       </div>
 
-      <Tabs defaultValue="rules" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-neutral-100 mb-4 w-full grid grid-cols-3 h-12 text-base">
-          <TabsTrigger value="rules" className="data-[state=active]:bg-primary data-[state=active]:text-white">Правила распределения</TabsTrigger>
-          <TabsTrigger value="departments" className="data-[state=active]:bg-primary data-[state=active]:text-white">Отделы</TabsTrigger>
-          <TabsTrigger value="positions" className="data-[state=active]:bg-primary data-[state=active]:text-white">Должности</TabsTrigger>
+      {/* Кнопки управления разделами */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Card 
+          className={`cursor-pointer overflow-hidden ${activeTab === "rules" ? "border-2 border-primary bg-primary/5" : ""}`} 
+          onClick={() => setActiveTab("rules")}
+        >
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <Settings className="h-8 w-8 text-primary" />
+            <div>
+              <CardTitle className="text-xl">Правила распределения</CardTitle>
+              <CardDescription>Настройка правил распределения задач</CardDescription>
+            </div>
+          </CardHeader>
+          <CardFooter>
+            {activeTab === "rules" && (
+              <Button onClick={(e) => { e.stopPropagation(); setShowRuleDialog(true); }} className="w-full">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Добавить правило
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer overflow-hidden ${activeTab === "departments" ? "border-2 border-primary bg-primary/5" : ""}`} 
+          onClick={() => setActiveTab("departments")}
+        >
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <Building className="h-8 w-8 text-primary" />
+            <div>
+              <CardTitle className="text-xl">Отделы</CardTitle>
+              <CardDescription>Управление отделами и департаментами</CardDescription>
+            </div>
+          </CardHeader>
+          <CardFooter>
+            {activeTab === "departments" && (
+              <Button onClick={(e) => { e.stopPropagation(); setShowDepartmentDialog(true); }} className="w-full">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Добавить отдел
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer overflow-hidden ${activeTab === "positions" ? "border-2 border-primary bg-primary/5" : ""}`} 
+          onClick={() => setActiveTab("positions")}
+        >
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <UserCog className="h-8 w-8 text-primary" />
+            <div>
+              <CardTitle className="text-xl">Должности</CardTitle>
+              <CardDescription>Управление должностями и уровнями доступа</CardDescription>
+            </div>
+          </CardHeader>
+          <CardFooter>
+            {activeTab === "positions" && (
+              <Button onClick={(e) => { e.stopPropagation(); setShowPositionDialog(true); }} className="w-full">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Добавить должность
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
+      
+      {/* Скрытые Tabs для управления содержимым */}
+      <Tabs defaultValue="rules" value={activeTab} onValueChange={setActiveTab} className="hidden">
+        <TabsList>
+          <TabsTrigger value="rules">Правила распределения</TabsTrigger>
+          <TabsTrigger value="departments">Отделы</TabsTrigger>
+          <TabsTrigger value="positions">Должности</TabsTrigger>
         </TabsList>
         
         <TabsContent value="rules" className="space-y-4">
