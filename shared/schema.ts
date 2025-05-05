@@ -377,6 +377,36 @@ export const insertAgentSchema = createInsertSchema(agents).pick({
   stats: true,
 });
 
+// Схема правил распределения (организационная структура)
+export const organizationalRules = pgTable("organizational_rules", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // разработка, поддержка, ИИ, документы, коммунальные_запросы
+  isActive: boolean("is_active").default(true),
+  sourceType: text("source_type").notNull(), // citizen_request, document, task
+  keywordsList: text("keywords_list").array(), // Ключевые слова для сопоставления
+  departmentId: integer("department_id").references(() => departments.id),
+  assignToAgentId: integer("assign_to_agent_id").references(() => agents.id),
+  assignToPositionId: integer("assign_to_position_id").references(() => positions.id),
+  config: jsonb("config"), // Дополнительные настройки правила
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOrganizationalRuleSchema = createInsertSchema(organizationalRules).pick({
+  name: true,
+  description: true,
+  type: true,
+  isActive: true,
+  sourceType: true,
+  keywordsList: true,
+  departmentId: true,
+  assignToAgentId: true,
+  assignToPositionId: true,
+  config: true,
+});
+
 // Relations for ministries, agent types, integrations and agents
 export const ministriesRelations = relations(ministries, ({ many }) => ({
   agents: many(agents),
@@ -390,7 +420,38 @@ export const integrationsRelations = relations(integrations, ({ many }) => ({
   agents: many(agents),
 }));
 
-export const agentsRelations = relations(agents, ({ one }) => ({
+export const departmentsRelations = relations(departments, ({ one, many }) => ({
+  parent: one(departments, {
+    fields: [departments.parentId],
+    references: [departments.id],
+  }),
+  positions: many(positions),
+  rules: many(organizationalRules),
+}));
+
+export const positionsRelations = relations(positions, ({ one, many }) => ({
+  department: one(departments, {
+    fields: [positions.departmentId],
+    references: [departments.id],
+  }),
+}));
+
+export const organizationalRulesRelations = relations(organizationalRules, ({ one }) => ({
+  department: one(departments, {
+    fields: [organizationalRules.departmentId],
+    references: [departments.id],
+  }),
+  agent: one(agents, {
+    fields: [organizationalRules.assignToAgentId],
+    references: [agents.id],
+  }),
+  position: one(positions, {
+    fields: [organizationalRules.assignToPositionId],
+    references: [positions.id],
+  }),
+}));
+
+export const agentsRelations = relations(agents, ({ one, many }) => ({
   model: one(integrations, {
     fields: [agents.modelId],
     references: [integrations.id],
@@ -403,6 +464,7 @@ export const agentsRelations = relations(agents, ({ one }) => ({
     fields: [agents.typeId],
     references: [agentTypes.id],
   }),
+  rules: many(organizationalRules, { relationName: "agent_rules" }),
 }));
 
 export type SystemStatusItem = typeof systemStatus.$inferSelect;
@@ -419,6 +481,15 @@ export type InsertAgentType = z.infer<typeof insertAgentTypeSchema>;
 
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
+
+export type OrganizationalRule = typeof organizationalRules.$inferSelect;
+export type InsertOrganizationalRule = z.infer<typeof insertOrganizationalRuleSchema>;
+
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+
+export type Position = typeof positions.$inferSelect;
+export type InsertPosition = z.infer<typeof insertPositionSchema>;
 
 // Citizen Requests schema
 export const citizenRequests = pgTable("citizen_requests", {

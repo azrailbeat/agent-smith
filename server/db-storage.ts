@@ -3,7 +3,7 @@ import {
   users, tasks, documents, blockchainRecords, 
   messages, activities, systemStatus, integrations,
   agents, citizenRequests, departments, positions,
-  ministries, agentTypes, plankaLinks
+  ministries, agentTypes, plankaLinks, organizationalRules
 } from "@shared/schema";
 import { eq, desc, sql, and, isNull, not } from 'drizzle-orm';
 import { IStorage } from "./storage";
