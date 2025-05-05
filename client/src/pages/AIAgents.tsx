@@ -62,7 +62,8 @@ import {
   Flame,
   BarChart2,
   Truck,
-  Database
+  Database,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -696,6 +697,26 @@ const AIAgentsPage = () => {
     }
   });
   
+  const deleteAgentMutation = useMutation({
+    mutationFn: (id: number) => {
+      return apiRequest('DELETE', `/api/agents/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agents'] });
+      toast({
+        title: "Успешно!",
+        description: "Агент удален",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить агента",
+        variant: "destructive",
+      });
+    }
+  });
+
   const updateSystemPromptMutation = useMutation({
     mutationFn: (data: {id: number, systemPrompt: string}) => {
       return apiRequest('PATCH', `/api/agents/${data.id}/prompt`, { systemPrompt: data.systemPrompt });
@@ -799,6 +820,12 @@ const AIAgentsPage = () => {
   const handleAssignTask = (task: Task) => {
     setAssigningTask(task);
     setShowTaskDialog(true);
+  };
+  
+  const handleDeleteAgent = (id: number) => {
+    if (window.confirm("Вы уверены, что хотите удалить этого агента?")) {
+      deleteAgentMutation.mutate(id);
+    }
   };
   
   const getAgentTypeIcon = (type: string) => {
@@ -1041,6 +1068,9 @@ const AIAgentsPage = () => {
                           <Button variant="ghost" size="sm" onClick={() => handleToggleAgentStatus(agent)}>
                             {agent.isActive ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
                           </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteAgent(agent.id)}>
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
                         </div>
                       </CardFooter>
                     </Card>
@@ -1113,6 +1143,15 @@ const AIAgentsPage = () => {
                                   <span className="sm:hidden">Вкл.</span>
                                 </>
                               )}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteAgent(agent.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">Удалить</span>
                             </Button>
                           </div>
                         </div>
