@@ -824,6 +824,25 @@ const CitizenRequests = () => {
     );
   };
   
+  // Функция загрузки результатов обработки агентов для конкретного обращения
+  const fetchAgentResults = async (requestId: number) => {
+    try {
+      const response = await apiRequest('GET', `/api/citizen-requests/${requestId}/agent-results`);
+      const results = await response.json();
+      
+      // Сохраняем результаты в состояние
+      setAgentResults(prev => ({
+        ...prev,
+        [requestId]: results
+      }));
+      
+      return results;
+    } catch (error) {
+      console.error('Error fetching agent results:', error);
+      return [];
+    }
+  };
+  
   // Заполняем канбан-доску обращениями при загрузке данных
   useEffect(() => {
     if (!isLoading && requests && requests.length > 0) {
@@ -1916,7 +1935,12 @@ const CitizenRequests = () => {
       {/* Диалог с детальной информацией по обращению */}
       <Dialog open={selectedRequest !== null && isViewDetailsOpen} onOpenChange={(open) => {
         setIsViewDetailsOpen(open);
-        if (!open) setSelectedRequest(null);
+        if (!open) {
+          setSelectedRequest(null);
+        } else if (selectedRequest) {
+          // Загружаем результаты агентов при открытии деталей обращения
+          fetchAgentResults(selectedRequest.id);
+        }
       }}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto">
           {selectedRequest && (
@@ -2100,6 +2124,16 @@ const CitizenRequests = () => {
                   
                   <div>
                     <h3 className="text-sm font-medium mb-2">ИИ агенты</h3>
+                    
+                    {/* Панель результатов обработки */}
+                    {selectedRequest && agentResults[selectedRequest.id]?.length > 0 && (
+                      <div className="mb-4">
+                        <RequestInsightPanel 
+                          results={agentResults[selectedRequest.id] || []} 
+                        />
+                      </div>
+                    )}
+                    
                     <div className="space-y-2">
                       {agentSettings.enabled ? (
                         <>
