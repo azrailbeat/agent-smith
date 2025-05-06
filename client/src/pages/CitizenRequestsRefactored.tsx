@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection';
 import RequestInsightPanel from '@/components/RequestInsightPanel';
-import { AutoProcessDialog } from '../components/AutoProcessDialog';
+import { AutoProcessDialog, AutoProcessDialogRef } from '../components/AutoProcessDialog';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
 import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User, Plus, ChevronDown } from 'lucide-react';
 
@@ -158,7 +158,7 @@ const CitizenRequests: React.FC = () => {
   });
   
   // Создаем реф для диалога автообработки для доступа к его методам
-  const autoProcessDialogRef = useRef<any>(null);
+  const autoProcessDialogRef = useRef<AutoProcessDialogRef>(null);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [agentSettings, setAgentSettings] = useState<AgentSettings>({
     enabled: false,
@@ -919,6 +919,7 @@ const CitizenRequests: React.FC = () => {
 
       {/* Диалог настройки автоматической обработки */}
       <AutoProcessDialog
+        ref={autoProcessDialogRef}
         open={isAutoProcessOpen}
         onOpenChange={setIsAutoProcessOpen}
         settings={agentSettings}
