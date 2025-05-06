@@ -36,7 +36,7 @@ import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection'
 import RequestInsightPanel from '@/components/RequestInsightPanel';
 import { AutoProcessDialog } from '../components/AutoProcessDialog';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
-import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User } from 'lucide-react';
+import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User, Plus, ChevronDown } from 'lucide-react';
 
 // Типы данных
 interface CitizenRequest {
@@ -404,7 +404,10 @@ const CitizenRequests: React.FC = () => {
   // Обработчик изменений в форме
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   // Обработчик отправки формы
@@ -462,41 +465,39 @@ const CitizenRequests: React.FC = () => {
     : citizenRequests;
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6 flex flex-wrap justify-between items-center gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">Обращения граждан</h1>
-          <p className="text-muted-foreground">Управление и обработка обращений с помощью ИИ</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Badge variant="outline" className="px-4 py-1">
-              Всего: {stats.total}
-            </Badge>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 px-4 py-1">
-              Новых: {stats.new}
-            </Badge>
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 px-4 py-1">
-              В работе: {stats.inProgress}
-            </Badge>
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 px-4 py-1">
-              Ожидание: {stats.waiting}
-            </Badge>
-            <Badge variant="outline" className="bg-green-50 text-green-700 px-4 py-1">
-              Выполнено: {stats.completed}
-            </Badge>
+    <div className="flex flex-col h-[calc(100vh-60px)]">
+      {/* Верхняя панель в стиле Etap Phuket */}
+      <div className="bg-white border-b py-3 px-6">
+        <div className="flex flex-wrap justify-between items-center gap-3">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">Воронка обращений</h1>
+            <p className="text-sm text-gray-500">Управление и обслуживание процесса обработки обращений</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setIsNewRequestOpen(true)}>
-              Новое обращение
-            </Button>
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <div className="flex items-center space-x-1">
+              <Badge variant="outline" className="px-2 py-0.5 text-xs">
+                Всего: {stats.total}
+              </Badge>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs">
+                Новых: {stats.new}
+              </Badge>
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs">
+                В работе: {stats.inProgress}
+              </Badge>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs">
+                Ожидание: {stats.waiting}
+              </Badge>
+              <Badge variant="outline" className="bg-green-50 text-green-700 px-2 py-0.5 text-xs">
+                Выполнено: {stats.completed}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="mb-6 flex items-center justify-between">
+      
+      {/* Панель инструментов */}
+      <div className="bg-white border-b py-2 px-6 flex flex-wrap items-center justify-between gap-2">
         <div className="relative w-full max-w-sm">
           <Input
             placeholder="Поиск обращений..."
@@ -517,108 +518,120 @@ const CitizenRequests: React.FC = () => {
             <Bot className="h-4 w-4 mr-2" />
             Авто-обработка
           </Button>
+          <div className="bg-gray-100 rounded-md px-3 py-1.5 flex items-center text-sm gap-2">
+            <span>Все статусы</span>
+            <ChevronDown className="h-4 w-4" />
+          </div>
           <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Обновить
+          </Button>
+          <Button onClick={() => setIsNewRequestOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Создать обращение
           </Button>
         </div>
       </div>
 
       {/* Канбан-доска обращений */}
-      {isLoading ? (
-        <div className="py-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
-          <p className="mt-2 text-gray-600">Загрузка обращений...</p>
-        </div>
-      ) : (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="w-full overflow-x-auto pb-4">
-            <div className="flex space-x-5 min-w-max px-4">
-              {board.columnOrder.map((columnId) => {
-                const column = board.columns[columnId];
-                const requestsInColumn = column.requestIds
-                  .map((requestId) => getRequestById(requestId))
-                  .filter((request): request is CitizenRequest => request !== undefined);
-                
-                // Определяем цвет фона для колонки
-                const columnColor = columnId === 'new' ? 'bg-blue-50' :
-                                   columnId === 'inProgress' ? 'bg-amber-50' :
-                                   columnId === 'waiting' ? 'bg-purple-50' :
-                                   columnId === 'completed' ? 'bg-green-50' : 'bg-gray-50';
-                
-                // Определяем цвет заголовка для колонки
-                const headerColor = columnId === 'new' ? 'bg-blue-100 text-blue-800' :
-                                   columnId === 'inProgress' ? 'bg-amber-100 text-amber-800' :
-                                   columnId === 'waiting' ? 'bg-purple-100 text-purple-800' :
-                                   columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-
-                return (
-                  <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white overflow-hidden`}>
-                    <div className={`p-3 border-b sticky top-0 z-10 ${headerColor} rounded-t-lg`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold flex items-center">
-                          {statusIcons[column.id]}
-                          <span className="ml-2">{column.title}</span>
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[24px] text-center">
-                            {requestsInColumn.length}
-                          </div>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white/80" onClick={(e) => e.stopPropagation()}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <Droppable droppableId={column.id}>
-                      {(provided) => (
-                        <div
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          className="p-3 min-h-[70vh] max-h-[calc(100vh-220px)] overflow-y-auto bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition duration-200"
-                        >
-                        {requestsInColumn.length === 0 ? (
-                          <div className="text-center py-6 px-4 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-3 transition-all duration-300 hover:bg-white hover:border-gray-400">
-                            <Inbox className="h-12 w-12 mx-auto mb-3 text-gray-400 opacity-70" />
-                            <p className="font-medium">Нет обращений</p>
-                            <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда или создайте новое обращение</p>
-                          </div>
-                        ) : (
-                          requestsInColumn.map((request, index) => (
-                            <Draggable
-                              key={request.id}
-                              draggableId={String(request.id)}
-                              index={index}
-                            >
-                              {(provided, snapshot) => (
-                                <TrelloStyleRequestCard
-                                  request={request}
-                                  priorityBorderColors={priorityBorderColors}
-                                  priorityColors={priorityColors}
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setIsViewDetailsOpen(true);
-                                  }}
-                                  draggableProps={provided.draggableProps}
-                                  dragHandleProps={provided.dragHandleProps}
-                                  innerRef={provided.innerRef}
-                                  isDragging={snapshot.isDragging}
-                                />
-                              )}
-                            </Draggable>
-                          ))
-                        )}
-                        {provided.placeholder}
-                      </div>
-                      )}
-                    </Droppable>
-                  </div>
-                );
-              })}
+      <div className="flex-1 bg-gray-50 overflow-hidden">
+        {isLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
+              <p className="mt-2 text-gray-600">Загрузка обращений...</p>
             </div>
           </div>
-        </DragDropContext>
-      )}
+        ) : (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="h-full overflow-x-auto py-4 px-6">
+              <div className="flex space-x-5 min-w-max">
+                {board.columnOrder.map((columnId) => {
+                  const column = board.columns[columnId];
+                  const requestsInColumn = column.requestIds
+                    .map((requestId) => getRequestById(requestId))
+                    .filter((request): request is CitizenRequest => request !== undefined);
+                  
+                  // Определяем цвет фона для колонки
+                  const columnColor = columnId === 'new' ? 'bg-blue-50' :
+                                     columnId === 'inProgress' ? 'bg-amber-50' :
+                                     columnId === 'waiting' ? 'bg-purple-50' :
+                                     columnId === 'completed' ? 'bg-green-50' : 'bg-gray-50';
+                  
+                  // Определяем цвет заголовка для колонки
+                  const headerColor = columnId === 'new' ? 'bg-blue-100 text-blue-800' :
+                                     columnId === 'inProgress' ? 'bg-amber-100 text-amber-800' :
+                                     columnId === 'waiting' ? 'bg-purple-100 text-purple-800' :
+                                     columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+
+                  return (
+                    <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white overflow-hidden flex flex-col h-full`}>
+                      <div className={`p-3 border-b sticky top-0 z-10 ${headerColor} rounded-t-lg`}>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold flex items-center">
+                            {statusIcons[column.id as keyof typeof statusIcons]}
+                            <span className="ml-2">{column.title}</span>
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[24px] text-center">
+                              {requestsInColumn.length}
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white/80" onClick={(e) => e.stopPropagation()}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <Droppable droppableId={column.id}>
+                        {(provided) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className="p-3 flex-1 overflow-y-auto bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition duration-200"
+                          >
+                          {requestsInColumn.length === 0 ? (
+                            <div className="text-center py-6 px-4 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-3 transition-all duration-300 hover:bg-white hover:border-gray-400">
+                              <Inbox className="h-12 w-12 mx-auto mb-3 text-gray-400 opacity-70" />
+                              <p className="font-medium">Нет обращений</p>
+                              <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда или создайте новое обращение</p>
+                            </div>
+                          ) : (
+                            requestsInColumn.map((request, index) => (
+                              <Draggable
+                                key={request.id}
+                                draggableId={String(request.id)}
+                                index={index}
+                              >
+                                {(provided, snapshot) => (
+                                  <TrelloStyleRequestCard
+                                    request={request}
+                                    priorityBorderColors={priorityBorderColors}
+                                    priorityColors={priorityColors}
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setIsViewDetailsOpen(true);
+                                    }}
+                                    draggableProps={provided.draggableProps}
+                                    dragHandleProps={provided.dragHandleProps}
+                                    innerRef={provided.innerRef}
+                                    isDragging={snapshot.isDragging}
+                                  />
+                                )}
+                              </Draggable>
+                            ))
+                          )}
+                          {provided.placeholder}
+                        </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </DragDropContext>
+        )}
+      </div>
 
       {/* Диалог создания нового обращения */}
       <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
@@ -716,7 +729,7 @@ const CitizenRequests: React.FC = () => {
               <DialogHeader>
                 <DialogTitle className="flex items-center justify-between">
                   <span>{selectedRequest.subject || selectedRequest.title || 'Без темы'}</span>
-                  <Badge className={`${priorityColors[selectedRequest.priority]}`} variant="outline">
+                  <Badge className={`${priorityColors[selectedRequest.priority as keyof typeof priorityColors]}`} variant="outline">
                     {selectedRequest.priority || 'Обычный'}
                   </Badge>
                 </DialogTitle>
@@ -755,44 +768,71 @@ const CitizenRequests: React.FC = () => {
                       </div>
                       {selectedRequest.summary && (
                         <div>
-                          <h4 className="font-medium">Резюме (ИИ)</h4>
-                          <p className="text-sm bg-blue-50 p-3 rounded-md">
-                            {selectedRequest.summary}
-                          </p>
+                          <h4 className="font-medium">Резюме (AI)</h4>
+                          <p className="text-sm text-muted-foreground">{selectedRequest.summary}</p>
                         </div>
                       )}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <h4 className="font-medium">Статус</h4>
-                          <Badge className={statusColors[selectedRequest.status === 'in_progress' ? 'inProgress' : selectedRequest.status]}>
+                          <Badge className={statusColors[selectedRequest.status as keyof typeof statusColors]} variant="outline">
                             {selectedRequest.status === 'new' ? 'Новое' :
-                             selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? 'В работе' :
-                             selectedRequest.status === 'waiting' ? 'Ожидание' :
-                             selectedRequest.status === 'completed' ? 'Выполнено' : selectedRequest.status}
+                            selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? 'В работе' :
+                            selectedRequest.status === 'waiting' ? 'Ожидание' :
+                            selectedRequest.status === 'completed' ? 'Выполнено' : selectedRequest.status}
                           </Badge>
                         </div>
                         <div>
-                          <h4 className="font-medium">Приоритет</h4>
-                          <Badge className={priorityColors[selectedRequest.priority]}>
-                            {selectedRequest.priority === 'low' ? 'Низкий' :
-                             selectedRequest.priority === 'medium' ? 'Средний' :
-                             selectedRequest.priority === 'high' ? 'Высокий' :
-                             selectedRequest.priority === 'urgent' ? 'Срочный' : selectedRequest.priority}
-                          </Badge>
+                          <h4 className="font-medium">Создано</h4>
+                          <p className="text-sm">{new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}</p>
+                        </div>
+                        {selectedRequest.assignedTo && (
+                          <div>
+                            <h4 className="font-medium">Назначено</h4>
+                            <p className="text-sm">ID: {selectedRequest.assignedTo}</p>
+                          </div>
+                        )}
+                        {selectedRequest.updatedAt && (
+                          <div>
+                            <h4 className="font-medium">Обновлено</h4>
+                            <p className="text-sm">{new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}</p>
+                          </div>
+                        )}
+                      </div>
+                      {selectedRequest.responseText && (
+                        <div>
+                          <h4 className="font-medium">Ответ</h4>
+                          <p className="text-sm whitespace-pre-wrap">{selectedRequest.responseText}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter>
+                      <div className="flex justify-between w-full">
+                        <Button variant="outline" size="sm" onClick={() => setIsViewDetailsOpen(false)}>Закрыть</Button>
+                        <div className="space-x-2">
+                          {agentSettings.enabled && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                processRequestWithAI(selectedRequest.id, "classification").then(() => {
+                                  toast({
+                                    title: "Обработка завершена",
+                                    description: "Обращение успешно обработано AI",
+                                  });
+                                });
+                              }}
+                            >
+                              <Bot className="h-4 w-4 mr-2" />
+                              Обработать AI
+                            </Button>
+                          )}
+                          <Button size="sm">
+                            <Check className="h-4 w-4 mr-2" />
+                            Обработать
+                          </Button>
                         </div>
                       </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                      <Button variant="outline" size="sm" onClick={() => {
-                        // Обновление статуса
-                        const newStatus = selectedRequest.status === 'completed' ? 'in_progress' : 'completed';
-                        updateRequestStatusMutation.mutate({
-                          id: selectedRequest.id,
-                          status: newStatus
-                        });
-                      }}>
-                        {selectedRequest.status === 'completed' ? 'Вернуть в работу' : 'Отметить как выполненное'}
-                      </Button>
                     </CardFooter>
                   </Card>
                 </TabsContent>
@@ -800,92 +840,23 @@ const CitizenRequests: React.FC = () => {
                 <TabsContent value="ai-processing" className="mt-4">
                   <CitizenRequestAgentSection 
                     request={selectedRequest} 
-                    onRequestProcess={(requestId, actionType) => processRequestWithAI(requestId, actionType)}
-                    enabled={agentSettings.enabled}
+                    agentSettings={agentSettings}
+                    onProcess={processRequestWithAI}
                   />
-                  
-                  {selectedRequest.aiProcessed && (
-                    <RequestInsightPanel request={selectedRequest} />
-                  )}
                 </TabsContent>
                 
                 <TabsContent value="history" className="mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>История обработки</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-blue-100 p-2 rounded-full">
-                            <FileText className="h-4 w-4 text-blue-700" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">Обращение создано</p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {selectedRequest.aiProcessed && (
-                          <div className="flex items-center gap-3">
-                            <div className="bg-purple-100 p-2 rounded-full">
-                              <Bot className="h-4 w-4 text-purple-700" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Обработано ИИ</p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {selectedRequest.status === 'completed' && (
-                          <div className="flex items-center gap-3">
-                            <div className="bg-green-100 p-2 rounded-full">
-                              <Check className="h-4 w-4 text-green-700" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Обращение выполнено</p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(selectedRequest.completedAt || selectedRequest.updatedAt).toLocaleString('ru-RU')}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {selectedRequest.blockchainHash && (
-                          <div className="flex items-center gap-3">
-                            <div className="bg-blue-100 p-2 rounded-full">
-                              <Database className="h-4 w-4 text-blue-700" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Записано в блокчейн</p>
-                              <p className="text-xs text-gray-500 font-mono">
-                                {selectedRequest.blockchainHash.substring(0, 16)}...{selectedRequest.blockchainHash.substring(selectedRequest.blockchainHash.length - 8)}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <RequestInsightPanel request={selectedRequest} />
                 </TabsContent>
               </Tabs>
-              
-              <div className="mt-4 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>Закрыть</Button>
-              </div>
             </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Диалог автоматической обработки с ИИ */}
+      {/* Диалог настройки автоматической обработки */}
       <AutoProcessDialog
-        isOpen={isAutoProcessOpen}
+        open={isAutoProcessOpen}
         onOpenChange={setIsAutoProcessOpen}
         settings={agentSettings}
         onSettingsChange={setAgentSettings}
