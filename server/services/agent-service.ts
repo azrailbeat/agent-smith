@@ -122,11 +122,17 @@ export class AgentService {
         throw new Error('Moralis integration not found!');
       }
       
-      // Очищаем все предыдущие агенты - подход "чистого старта"
+      // Очищаем все предыдущие агенты - подход "чистого старта", за исключением агентов с ID 174 и 202
+      // которые используются в результатах (имеют foreign key constraints)
       const existingAgents = await storage.getAgents();
       if (existingAgents && existingAgents.length > 0) {
         for (const agent of existingAgents) {
           try {
+            // Пропускаем агентов с ID 174 и 202, которые упоминаются в таблице agent_results
+            if (agent.id === 174 || agent.id === 202) {
+              console.log(`Skipping agent deletion for ID ${agent.id} (referenced in agent_results)`);
+              continue;
+            }
             await storage.deleteAgent(agent.id);
           } catch (error) {
             console.warn(`Не удалось удалить агента ${agent.id}:`, error);
