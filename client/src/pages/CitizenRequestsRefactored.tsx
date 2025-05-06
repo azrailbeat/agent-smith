@@ -416,7 +416,16 @@ const CitizenRequests: React.FC = () => {
     createRequestMutation.mutate(formData);
   };
 
-  // Обработка массовой обработки обращений с AI
+  /**
+   * Обработка массовой обработки обращений с AI
+   * 
+   * @param {Object} settings - Настройки для обработки
+   * @param {number} [settings.agentId] - ID агента для обработки
+   * @param {boolean} [settings.autoProcess] - Флаг автоматической обработки
+   * @param {boolean} [settings.autoClassify] - Флаг автоматической классификации
+   * @param {boolean} [settings.autoRespond] - Флаг автоматического ответа
+   * @returns {Promise<void>}
+   */
   const handleBatchProcess = async (settings: { agentId?: number; autoProcess?: boolean; autoClassify?: boolean; autoRespond?: boolean }) => {
     try {
       // Проверка наличия агента
@@ -888,6 +897,7 @@ const CitizenRequests: React.FC = () => {
                     request={selectedRequest} 
                     agentSettings={agentSettings}
                     onProcess={processRequestWithAI}
+                    enabled={agentSettings.enabled}
                   />
                 </TabsContent>
                 

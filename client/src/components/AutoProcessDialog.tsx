@@ -27,6 +27,14 @@ import { Bot, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from 'lucide-reac
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 
+/**
+ * Интерфейс агента ИИ
+ * @interface Agent
+ * @property {number} id - Идентификатор агента
+ * @property {string} name - Имя агента
+ * @property {string} type - Тип агента (citizen_requests, blockchain, etc.)
+ * @property {string} [description] - Описание агента
+ */
 interface Agent {
   id: number;
   name: string;
@@ -34,6 +42,15 @@ interface Agent {
   description?: string;
 }
 
+/**
+ * Интерфейс обращения гражданина
+ * @interface CitizenRequest
+ * @property {number} id - Идентификатор обращения
+ * @property {string} fullName - ФИО гражданина
+ * @property {string} status - Статус обращения
+ * @property {string} subject - Тема обращения
+ * @property {Date} createdAt - Дата создания обращения
+ */
 interface CitizenRequest {
   id: number;
   fullName: string;
@@ -42,6 +59,14 @@ interface CitizenRequest {
   createdAt: Date;
 }
 
+/**
+ * Интерфейс шага обработки
+ * @interface ProcessingStep
+ * @property {string} id - Идентификатор шага
+ * @property {string} title - Заголовок шага
+ * @property {string} description - Описание шага
+ * @property {'pending' | 'in_progress' | 'completed' | 'error'} status - Статус шага обработки
+ */
 interface ProcessingStep {
   id: string;
   title: string;
@@ -119,9 +144,12 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
     refetchOnWindowFocus: false,
   });
 
-  // Фильтруем агентов по типу (citizen_requests)
+  /**
+   * Фильтруем агентов по типу (citizen_requests)
+   * @type {Agent[]}
+   */
   const citizenRequestAgents = agents.filter(agent => 
-    agent.type === "citizen_requests" && agent.id !== 174 && agent.id !== 202
+    agent.type === "citizen_requests"
   );
   
   // Получаем список необработанных обращений
