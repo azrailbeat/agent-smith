@@ -2030,8 +2030,42 @@ ${request.description || ''}
 ФИО: ${request.fullName}
 Контакты: ${request.contactInfo}`;
         
-        // Определяем новый статус для запроса
-        const newRequestStatus = 'in_progress';
+        // Определяем новый статус для запроса в зависимости от типа обращения и действий
+        let newRequestStatus = 'in_progress';
+        
+        // Полная обработка и назначение по орг структуре если autoProcess и autoRespond
+        if (autoProcess && autoRespond) {
+          // Попытка автоматической обработки и назначения
+          try {
+            const fullText = `${request.subject || ''} ${request.description || ''}`;
+            const orgStructureResult = await processRequestByOrgStructure(request.id, fullText);
+            
+            if (orgStructureResult.processed) {
+              newRequestStatus = 'assigned';
+              
+              // Логируем активность назначения по организационной структуре
+              await logActivity({
+                action: 'auto_assign',
+                entityType: 'citizen_request',
+                entityId: request.id,
+                details: `Обращение автоматически назначено согласно правилу "${orgStructureResult.rule?.name}"`,
+                metadata: {
+                  ruleId: orgStructureResult.rule?.id,
+                  departmentId: orgStructureResult.rule?.departmentId,
+                  positionId: orgStructureResult.rule?.positionId
+                }
+              });
+              
+              // Если обработка завершена, статус - "Выполнено"
+              if (autoRespond) {
+                newRequestStatus = 'completed';
+              }
+            }
+          } catch (orgStructureError) {
+            console.error(`Error processing request ${request.id} by org structure:`, orgStructureError);
+          }
+        }
+        
         let updateData: any = { status: newRequestStatus };
         
         // Выполняем выбранные действия
@@ -2070,6 +2104,27 @@ ${request.description || ''}
         try {
           // Устанавливаем флаг aiProcessed
           updateData.aiProcessed = true;
+          
+          // Добавляем данные о назначении, если есть
+          if (autoProcess && autoRespond) {
+            try {
+              const fullText = `${request.subject || ''} ${request.description || ''}`;
+              const orgStructureResult = await processRequestByOrgStructure(requestId, fullText);
+              
+              if (orgStructureResult.processed && orgStructureResult.rule) {
+                updateData.assignedTo = orgStructureResult.rule.positionId || null;
+                updateData.departmentId = orgStructureResult.rule.departmentId || null;
+                updateData.metadata = {
+                  ...(request.metadata || {}),
+                  orgStructureRule: orgStructureResult.rule.id,
+                  orgStructureRuleName: orgStructureResult.rule.name,
+                  autoAssigned: true
+                };
+              }
+            } catch (orgError) {
+              console.error(`Error assigning request ${requestId} by org structure:`, orgError);
+            }
+          }
           
           // Обновляем запрос в хранилище
           await storage.updateCitizenRequest(requestId, updateData);
