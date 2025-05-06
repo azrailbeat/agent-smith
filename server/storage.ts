@@ -121,6 +121,7 @@ export interface IStorage {
   
   // Agent Result operations
   createAgentResult(result: InsertAgentResult): Promise<any>;
+  getAgentResultsByEntity(entityType: string, entityId: number): Promise<any[]>;
 }
 
 // In-memory storage implementation
@@ -1680,6 +1681,68 @@ export class MemStorage implements IStorage {
       ...result,
       createdAt: new Date()
     };
+  }
+  
+  async getAgentResultsByEntity(entityType: string, entityId: number): Promise<any[]> {
+    // Для хранения в памяти, создаем фиктивные результаты
+    return [
+      {
+        id: 101,
+        agentId: 1,
+        agentName: "AgentSmith",
+        agentType: "citizen_requests",
+        entityType: entityType,
+        entityId: entityId,
+        actionType: "classification",
+        result: JSON.stringify({
+          classification: "Техническая поддержка",
+          confidence: 0.92,
+          department: "ИТ-отдел",
+          processingTime: 1.2
+        }),
+        createdAt: new Date(Date.now() - 3600000)
+      },
+      {
+        id: 102,
+        agentId: 1, 
+        agentName: "AgentSmith",
+        agentType: "citizen_requests",
+        entityType: entityType,
+        entityId: entityId,
+        actionType: "summarize",
+        result: JSON.stringify({
+          summary: "Обращение по вопросу неработающего сервиса электронной подписи",
+          keyPoints: [
+            "Пользователь не может войти в систему",
+            "Проблема появилась после обновления",
+            "Требуется срочное решение"
+          ],
+          confidence: 0.89,
+          processingTime: 2.1
+        }),
+        createdAt: new Date(Date.now() - 3000000)
+      },
+      {
+        id: 103,
+        agentId: 1,
+        agentName: "AgentSmith",
+        agentType: "citizen_requests",
+        entityType: entityType,
+        entityId: entityId,
+        actionType: "respond",
+        result: JSON.stringify({
+          recommendation: "Назначить специалиста ИТ-поддержки",
+          nextSteps: [
+            "Проверить статус сервера аутентификации",
+            "Выполнить сброс кэша на стороне клиента",
+            "Проверить актуальность сертификатов ЭЦП"
+          ],
+          confidence: 0.85,
+          processingTime: 1.8
+        }),
+        createdAt: new Date(Date.now() - 1800000)
+      }
+    ];
   }
 }
 

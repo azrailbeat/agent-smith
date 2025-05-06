@@ -604,6 +604,23 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     return result;
   }
+  
+  async getAgentResultsByEntity(entityType: string, entityId: number): Promise<any[]> {
+    try {
+      const results = await db
+        .select()
+        .from(agentResults)
+        .where(and(
+          eq(agentResults.entityType, entityType),
+          eq(agentResults.entityId, entityId)
+        ))
+        .orderBy(desc(agentResults.createdAt));
+      return results;
+    } catch (error) {
+      console.error("Error getting agent results by entity from database:", error);
+      return [];
+    }
+  }
 
   // Initialize default data
   async initializeDefaultData() {
