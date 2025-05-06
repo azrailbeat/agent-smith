@@ -595,6 +595,15 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+  
+  // Agent Result operations
+  async createAgentResult(insertResult: InsertAgentResult): Promise<any> {
+    const [result] = await db.insert(agentResults).values({
+      ...insertResult,
+      createdAt: new Date()
+    }).returning();
+    return result;
+  }
 
   // Initialize default data
   async initializeDefaultData() {

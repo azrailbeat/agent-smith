@@ -1670,6 +1670,17 @@ export class MemStorage implements IStorage {
   async deletePlankaLink(id: number): Promise<boolean> {
     return this.plankaLinks.delete(id);
   }
+  
+  // Agent Result operations
+  async createAgentResult(result: InsertAgentResult): Promise<any> {
+    // For in-memory storage, we just log it and return
+    console.log("Agent result created (in-memory):", result);
+    return {
+      id: Math.floor(Math.random() * 10000),
+      ...result,
+      createdAt: new Date()
+    };
+  }
 }
 
 // Export storage instance
