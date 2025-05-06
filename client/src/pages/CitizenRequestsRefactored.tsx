@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DragDropContext,
@@ -156,6 +156,9 @@ const CitizenRequests: React.FC = () => {
     subject: "",
     description: "",
   });
+  
+  // Создаем реф для диалога автообработки для доступа к его методам
+  const autoProcessDialogRef = useRef<any>(null);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [agentSettings, setAgentSettings] = useState<AgentSettings>({
     enabled: false,
@@ -481,9 +484,13 @@ const CitizenRequests: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
       }, 5000);
       
-      // Имитируем вызов API для демонстрации
+      // Вызываем API для обработки обращений
       try {
-        await apiRequest('POST', '/api/citizen-requests/process-batch', settings);
+        const response = await apiRequest('POST', '/api/citizen-requests/process-batch', settings);
+        // Если есть ссылка на компонент диалога, обновляем отчет
+        if (autoProcessDialogRef.current && typeof autoProcessDialogRef.current.setProcessReport === 'function') {
+          autoProcessDialogRef.current.setProcessReport(response);
+        }
       } catch (err) {
         // Игнорируем ошибку, так как мы имитируем успешный процесс для демонстрации
         console.log("API call failed, but we're simulating success for demo purposes");
