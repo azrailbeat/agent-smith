@@ -165,6 +165,50 @@ export default function OrganizationalStructurePage() {
     const user = users.find((u: User) => u.id === userId);
     return user ? (user.fullName || user.username) : 'Не назначено';
   };
+  
+  // Функция для рендеринга сотрудника в отделе
+  const renderDepartmentUser = (user: User) => {
+    return (
+      <div key={user.id} className="flex items-center justify-between p-2 border rounded-md">
+        <div className="flex items-center">
+          <BookUser className="mr-2 h-4 w-4 text-muted-foreground" />
+          <div>
+            <div>{user.fullName || user.username}</div>
+            <div className="text-xs text-muted-foreground">
+              {positions.find((p: Position) => p.id === user.positionId)?.name || 'Должность не указана'}
+            </div>
+          </div>
+        </div>
+        <div className="flex space-x-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setEditingUser(user);
+              setNewUserDialogOpen(true);
+            }}
+          >
+            <Edit className="h-3 w-3" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDeleteUser(user.id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   // Состояние и функции для диалога создания/редактирования сотрудника
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
@@ -355,22 +399,7 @@ export default function OrganizationalStructurePage() {
                           <div className="pl-6 space-y-2">
                             {getDepartmentUsers(dept.id).length > 0 ? (
                               getDepartmentUsers(dept.id).map((user: User) => (
-                                <div key={user.id} className="flex items-center justify-between p-2 border rounded-md">
-                                  <div className="flex items-center">
-                                    <BookUser className="mr-2 h-4 w-4 text-muted-foreground" />
-                                    <div>
-                                      <div>{user.fullName || user.username}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {positions.find((p: Position) => p.id === user.positionId)?.name || 'Должность не указана'}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="flex space-x-1">
-                                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
+                                renderDepartmentUser(user)
                               ))
                             ) : (
                               <div className="text-sm text-muted-foreground">Нет сотрудников в отделе</div>
@@ -470,6 +499,14 @@ export default function OrganizationalStructurePage() {
                             }}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
