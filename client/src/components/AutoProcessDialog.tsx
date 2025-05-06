@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Loader2, ArrowRight, Bot, Hourglass, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,11 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 /**
  * Интерфейс агента ИИ
- * @interface Agent
- * @property {number} id - Идентификатор агента
- * @property {string} name - Имя агента
- * @property {string} type - Тип агента (citizen_requests, blockchain, etc.)
- * @property {string} [description] - Описание агента
  */
 interface Agent {
   id: number;
@@ -26,12 +21,6 @@ interface Agent {
 
 /**
  * Интерфейс обращения гражданина
- * @interface CitizenRequest
- * @property {number} id - Идентификатор обращения
- * @property {string} fullName - ФИО гражданина
- * @property {string} status - Статус обращения
- * @property {string} subject - Тема обращения
- * @property {Date} createdAt - Дата создания обращения
  */
 interface CitizenRequest {
   id: number;
@@ -44,11 +33,6 @@ interface CitizenRequest {
 
 /**
  * Интерфейс шага обработки
- * @interface ProcessingStep
- * @property {string} id - Идентификатор шага
- * @property {string} title - Заголовок шага
- * @property {string} description - Описание шага
- * @property {'pending' | 'in_progress' | 'completed' | 'error'} status - Статус шага обработки
  */
 interface ProcessingStep {
   id: string;
@@ -84,7 +68,7 @@ export interface AutoProcessDialogRef {
 /**
  * Компонент диалога автоматической обработки обращений
  */
-const AutoProcessDialog = React.forwardRef<AutoProcessDialogRef, AutoProcessDialogProps>((props, ref) => {
+const AutoProcessDialog = forwardRef<AutoProcessDialogRef, AutoProcessDialogProps>((props, ref) => {
   const { open, onOpenChange, settings, onSettingsChange, onProcess } = props;
   
   // Состояния процесса обработки
@@ -101,6 +85,11 @@ const AutoProcessDialog = React.forwardRef<AutoProcessDialogRef, AutoProcessDial
   useImperativeHandle(ref, () => ({
     setProcessReport: (report: any) => {
       setProcessReport(report);
+      // Также сбросим анимацию прогресса, когда получен отчет
+      if (report) {
+        setProgress(100);
+        setIsProcessing(false);
+      }
     }
   }));
   
@@ -146,7 +135,6 @@ const AutoProcessDialog = React.forwardRef<AutoProcessDialogRef, AutoProcessDial
 
   /**
    * Фильтруем агентов по типу (citizen_requests)
-   * @type {Agent[]}
    */
   const citizenRequestAgents = agents.filter(agent => 
     agent.type === "citizen_requests"
@@ -210,15 +198,14 @@ const AutoProcessDialog = React.forwardRef<AutoProcessDialogRef, AutoProcessDial
     setIsProcessing(true);
     setProcessingStep(0);
     setProgress(0);
+    // Сбросим отчет при старте новой обработки
+    setProcessReport(null);
     // Имитируем выбор обращений из текущего списка
     setRequestsToProcess(newRequests.slice(0, Math.min(newRequests.length, 5)));
     // Имитируем выбор клиента для демонстрации
     if (newRequests.length > 0) {
       setSelectedClient(newRequests[0].fullName);
     }
-    
-    // Сбрасываем отчет при старте новой обработки
-    setProcessReport(null);
     
     // После завершения анимации запускаем реальную обработку
     setTimeout(() => {
@@ -534,7 +521,7 @@ const AutoProcessDialog = React.forwardRef<AutoProcessDialogRef, AutoProcessDial
   );
 });
 
-// Необходимо для корректной работы forwardRef
+// Добавляем displayName для React.forwardRef
 AutoProcessDialog.displayName = "AutoProcessDialog";
 
 export { AutoProcessDialog };
