@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ALLOWED_AGENT_TYPES } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import RequestInsightPanel from "@/components/RequestInsightPanel";
+import { AutoProcessDialog } from "@/components/AutoProcessDialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +144,7 @@ const CitizenRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState<boolean>(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState<boolean>(false);
+  const [isAutoProcessOpen, setIsAutoProcessOpen] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [formData, setFormData] = useState<{
@@ -711,6 +713,15 @@ const CitizenRequests = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAutoProcessOpen(true)}
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
+          >
+            <Bot className="h-4 w-4 mr-2 text-blue-600" />
+            Авто-обработка
+          </Button>
           <Button
             variant="outline"
             size="sm"
