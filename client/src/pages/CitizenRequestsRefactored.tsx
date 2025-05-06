@@ -553,14 +553,14 @@ const CitizenRequests: React.FC = () => {
                                    columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
 
                 return (
-                  <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white`}>
-                    <div className={`p-3 border-b sticky top-0 z-10 bg-white rounded-t-lg ${headerColor}`}>
+                  <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white overflow-hidden`}>
+                    <div className={`p-3 border-b sticky top-0 z-10 ${headerColor} rounded-t-lg`}>
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium flex items-center">
                           {statusIcons[column.id]}
                           <span className="ml-2">{column.title}</span>
                         </h3>
-                        <div className="px-2 py-1 rounded-full text-xs font-medium bg-white border">
+                        <div className="px-2 py-1 rounded-full text-xs font-medium bg-white border shadow-sm">
                           {requestsInColumn.length}
                         </div>
                       </div>
@@ -570,10 +570,11 @@ const CitizenRequests: React.FC = () => {
                         <div
                           {...provided.droppableProps}
                           ref={provided.innerRef}
-                          className="p-2 min-h-[70vh] max-h-[calc(100vh-220px)] overflow-y-auto"
+                          className="p-3 min-h-[70vh] max-h-[calc(100vh-220px)] overflow-y-auto bg-gray-50/50"
                         >
                         {requestsInColumn.length === 0 ? (
-                          <div className="text-center py-4 text-muted-foreground text-sm">
+                          <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2">
+                            <Inbox className="h-10 w-10 mx-auto mb-2 text-gray-400" />
                             Нет обращений
                           </div>
                         ) : (

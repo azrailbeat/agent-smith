@@ -143,7 +143,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       ref={innerRef}
       {...draggableProps}
       {...dragHandleProps}
-      className={`mb-3 bg-white rounded-md border-l-4 ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg" : "shadow-sm"} hover:shadow-md transition-shadow`}
+      className={`mb-3 bg-white rounded-md border-l-4 ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg" : "shadow-sm"} hover:shadow-md transition-all duration-200`}
       onClick={onClick}
     >
       <div className="p-3">
@@ -200,23 +200,23 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Содержимое карточки */}
-        <h4 className="font-medium text-sm mb-2 line-clamp-1">
+        <h4 className="font-medium text-sm mb-2 line-clamp-1 pb-1 border-b border-gray-100">
           {request.subject || request.title || "Без темы"}
         </h4>
         
-        <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+        <p className="text-xs text-gray-600 line-clamp-2 mb-2 bg-gray-50 p-2 rounded border border-gray-100 shadow-sm">
           {request.description || request.content || "Без описания"}
         </p>
 
         {/* Дополнительные метки */}
         <div className="flex flex-wrap gap-1 mb-2">
           {request.category && (
-            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs">
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs border-gray-200 shadow-sm">
               {request.category}
             </Badge>
           )}
           {request.aiClassification && (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs border-purple-200 shadow-sm">
               {request.aiClassification}
             </Badge>
           )}
@@ -224,7 +224,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Дополнительная информация (резюме AI) */}
         {request.summary && (
-          <div className="bg-blue-50 p-2 rounded-md text-xs text-blue-800 mb-2">
+          <div className="bg-blue-50 p-2 rounded-md text-xs text-blue-800 mb-2 border border-blue-100 shadow-sm">
             <span className="font-medium">Резюме: </span>
             <span className="line-clamp-2">{request.summary}</span>
           </div>
@@ -249,23 +249,23 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
           <div className="flex items-center gap-1">
             {/* Индикаторы */}
             {request.aiProcessed && (
-              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs flex items-center px-1 h-5">
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs flex items-center px-1 h-5 border-purple-200 shadow-sm">
                 <Bot className="h-3 w-3 mr-1" /> ИИ
               </Badge>
             )}
             {request.blockchainHash && (
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex items-center px-1 h-5">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex items-center px-1 h-5 border-blue-200 shadow-sm">
                 <Database className="h-3 w-3 mr-1" />
               </Badge>
             )}
             {assignedAgent && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center px-1 h-5">
+              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center px-1 h-5 border-green-200 shadow-sm">
                 <User className="h-3 w-3 mr-1" />
                 {assignedAgent.name.split(' ')[0]}
               </Badge>
             )}
             {request.assignedTo && !assignedAgent && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center px-1 h-5">
+              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center px-1 h-5 border-green-200 shadow-sm">
                 <User className="h-3 w-3 mr-1" />
               </Badge>
             )}
