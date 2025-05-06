@@ -637,6 +637,14 @@ const CitizenRequests = () => {
     urgent: "bg-red-100 text-red-800",
   };
 
+  // Цвета бордеров для приоритетов
+  const priorityBorderColors: { [key: string]: string } = {
+    low: "border-l-blue-400",
+    medium: "border-l-yellow-400",
+    high: "border-l-orange-500",
+    urgent: "border-l-red-500",
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex justify-between items-center mb-6">
@@ -646,7 +654,17 @@ const CitizenRequests = () => {
             Управление и обработка обращений с помощью ИИ
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <div className="text-lg font-bold text-blue-600">{stats.total.toLocaleString('ru-RU')}</div>
+            <div className="text-xs text-gray-500">Всего обращений</div>
+          </div>
+          <div className="h-10 border-r border-gray-200 mx-1"></div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-600">{stats.completed.toLocaleString('ru-RU')}</div>
+            <div className="text-xs text-gray-500">Закрыто</div>
+          </div>
+          <div className="h-10 border-r border-gray-200 mx-1"></div>
           <Button
             onClick={() => setIsNewRequestOpen(true)}
             className="bg-gradient-to-r from-blue-600 to-indigo-600"
@@ -656,52 +674,7 @@ const CitizenRequests = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="bg-blue-100 p-3 rounded-full">
-              <FileText className="h-6 w-6 text-blue-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Всего обращений</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="bg-yellow-100 p-3 rounded-full">
-              <Clock className="h-6 w-6 text-yellow-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">В обработке</p>
-              <p className="text-2xl font-bold">{stats.inProgress}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="bg-green-100 p-3 rounded-full">
-              <Check className="h-6 w-6 text-green-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Выполнено</p>
-              <p className="text-2xl font-bold">{stats.completed}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="bg-purple-100 p-3 rounded-full">
-              <Bot className="h-6 w-6 text-purple-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Обработано ИИ</p>
-              <p className="text-2xl font-bold">{stats.aiProcessed}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -771,7 +744,9 @@ const CitizenRequests = () => {
                         {statusIcons[column.id]}
                         <span className="ml-2">{column.title}</span>
                       </h3>
-                      <Badge variant="outline">{requestsInColumn.length}</Badge>
+                      <div className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">
+                        {requestsInColumn.length}
+                      </div>
                     </div>
                   </div>
                   <Droppable droppableId={column.id}>
