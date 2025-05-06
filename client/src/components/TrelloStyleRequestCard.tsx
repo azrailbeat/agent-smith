@@ -156,9 +156,6 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={`${priorityColors[request.priority]}`} variant="outline">
-              {request.priority || 'Обычный'}
-            </Badge>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full" onClick={e => e.stopPropagation()}>
@@ -192,6 +189,16 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
           </div>
         </div>
         
+        {/* ID и категория карточки */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-500">ID: {request.id}</span>
+          </div>
+          <Badge className={`${priorityColors[request.priority]}`} variant="outline">
+            {request.priority || 'Обычный'}
+          </Badge>
+        </div>
+        
         {/* Содержимое карточки */}
         <h4 className="font-medium text-sm mb-2 line-clamp-1">
           {request.subject || request.title || "Без темы"}
@@ -201,6 +208,20 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
           {request.description || request.content || "Без описания"}
         </p>
 
+        {/* Дополнительные метки */}
+        <div className="flex flex-wrap gap-1 mb-2">
+          {request.category && (
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs">
+              {request.category}
+            </Badge>
+          )}
+          {request.aiClassification && (
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+              {request.aiClassification}
+            </Badge>
+          )}
+        </div>
+        
         {/* Дополнительная информация (резюме AI) */}
         {request.summary && (
           <div className="bg-blue-50 p-2 rounded-md text-xs text-blue-800 mb-2">
@@ -208,20 +229,21 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             <span className="line-clamp-2">{request.summary}</span>
           </div>
         )}
-        
-        {/* Дополнительная информация (классификация AI) */}
-        {request.aiClassification && (
-          <div className="bg-purple-50 p-2 rounded-md text-xs text-purple-800 mb-2">
-            <span className="font-medium">Классификация: </span>
-            {request.aiClassification}
-          </div>
-        )}
 
         {/* Футер карточки */}
         <div className="flex justify-between items-center text-xs text-gray-500 mt-3 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {new Date(request.createdAt).toLocaleDateString("ru-RU")}
+          <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {new Date(request.createdAt).toLocaleDateString("ru-RU")}
+            </div>
+            
+            {request.contactInfo && (
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-1 h-1 rounded-full bg-gray-300"></span>
+                <span title={request.contactInfo} className="truncate max-w-[80px]">{request.contactInfo}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-1">

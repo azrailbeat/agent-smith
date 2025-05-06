@@ -533,7 +533,7 @@ const CitizenRequests: React.FC = () => {
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="w-full overflow-x-auto pb-4">
-            <div className="flex space-x-5 min-w-max px-1">
+            <div className="flex space-x-5 min-w-max px-4">
               {board.columnOrder.map((columnId) => {
                 const column = board.columns[columnId];
                 const requestsInColumn = column.requestIds
@@ -553,8 +553,8 @@ const CitizenRequests: React.FC = () => {
                                    columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
 
                 return (
-                  <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm ${columnColor}`}>
-                    <div className="p-3 border-b sticky top-0 z-10 bg-white">
+                  <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white`}>
+                    <div className={`p-3 border-b sticky top-0 z-10 bg-white rounded-t-lg ${headerColor}`}>
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium flex items-center">
                           {statusIcons[column.id]}
