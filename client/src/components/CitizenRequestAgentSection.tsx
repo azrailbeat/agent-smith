@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, Bot, Sparkles, Settings2, UserRound, FileCheck } from 'lucide-react';
+import { Loader2, FileText, Bot, Sparkles, Settings2, UserRound, FileCheck, Database } from 'lucide-react';
 
 import AgentButtonOrderConfig from './AgentButtonOrderConfig';
 import AgentSelectionDialog from './AgentSelectionDialog';

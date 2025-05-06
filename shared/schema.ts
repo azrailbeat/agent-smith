@@ -377,6 +377,27 @@ export const insertAgentSchema = createInsertSchema(agents).pick({
   stats: true,
 });
 
+// Результаты работы агентов
+export const agentResults = pgTable("agent_results", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  entityType: text("entity_type").notNull(),  // citizen_request, document, task
+  entityId: integer("entity_id").notNull(),
+  actionType: text("action_type").notNull(),   // classification, response, summarization, etc.
+  result: jsonb("result").notNull(),
+  feedback: text("feedback"),              // positive, negative
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAgentResultSchema = createInsertSchema(agentResults).pick({
+  agentId: true,
+  entityType: true,
+  entityId: true,
+  actionType: true,
+  result: true,
+  feedback: true,
+});
+
 // Схема правил распределения (организационная структура)
 export const organizationalRules = pgTable("organizational_rules", {
   id: serial("id").primaryKey(),
