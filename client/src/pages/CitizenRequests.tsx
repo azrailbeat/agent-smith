@@ -1959,7 +1959,7 @@ const CitizenRequests = () => {
                     <h2 className="text-lg font-semibold">Карточка обращения</h2>
                   </div>
                   <DialogClose className="rounded-full p-1 hover:bg-neutral-100">
-                    <X className="h-5 w-5" />
+                    <span aria-hidden>×</span>
                   </DialogClose>
                 </div>
               </div>
@@ -2006,57 +2006,7 @@ const CitizenRequests = () => {
                   </div>
                 </div>
                 
-                {/* Кнопка анализа с помощью AI */}
-                <Button 
-                  className="w-full mt-2"
-                  size="lg"
-                  onClick={() => {
-                    if (!selectedRequest) return;
-                    
-                    // Получаем все активные агенты из настроек
-                    const activeAgents = availableAgents.filter(agent => 
-                      agent.isActive && ALLOWED_AGENT_TYPES.includes(agent.type)
-                    );
-                    
-                    if (activeAgents.length === 0) {
-                      toast({
-                        title: "Ошибка",
-                        description: "Не найдены активные AI агенты для обработки. Перейдите в раздел Настройки и активируйте агентов.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-                    
-                    // Начинаем с агента для обработки обращений
-                    const citizenRequestAgent = activeAgents.find(agent => agent.type === 'citizen_requests');
-                    
-                    toast({
-                      title: "Запуск комплексного анализа AI",
-                      description: "Запущено полное аналитическое исследование обращения..."
-                    });
-                    
-                    // Запускаем полную обработку обращения
-                    if (citizenRequestAgent) {
-                      processRequestWithAgent(selectedRequest, citizenRequestAgent.id, "full");
-                    }
-                    
-                    // Запускаем блокчейн-агента, если такой есть
-                    const blockchainAgent = activeAgents.find(agent => agent.type === 'blockchain');
-                    
-                    if (blockchainAgent) {
-                      setTimeout(() => {
-                        processRequestWithAgent(selectedRequest, blockchainAgent.id, "blockchain");
-                      }, 1500); // Небольшая задержка для последовательной обработки
-                    }
-                    
-                    // Загружаем результаты после всех обработок
-                    setTimeout(() => {
-                      fetchAgentResults(selectedRequest.id);
-                    }, 3000);
-                  }}
-                >
-                  <Bot className="mr-2 h-5 w-5" /> Анализировать с помощью AI
-                </Button>
+                {/* Удалена кнопка анализа с помощью AI, теперь используется из списка агентов */}
               </div>
               
               <div className="border-t border-border"></div>
