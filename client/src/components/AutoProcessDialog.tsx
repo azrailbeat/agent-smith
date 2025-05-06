@@ -57,6 +57,7 @@ interface CitizenRequest {
   status: string;
   subject: string;
   createdAt: Date;
+  aiProcessed?: boolean;
 }
 
 /**
@@ -103,6 +104,7 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
   const [requestMoved, setRequestMoved] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [requestsToProcess, setRequestsToProcess] = useState<CitizenRequest[]>([]);
+  const [processReport, setProcessReport] = useState<any>(null);
   
   // Этапы обработки
   const processingSteps: ProcessingStep[] = [
@@ -226,6 +228,68 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
     }, 5000);
   };
 
+  // Функция для отображения итогового отчета
+  const renderReportContent = () => {
+    if (!processReport) return null;
+    
+    const { summary } = processReport;
+    
+    return (
+      <div className="space-y-4 mt-4 border border-green-100 rounded-lg p-4 bg-green-50">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <h3 className="text-lg font-medium text-green-800">Отчёт о выполнении</h3>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="bg-white rounded p-2 border border-green-200">
+            <p className="text-xs text-gray-600">Всего обращений:</p>
+            <p className="text-xl font-bold text-gray-900">{summary.total}</p>
+          </div>
+          <div className="bg-white rounded p-2 border border-green-200">
+            <p className="text-xs text-gray-600">Обработано:</p>
+            <p className="text-xl font-bold text-blue-700">{summary.processed}</p>
+          </div>
+          <div className="bg-white rounded p-2 border border-green-200">
+            <p className="text-xs text-gray-600">Успешно:</p>
+            <p className="text-xl font-bold text-green-700">{summary.succeeded}</p>
+          </div>
+          <div className="bg-white rounded p-2 border border-green-200">
+            <p className="text-xs text-gray-600">С ошибками:</p>
+            <p className="text-xl font-bold text-red-700">{summary.failed}</p>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded p-3 border border-green-200 text-sm">
+          <p className="font-medium mb-1">Примененные действия:</p>
+          <Badge variant="outline" className="mr-1">{summary.actions}</Badge>
+        </div>
+        
+        <div className="bg-white rounded p-3 border border-green-200 text-sm">
+          <p className="font-medium mb-1">Использован агент:</p>
+          <div className="flex items-center">
+            <Bot className="h-4 w-4 mr-2 text-blue-600" />
+            <span>{summary.agentName} (ID: {summary.agentId})</span>
+          </div>
+        </div>
+        
+        <div className="mt-2 text-xs text-gray-500 text-right">
+          Время завершения: {new Date(summary.timeStamp).toLocaleString()}
+        </div>
+        
+        <div className="flex justify-center mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="w-full"
+          >
+            Закрыть отчет
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   // Отображение прогресса при обработке обращений
   const renderProcessingContent = () => (
     <>
@@ -239,85 +303,88 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
         </p>
       </div>
       
-      <div className="space-y-4 mb-6">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium">Прогресс: {Math.floor(progress)}%</span>
-          <Badge variant="outline" className="text-xs">
-            Этап {processingStep + 1}/{processingSteps.length}
-          </Badge>
-        </div>
-        <Progress value={progress} className="h-2" />
-        
-        <div className="space-y-3 max-h-[260px] overflow-y-auto p-1">
-          {stepsWithStatus.map((step, index) => (
-            <div 
-              key={step.id} 
-              className={`flex items-center p-3 rounded-md border ${
-                step.status === 'in_progress' 
-                  ? 'border-blue-200 bg-blue-50' 
-                  : step.status === 'completed' 
-                    ? 'border-green-200 bg-green-50' 
-                    : 'border-gray-100 bg-gray-50'
-              }`}
-            >
-              <div className="mr-3">
-                {step.status === 'pending' && (
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-                )}
-                {step.status === 'in_progress' && (
-                  <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                )}
-                {step.status === 'completed' && (
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">{step.title}</p>
-                <p className="text-xs text-gray-500">{step.description}</p>
-              </div>
-              {step.status === 'in_progress' && index === 4 && requestMoved && (
-                <Badge className="ml-auto animate-pulse bg-green-500">
-                  Перемещено: 2 обращения
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
-        
-        {processingStep >= 3 && (
-          <div className="border border-blue-100 rounded-md p-3 bg-blue-50">
-            <h4 className="text-sm font-medium flex items-center mb-2">
-              <ArrowRight className="h-4 w-4 mr-1 text-blue-500" />
-              Сводка действий
-            </h4>
-            <div className="space-y-2">
-              {processingStep >= 4 && (
-                <div className="flex items-center justify-between text-xs">
-                  <span>Обработано обращений:</span>
-                  <Badge variant="outline" className="bg-white">
-                    {Math.min(progress > 90 ? newRequests.length : Math.floor(newRequests.length * progress / 100), newRequests.length)}
-                  </Badge>
-                </div>
-              )}
-              {selectedClient && progress > 60 && (
-                <div className="text-xs border-t border-blue-200 pt-2 mt-2">
-                  <div className="flex items-center mb-1">
-                    <span className="font-medium">{selectedClient}</span>
-                    <Badge className="ml-2 text-[10px] bg-green-500">В работе</Badge>
-                  </div>
-                  <p className="text-gray-600">Обращение классифицировано и передано в работу ведомству</p>
-                </div>
-              )}
-            </div>
+      {processReport ? renderReportContent() : (
+        <div className="space-y-4 mb-6">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Прогресс: {Math.floor(progress)}%</span>
+            <Badge variant="outline" className="text-xs">
+              Этап {processingStep + 1}/{processingSteps.length}
+            </Badge>
           </div>
-        )}
-      </div>
+          <Progress value={progress} className="h-2" />
+          
+          <div className="space-y-3 max-h-[260px] overflow-y-auto p-1">
+            {stepsWithStatus.map((step, index) => (
+              <div 
+                key={step.id} 
+                className={`flex items-center p-3 rounded-md border ${
+                  step.status === 'in_progress' 
+                    ? 'border-blue-200 bg-blue-50' 
+                    : step.status === 'completed' 
+                      ? 'border-green-200 bg-green-50' 
+                      : 'border-gray-100 bg-gray-50'
+                }`}
+              >
+                <div className="mr-3">
+                  {step.status === 'pending' && (
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                  )}
+                  {step.status === 'in_progress' && (
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  )}
+                  {step.status === 'completed' && (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{step.title}</p>
+                  <p className="text-xs text-gray-500">{step.description}</p>
+                </div>
+                {step.status === 'in_progress' && index === 4 && requestMoved && (
+                  <Badge className="ml-auto animate-pulse bg-green-500">
+                    Перемещено: 2 обращения
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          {processingStep >= 3 && (
+            <div className="border border-blue-100 rounded-md p-3 bg-blue-50">
+              <h4 className="text-sm font-medium flex items-center mb-2">
+                <ArrowRight className="h-4 w-4 mr-1 text-blue-500" />
+                Сводка действий
+              </h4>
+              <div className="space-y-2">
+                {processingStep >= 4 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span>Обработано обращений:</span>
+                    <Badge variant="outline" className="bg-white">
+                      {Math.min(progress > 90 ? newRequests.length : Math.floor(newRequests.length * progress / 100), newRequests.length)}
+                    </Badge>
+                  </div>
+                )}
+                {selectedClient && progress > 60 && (
+                  <div className="text-xs border-t border-blue-200 pt-2 mt-2">
+                    <div className="flex items-center mb-1">
+                      <span className="font-medium">{selectedClient}</span>
+                      <Badge className="ml-2 text-[10px] bg-green-500">В работе</Badge>
+                    </div>
+                    <p className="text-gray-600">Обращение классифицировано и передано в работу ведомству</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="flex justify-center">
         <Button 
           variant="outline" 
           onClick={() => {
             setIsProcessing(false);
+            setProcessReport(null);
             onOpenChange(false);
           }}
           className="w-full"

@@ -2000,7 +2000,35 @@ ${request.description || ''}
         }
       }
       
-      return res.json({ success: true, results, processedCount });
+      // Генерируем детальный отчет о процессе обработки для возврата клиенту
+      const report = {
+        success: true,
+        processedCount,
+        results,
+        summary: {
+          total: allRequests.length,
+          processed: results.length,
+          succeeded: processedCount.success,
+          failed: processedCount.error,
+          timeStamp: new Date().toISOString(),
+          actions: actions.join(', '),
+          agentId: resolvedAgentId,
+          agentName: agent?.name || 'Unknown'
+        }
+      };
+      
+      // Логируем активность создания отчета
+      await storage.createActivity({
+        actionType: "ai_process_report",
+        description: `Создан отчет по пакетной обработке ${results.length} обращений`,
+        metadata: {
+          processedCount,
+          succeededCount: processedCount.success,
+          failedCount: processedCount.error
+        }
+      });
+      
+      return res.json(report);
     } catch (error) {
       console.error('Error during batch processing:', error);
       return res.status(500).json({ error: 'Internal server error during batch processing' });
