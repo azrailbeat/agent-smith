@@ -1239,8 +1239,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      await storage.deleteCitizenRequest(id);
-      res.status(200).json({ success: true, message: 'Citizen request deleted successfully' });
+      const result = await storage.deleteCitizenRequest(id);
+      if (result) {
+        res.status(200).json({ success: true, message: 'Citizen request deleted successfully' });
+      } else {
+        res.status(404).json({ error: 'Citizen request not found' });
+      }
     } catch (error) {
       console.error('Error deleting citizen request:', error);
       res.status(500).json({ error: 'Failed to delete citizen request', message: error.message });
