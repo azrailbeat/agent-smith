@@ -1,18 +1,24 @@
-export default {
-  preset: 'ts-jest/presets/js-with-ts-esm',
+// @ts-check
+/** @type {import('jest').Config} */
+const config = {
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      useESM: true,
-    }],
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+      },
+    ],
   },
-  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@/(.*)$': '<rootDir>/client/src/$1',
     '^@shared/(.*)$': '<rootDir>/shared/$1',
     '^@server/(.*)$': '<rootDir>/server/$1',
   },
 };
+
+export default config;
