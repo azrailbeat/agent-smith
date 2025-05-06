@@ -1552,6 +1552,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Documentolog integration route
+  // API для приема обращений извне
+  app.post('/api/external/citizen-requests', async (req, res) => {
+    try {
+      const { fullName, contactInfo, subject, description, requestType, priority, citizenInfo } = req.body;
+      
+      // Базовая валидация
+      if (!fullName || !contactInfo || !description) {
+        return res.status(400).json({ 
+          error: 'Missing required fields', 
+          message: 'Fields fullName, contactInfo, and description are required' 
+        });
+      }
+      
+      // Создаем обращение
+      const newRequest = await storage.createCitizenRequest({
+        fullName,
+        contactInfo,
+        subject: subject || 'Новое обращение',
+        description,
+        requestType: requestType || 'general',
+        priority: priority || 'normal',
+        status: 'new',
+        createdAt: new Date(),
+        citizenInfo: citizenInfo || {}
+      });
+      
+      // Логируем активность
+      await storage.createActivity({
+        actionType: 'citizen_request_created',
+        description: `Создано новое обращение от ${fullName}`,
+        relatedId: newRequest.id,
+        relatedType: 'citizen_request'
+      });
+      
+      // Автоматическая обработка, если включена
+      let processingResult = {};
+      const agentEnabled = await storage.getAgentsByType("citizen_requests")
+        .then(agents => agents.length > 0 ? agents[0].isActive : false);
+      
+      if (agentEnabled) {
+        try {
+          // Запускаем обработку в фоновом режиме
+          // Не блокируем ответ
+          process.nextTick(async () => {
+            try {
+              // Вызываем маршрут обработки
+              await fetch(`http://localhost:${process.env.PORT || 5000}/api/citizen-requests/${newRequest.id}/process`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+            } catch (e) {
+              console.error('Background processing error:', e);
+            }
+          });
+          
+          processingResult = { autoProcessing: true, status: 'in_progress' };
+        } catch (procError) {
+          console.error('Error initiating auto-processing:', procError);
+          processingResult = { autoProcessing: false, error: procError.message };
+        }
+      } else {
+        processingResult = { autoProcessing: false, reason: 'AI processing disabled' };
+      }
+      
+      // Возвращаем результат
+      res.status(201).json({
+        success: true,
+        request: newRequest,
+        processing: processingResult,
+        message: 'Citizen request created successfully'
+      });
+    } catch (error) {
+      console.error('Error creating external citizen request:', error);
+      res.status(500).json({ error: error.message || 'Failed to create citizen request' });
+    }
+  });
+
   app.post('/api/documents/documentolog', async (req, res) => {
     try {
       const { docId, taskId, userId } = req.body;

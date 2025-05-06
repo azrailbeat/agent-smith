@@ -835,9 +835,39 @@ const CitizenRequests = () => {
       
       // Распределяем обращения по колонкам в соответствии со статусом
       requests.forEach((request) => {
-        const status = request.status || "pending";
-        if (newBoard.columns[status]) {
-          newBoard.columns[status].requestIds.push(request.id);
+        // Определяем правильный статус для отображения
+        let status = request.status || "pending";
+        
+        // Если обращение обработано AI, но статус остался как "new", меняем на "in_progress"
+        if (request.aiProcessed && status === "new") {
+          status = "in_progress";
+          
+          // Обновляем статус и в базе данных
+          apiRequest('PATCH', `/api/citizen-requests/${request.id}`, {
+            status: "in_progress"
+          }).catch(err => console.error(`Ошибка обновления статуса для запроса ${request.id}:`, err));
+        }
+        
+        // Если есть автоматическое назначение или departmentId, но статус "pending" или "new"
+        if ((request.assignedTo || request.departmentId) && (status === "pending" || status === "new")) {
+          status = "assigned";
+          
+          // Обновляем статус в базе
+          apiRequest('PATCH', `/api/citizen-requests/${request.id}`, {
+            status: "assigned"
+          }).catch(err => console.error(`Ошибка обновления статуса для запроса ${request.id}:`, err));
+        }
+        
+        // Добавляем карточку в соответствующую колонку
+        // Приводим статус к одному из допустимых значений колонок
+        let columnStatus = status;
+        if (status === "new" || status === "pending") columnStatus = "pending";
+        else if (status === "assigned" || status === "in_progress") columnStatus = "in_progress";
+        else if (status === "completed" || status === "done") columnStatus = "completed";
+        else if (status === "rejected" || status === "cancelled") columnStatus = "rejected";
+        
+        if (newBoard.columns[columnStatus]) {
+          newBoard.columns[columnStatus].requestIds.push(request.id);
         } else {
           // Если статус не соответствует ни одной колонке, добавляем в "pending"
           newBoard.columns["pending"].requestIds.push(request.id);
