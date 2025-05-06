@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
   title: string;
@@ -11,10 +12,10 @@ interface PageHeaderProps {
  */
 export function PageHeader({ title, description, className }: PageHeaderProps) {
   return (
-    <div className={className}>
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+    <div className={cn("space-y-1", className)}>
+      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       {description && (
-        <p className="text-muted-foreground mt-1">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       )}
     </div>
   );

@@ -25,7 +25,9 @@ import {
   LogOut,
   Vote,
   XCircle,
-  FileStack
+  FileStack,
+  HelpCircle,
+  Cpu
 } from "lucide-react";
 import { 
   Tooltip, 
@@ -114,6 +116,11 @@ const Sidebar = ({
           name: "Документы",
           path: "/documents",
           icon: <FileCheck size={20} />
+        },
+        {
+          name: "Помощники",
+          path: "/help-bubble",
+          icon: <HelpCircle size={20} />
         },
         {
           name: "DAO Голосования",
