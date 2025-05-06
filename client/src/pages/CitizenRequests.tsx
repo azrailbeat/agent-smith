@@ -464,7 +464,7 @@ const CitizenRequests = () => {
         case "new":
           newBoard.columns.new.requestIds.push(request.id);
           break;
-        case "inProgress":
+        case "in_progress":
           newBoard.columns.inProgress.requestIds.push(request.id);
           break;
         case "waiting":
@@ -545,7 +545,12 @@ const CitizenRequests = () => {
 
     // Находим перемещенный запрос и обновляем его статус
     const requestId = parseInt(draggableId);
-    const newStatus = destination.droppableId;
+    let newStatus = destination.droppableId;
+    
+    // Преобразуем статус для бэкенда
+    if (newStatus === 'inProgress') {
+      newStatus = 'in_progress';
+    }
 
     // Вызываем мутацию для обновления статуса запроса в API
     updateRequestStatusMutation.mutate({
@@ -611,7 +616,7 @@ const CitizenRequests = () => {
   const stats = {
     total: citizenRequests.length,
     new: citizenRequests.filter(r => r.status === 'new').length,
-    inProgress: citizenRequests.filter(r => r.status === 'inProgress').length,
+    inProgress: citizenRequests.filter(r => r.status === 'in_progress').length,
     waiting: citizenRequests.filter(r => r.status === 'waiting').length,
     completed: citizenRequests.filter(r => r.status === 'completed').length,
     aiProcessed: citizenRequests.filter(r => r.aiProcessed).length
