@@ -103,8 +103,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Регистрация системных маршрутов
   registerSystemRoutes(app);
   
-  // Регистрация маршрутов для протоколов заседаний
-  registerMeetingRoutes(app);
+  // Добавляем маршруты для протоколов заседаний напрямую
+  app.get('/api/meetings', async (req, res) => {
+    try {
+      const meetings = await storage.getMeetings();
+      
+      // Логируем активность просмотра протоколов
+      await logActivity({
+        action: 'view_list',
+        entityType: 'meeting',
+        details: 'Просмотр списка протоколов заседаний'
+      });
+      
+      res.json(meetings);
+    } catch (error: any) {
+      console.error('Error getting meetings:', error);
+      res.status(500).json({ error: 'Failed to get meetings', details: error.message });
+    }
+  });
+  
+  // Получение протокола заседания по ID
+  app.get('/api/meetings/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid meeting ID' });
+      }
+      
+      const meeting = await storage.getMeeting(id);
+      if (!meeting) {
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+      
+      res.json(meeting);
+    } catch (error: any) {
+      console.error(`Error getting meeting by ID:`, error);
+      res.status(500).json({ error: 'Failed to get meeting', details: error.message });
+    }
+  });
+  
+  // Создание нового протокола заседания
+  app.post('/api/meetings', async (req, res) => {
+    try {
+      const meetingData = req.body;
+      
+      if (!meetingData.title) {
+        return res.status(400).json({ error: 'Meeting title is required' });
+      }
+      
+      const meeting = await storage.createMeeting(meetingData);
+      res.status(201).json(meeting);
+    } catch (error: any) {
+      console.error('Error creating meeting:', error);
+      res.status(500).json({ error: 'Failed to create meeting', details: error.message });
+    }
+  });
   
   // Регистрация маршрутов мониторинга LLM
   const llmMonitoringRouter = express.Router();
