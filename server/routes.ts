@@ -1859,7 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Получаем агента
-      const agent = await storage.getAgent(agentId);
+      const agent = await storage.getAgent(resolvedAgentId);
       if (!agent) {
         return res.status(404).json({ error: 'Agent not found' });
       }
