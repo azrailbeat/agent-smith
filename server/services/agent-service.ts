@@ -611,7 +611,7 @@ export class AgentService {
   }
   
   /**
-   * Запись результата работы агента в блокчейн
+   * Запись результата работы агента в блокчейн через Hyperledger Besu
    */
   private async recordResultToBlockchain(
     input: AgentInput, 
@@ -619,23 +619,62 @@ export class AgentService {
     agentId: number
   ): Promise<{ transactionHash: string }> {
     try {
+      // Определяем тип действия на основе типа задачи
+      let action: string;
+      switch (input.taskType) {
+        case AgentTaskType.CLASSIFICATION:
+          action = 'classification';
+          break;
+        case AgentTaskType.RESPONSE_GENERATION:
+          action = 'response_generation';
+          break;
+        case AgentTaskType.SUMMARIZATION:
+          action = 'summarization';
+          break;
+        case AgentTaskType.DOCUMENT_ANALYSIS:
+          action = 'document_analysis';
+          break;
+        case AgentTaskType.VALIDATION:
+          action = 'validation';
+          break;
+        default:
+          action = 'processing';
+      }
+      
       // Формируем данные для записи в блокчейн
       const blockchainData = {
         type: this.mapEntityTypeToBlockchainType(input.entityType),
         title: `AI processing: ${input.taskType} of ${input.entityType}`,
         content: result.output || result.summary || JSON.stringify(result.analysis),
+        entityId: input.entityId || 0,
+        entityType: input.entityType,
+        action: action,
         metadata: {
-          entityId: input.entityId,
-          entityType: input.entityType,
           taskType: input.taskType,
           agentId,
           timestamp: new Date().toISOString(),
+          userId: input.userId,
+          language: input.language,
           ...result.metadata
         }
       };
       
-      // Записываем в блокчейн
+      // Записываем в блокчейн через Hyperledger Besu (через Moralis API)
+      console.log(`Recording agent result to Hyperledger Besu blockchain: ${action} of ${input.entityType}`);
       const blockchainResult = await recordToBlockchain(blockchainData);
+      
+      // Сохраняем результат в агентских результатах
+      if (input.entityId) {
+        await storage.createAgentResult({
+          agentId,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          taskType: input.taskType,
+          result: JSON.stringify(result),
+          transactionHash: blockchainResult.transactionHash,
+          createdAt: new Date()
+        });
+      }
       
       return { 
         transactionHash: blockchainResult.transactionHash

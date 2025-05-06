@@ -1,7 +1,11 @@
 /**
- * Enhanced blockchain service with Moralis API integration
- * Uses Moralis API for real blockchain interactions while maintaining compatibility
- * with the existing API for blockchain operations
+ * Agent Smith Platform - Блокчейн-сервис на основе Hyperledger Besu
+ * 
+ * Интеграция платформы госуслуг с блокчейн технологией для обеспечения 
+ * прозрачности, неизменяемости и аудита всех действий в системе.
+ * Использует Moralis API как шлюз к Hyperledger Besu для записи 
+ * результатов обработки обращений граждан, протоколов совещаний и других 
+ * критически важных данных в блокчейн.
  */
 
 import crypto from 'crypto';
@@ -20,11 +24,14 @@ function getTimestamp(): number {
 
 // Interface for blockchain record
 interface BlockchainData {
-  type: string;
-  title: string;
-  content: string;
-  metadata?: Record<string, any>;
-  timestamp?: number;
+  type: string;          // Тип записи (обращение, протокол, документ и т.д.)
+  title: string;         // Заголовок записи
+  content: string;       // Содержимое записи (текст или хеш)
+  entityId?: number;     // ID сущности в системе
+  entityType: string;    // Тип сущности в системе
+  action: string;        // Действие (создание, обновление, подтверждение)
+  metadata?: Record<string, any>; // Дополнительные метаданные
+  timestamp?: number;    // Временная метка
 }
 
 // Interface for blockchain response
