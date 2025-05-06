@@ -1,3 +1,14 @@
+/**
+ * CitizenRequestAgentSection Component
+ * 
+ * Компонент для обработки обращений граждан с помощью ИИ-агентов. 
+ * Позволяет выбрать тип действия (классификация, резюмирование, генерация ответа)
+ * и обработать обращение с помощью ИИ.
+ * 
+ * @version 1.0.0
+ * @since 06.05.2025
+ */
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,16 +38,39 @@ interface Agent {
   description?: string;
 }
 
+/**
+ * Свойства компонента CitizenRequestAgentSection
+ * @interface CitizenRequestAgentSectionProps
+ * @property {CitizenRequest} request - Обращение гражданина для обработки
+ * @property {Function} onProcess - Функция для обработки обращения
+ * @property {boolean} [enabled=false] - Флаг, включена ли обработка ИИ
+ * @property {object} [agentSettings] - Настройки агента для обработки
+ */
 interface CitizenRequestAgentSectionProps {
   request: CitizenRequest;
-  onRequestProcess: (requestId: number, actionType: string) => Promise<any>;
-  enabled: boolean;
+  onProcess: (requestId: number, actionType: string) => Promise<any>;
+  enabled?: boolean;
+  agentSettings?: {
+    enabled: boolean;
+    autoProcess?: boolean;
+    autoClassify?: boolean;
+    autoRespond?: boolean;
+    agentId?: number;
+  };
 }
 
+/**
+ * Компонент для обработки обращений с помощью ИИ-агентов
+ * 
+ * @component
+ * @param {CitizenRequestAgentSectionProps} props - Свойства компонента
+ * @returns {JSX.Element} Компонент для обработки обращений
+ */
 const CitizenRequestAgentSection: React.FC<CitizenRequestAgentSectionProps> = ({
   request,
-  onRequestProcess,
-  enabled,
+  onProcess,
+  enabled = false,
+  agentSettings,
 }) => {
   const [selectedAction, setSelectedAction] = useState<string>("classification");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -52,13 +86,16 @@ const CitizenRequestAgentSection: React.FC<CitizenRequestAgentSectionProps> = ({
     agent.type === "citizen_requests" && agent.id !== 174 && agent.id !== 202
   );
 
-  // Обработка запроса
+  /**
+   * Обработка запроса с помощью ИИ
+   * Отправляет запрос на обработку обращения выбранным типом действия
+   */
   const handleProcess = async () => {
     if (!enabled) return;
     
     setIsProcessing(true);
     try {
-      await onRequestProcess(request.id, selectedAction);
+      await onProcess(request.id, selectedAction);
     } catch (error) {
       console.error("Error processing request:", error);
     } finally {

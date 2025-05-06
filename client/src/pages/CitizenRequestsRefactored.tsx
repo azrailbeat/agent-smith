@@ -430,7 +430,7 @@ const CitizenRequests: React.FC = () => {
       }
       
       // Проверка наличия необработанных обращений в статусе "new"
-      const newRequests = requests.filter(req => req.status === 'new');
+      const newRequests = citizenRequests.filter(req => req.status === 'new');
       if (newRequests.length === 0) {
         toast({
           title: "Информация",
