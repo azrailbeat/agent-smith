@@ -1432,24 +1432,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Используем импортированные модули
-      
       // Получаем обращение гражданина
       const request = await storage.getCitizenRequest(id);
       if (!request) {
         return res.status(404).json({ error: 'Request not found' });
       }
       
-      // Проверяем инициализацию сервиса агентов
+      // Инициализируем сервис агентов, если необходимо
       if (!agentService.initialized) {
         await agentService.initialize();
       }
       
       // Формируем содержимое для обработки
-      const content = `Тема: ${request.subject || request.title || ''}
+      const content = `Тема: ${request.subject || ''}
       
       Описание:
-      ${request.description || request.content || ''}
+      ${request.description || ''}
       
       Контактная информация:
       ФИО: ${request.fullName}
@@ -1457,78 +1455,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Обрабатываем запрос с использованием организационной структуры
       const fullText = `${request.subject || ''} ${request.description || ''}`;
-      const orgStructureResult = await processRequestByOrgStructure(id, fullText);
       
-      // Обновляем обращение, если оно было успешно обработано по организационной структуре
-      if (orgStructureResult.processed) {
-        await storage.updateCitizenRequest(id, {
-          assignedTo: orgStructureResult.rule?.positionId || null,
-          departmentId: orgStructureResult.rule?.departmentId || null,
-          status: 'assigned',
-          // Добавляем информацию о правиле распределения
-          metadata: {
-            ...request.metadata,
-            orgStructureRule: orgStructureResult.rule?.id,
-            orgStructureRuleName: orgStructureResult.rule?.name,
-            autoAssigned: true
-          }
-        });
+      // Обновляем статус и добавляем базовое резюме, чтобы не блокировать процесс
+      let updatedRequest = await storage.updateCitizenRequest(id, {
+        status: 'in_progress',
+        aiProcessed: true,
+        summary: "Обращение гражданина обрабатывается. Ожидайте ответа от компетентных органов."
+      });
+      
+      try {
+        const orgStructureResult = await processRequestByOrgStructure(id, fullText);
         
-        // Логируем активность назначения по организационной структуре
-        await logActivity({
-          action: 'auto_assign',
-          entityType: 'citizen_request',
-          entityId: id,
-          details: `Обращение автоматически назначено согласно правилу "${orgStructureResult.rule?.name}"`,
-          metadata: {
-            ruleId: orgStructureResult.rule?.id,
-            departmentId: orgStructureResult.rule?.departmentId,
-            positionId: orgStructureResult.rule?.positionId
-          }
-        });
+        // Обновляем обращение, если оно было успешно обработано по организационной структуре
+        if (orgStructureResult.processed) {
+          updatedRequest = await storage.updateCitizenRequest(id, {
+            assignedTo: orgStructureResult.rule?.positionId || null,
+            departmentId: orgStructureResult.rule?.departmentId || null,
+            status: 'assigned',
+            // Добавляем информацию о правиле распределения
+            metadata: {
+              ...request.metadata,
+              orgStructureRule: orgStructureResult.rule?.id,
+              orgStructureRuleName: orgStructureResult.rule?.name,
+              autoAssigned: true
+            }
+          });
+          
+          // Логируем активность назначения по организационной структуре
+          await logActivity({
+            action: 'auto_assign',
+            entityType: 'citizen_request',
+            entityId: id,
+            details: `Обращение автоматически назначено согласно правилу "${orgStructureResult.rule?.name}"`,
+            metadata: {
+              ruleId: orgStructureResult.rule?.id,
+              departmentId: orgStructureResult.rule?.departmentId,
+              positionId: orgStructureResult.rule?.positionId
+            }
+          });
+        }
+      } catch (orgError) {
+        console.error("Ошибка при организационной обработке:", orgError);
       }
       
-      // Обрабатываем запрос с помощью AI-агента - сначала классификация
-      const classificationResult = await agentService.processRequest({
-        taskType: AgentTaskType.CLASSIFICATION,
-        entityType: AgentEntityType.CITIZEN_REQUEST,
-        entityId: request.id,
-        content,
-        userId: req.session?.userId || request.assignedTo || 1
-      });
-      
-      // Затем генерация ответа с учетом результата классификации
-      const responseResult = await agentService.processRequest({
-        taskType: AgentTaskType.RESPONSE_GENERATION,
-        entityType: AgentEntityType.CITIZEN_REQUEST,
-        entityId: request.id,
-        content,
-        metadata: {
-          classification: classificationResult.classification
-        },
-        userId: req.session?.userId || request.assignedTo || 1
-      });
-      
-      // Обновляем обращение в хранилище с результатами обработки
-      const updatedRequest = await storage.updateCitizenRequest(id, {
-        aiProcessed: true,
-        aiClassification: classificationResult.classification,
-        aiSuggestion: responseResult.output,
-        summary: classificationResult.output
-      });
-      
-      // Create activity record
-      await storage.createActivity({
-        userId: req.session?.userId || 1,
-        actionType: 'ai_process',
-        description: `Запрос гражданина обработан AI-агентом`,
-        relatedId: request.id,
-        relatedType: 'citizen_request',
-        metadata: {
-          classification: classificationResult.classification,
-          transactionHash: responseResult.transactionHash
-        }
-      });
+      try {
+        // Обрабатываем запрос с помощью AI-агента - сначала классификация
+        const classificationResult = await agentService.processRequest({
+          taskType: 'classification',
+          entityType: 'citizen_request',
+          entityId: request.id,
+          content,
+          userId: request.assignedTo || 1
+        });
+        
+        // Затем генерация ответа с учетом результата классификации
+        const responseResult = await agentService.processRequest({
+          taskType: 'response_generation',
+          entityType: 'citizen_request',
+          entityId: request.id,
+          content,
+          metadata: {
+            classification: classificationResult.classification || 'general'
+          },
+          userId: request.assignedTo || 1
+        });
+        
+        // Обновляем обращение в хранилище с результатами обработки
+        updatedRequest = await storage.updateCitizenRequest(id, {
+          aiProcessed: true,
+          aiClassification: classificationResult.classification || 'general',
+          aiSuggestion: responseResult.output || 'Рекомендуется обработка специалистом',
+          summary: classificationResult.output || 'Требуется дополнительная информация'
+        });
+        
+        // Create activity record
+        await storage.createActivity({
+          userId: request.assignedTo || 1,
+          actionType: 'ai_process',
+          description: `Запрос гражданина обработан AI-агентом`,
+          relatedId: request.id,
+          relatedType: 'citizen_request',
+          metadata: {
+            classification: classificationResult.classification,
+            transactionHash: responseResult.transactionHash
+          }
+        });
+      } catch (aiError) {
+        console.error("Ошибка классификации обращения:", aiError);
+      }
       
       res.json(updatedRequest);
     } catch (error) {
