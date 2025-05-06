@@ -28,6 +28,7 @@ import { registerSystemRoutes } from "./system-api";
 import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
 import { registerLLMMonitoringRoutes } from "./monitoring/llm-monitoring";
+import { registerMeetingRoutes } from "./meeting-api";
 import {
   getTaskRules,
   getTaskRuleById,
@@ -97,8 +98,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Инициализация настроек системы
   initializeSettings();
   
+  // Регистрация API маршрутов должна происходить до обработки статических файлов
+  
   // Регистрация системных маршрутов
   registerSystemRoutes(app);
+  
+  // Регистрация маршрутов для протоколов заседаний
+  registerMeetingRoutes(app);
   
   // Регистрация маршрутов мониторинга LLM
   const llmMonitoringRouter = express.Router();

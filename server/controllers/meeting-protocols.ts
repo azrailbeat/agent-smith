@@ -3,8 +3,9 @@
  */
 import { Request, Response } from 'express';
 import { storage } from '../storage';
+import { recordToBlockchain } from '../blockchain';
 import { logActivity } from '../activity-logger';
-import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
+import { agentService } from '../services/agent-service';
 
 /**
  * Получение списка протоколов заседаний
@@ -13,22 +14,17 @@ export async function getMeetings(req: Request, res: Response) {
   try {
     const meetings = await storage.getMeetings();
     
-    // Логируем активность
+    // Логируем активность просмотра протоколов
     await logActivity({
       action: 'view_list',
       entityType: 'meeting',
-      userId: req.session?.userId,
       details: 'Просмотр списка протоколов заседаний'
     });
     
-    // Возвращаем JSON ответ
     res.json(meetings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting meetings:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to get meetings list' 
-    });
+    res.status(500).json({ error: 'Failed to get meetings', details: error.message });
   }
 }
 
@@ -37,41 +33,28 @@ export async function getMeetings(req: Request, res: Response) {
  */
 export async function getMeetingById(req: Request, res: Response) {
   try {
-    const meetingId = parseInt(req.params.id);
-    
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid meeting ID' 
-      });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid meeting ID' });
     }
     
-    const meeting = await storage.getMeeting(meetingId);
-    
+    const meeting = await storage.getMeeting(id);
     if (!meeting) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Meeting not found' 
-      });
+      return res.status(404).json({ error: 'Meeting not found' });
     }
     
-    // Логируем активность
+    // Логируем активность просмотра протокола
     await logActivity({
-      action: 'view_item',
+      action: 'view',
       entityType: 'meeting',
-      entityId: meetingId,
-      userId: req.session?.userId,
-      details: `Просмотр протокола заседания #${meetingId}`
+      entityId: meeting.id,
+      details: `Просмотр протокола заседания "${meeting.title}"`
     });
     
-    // Возвращаем JSON ответ
     res.json(meeting);
-  } catch (error) {
-    console.error(`Error getting meeting ${req.params.id}:`, error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to get meeting protocol' 
-    });
+  } catch (error: any) {
+    console.error(`Error getting meeting by ID:`, error);
+    res.status(500).json({ error: 'Failed to get meeting', details: error.message });
   }
 }
 
@@ -82,37 +65,24 @@ export async function createMeeting(req: Request, res: Response) {
   try {
     const meetingData = req.body;
     
-    // Валидация данных (в реальном приложении здесь может быть Zod)
     if (!meetingData.title) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Meeting title is required' 
-      });
+      return res.status(400).json({ error: 'Meeting title is required' });
     }
     
-    // Создаем протокол
     const meeting = await storage.createMeeting(meetingData);
     
-    // Логируем активность
+    // Логируем активность создания протокола
     await logActivity({
       action: 'create',
       entityType: 'meeting',
       entityId: meeting.id,
-      userId: req.session?.userId,
-      details: `Создание протокола заседания "${meeting.title}"`
+      details: `Создан протокол заседания "${meeting.title}"`
     });
     
-    // Возвращаем JSON ответ
-    res.status(201).json({
-      success: true,
-      meeting
-    });
-  } catch (error) {
+    res.status(201).json(meeting);
+  } catch (error: any) {
     console.error('Error creating meeting:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to create meeting protocol' 
-    });
+    res.status(500).json({ error: 'Failed to create meeting', details: error.message });
   }
 }
 
@@ -121,50 +91,30 @@ export async function createMeeting(req: Request, res: Response) {
  */
 export async function updateMeeting(req: Request, res: Response) {
   try {
-    const meetingId = parseInt(req.params.id);
-    
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid meeting ID' 
-      });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid meeting ID' });
     }
     
-    const updateData = req.body;
+    const meetingData = req.body;
     
-    // Проверяем существование протокола
-    const existingMeeting = await storage.getMeeting(meetingId);
-    
-    if (!existingMeeting) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Meeting not found' 
-      });
+    const updatedMeeting = await storage.updateMeeting(id, meetingData);
+    if (!updatedMeeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
     }
     
-    // Обновляем протокол
-    const meeting = await storage.updateMeeting(meetingId, updateData);
-    
-    // Логируем активность
+    // Логируем активность обновления протокола
     await logActivity({
       action: 'update',
       entityType: 'meeting',
-      entityId: meetingId,
-      userId: req.session?.userId,
-      details: `Обновление протокола заседания #${meetingId}`
+      entityId: updatedMeeting.id,
+      details: `Обновлен протокол заседания "${updatedMeeting.title}"`
     });
     
-    // Возвращаем JSON ответ
-    res.json({
-      success: true,
-      meeting
-    });
-  } catch (error) {
-    console.error(`Error updating meeting ${req.params.id}:`, error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to update meeting protocol' 
-    });
+    res.json(updatedMeeting);
+  } catch (error: any) {
+    console.error('Error updating meeting:', error);
+    res.status(500).json({ error: 'Failed to update meeting', details: error.message });
   }
 }
 
@@ -173,51 +123,76 @@ export async function updateMeeting(req: Request, res: Response) {
  */
 export async function generateProtocol(req: Request, res: Response) {
   try {
-    const meetingId = parseInt(req.params.id);
-    
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid meeting ID' 
-      });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid meeting ID' });
     }
     
-    const meeting = await storage.getMeeting(meetingId);
-    
+    const meeting = await storage.getMeeting(id);
     if (!meeting) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Meeting not found' 
-      });
+      return res.status(404).json({ error: 'Meeting not found' });
     }
     
-    // В реальном приложении здесь была бы логика генерации протокола с помощью AI
-    // Для демонстрации просто устанавливаем флаг hasProtocol
-    const updatedMeeting = await storage.updateMeeting(meetingId, {
+    const { transcription } = req.body;
+    if (!transcription) {
+      return res.status(400).json({ error: 'Transcription is required' });
+    }
+    
+    // Найдем агента для работы с протоколами
+    const agent = await agentService.getAgentByType('meeting_protocols');
+    if (!agent) {
+      return res.status(400).json({ error: 'Protocol agent not configured' });
+    }
+    
+    // Анализируем транскрипцию с помощью агента
+    const analysis = await agentService.processRequest({
+      agent: agent,
+      requestType: 'analyze',
+      content: transcription,
+      metadata: { 
+        meetingId: meeting.id,
+        meetingTitle: meeting.title
+      }
+    });
+    
+    // Обновляем протокол с результатами анализа
+    const updatedMeeting = await storage.updateMeeting(id, {
       hasProtocol: true,
-      protocolContent: meeting.protocolContent || 'Протокол сгенерирован автоматически'
+      protocolContent: analysis.summary,
+      decisions: analysis.decisions,
+      tasks: analysis.actionItems,
+      keyPoints: analysis.keyPoints,
+      status: 'completed',
+      updatedAt: new Date()
     });
     
-    // Логируем активность
+    // Логируем активность генерации протокола
     await logActivity({
-      action: 'generate_protocol',
+      action: 'generate',
       entityType: 'meeting',
-      entityId: meetingId,
-      userId: req.session?.userId,
-      details: `Генерация протокола заседания #${meetingId}`
+      entityId: meeting.id,
+      details: `Сгенерирован протокол заседания "${meeting.title}"`
     });
     
-    // Возвращаем JSON ответ
+    // Создаем результат работы агента
+    await storage.createAgentResult({
+      agentId: agent.id,
+      agentName: agent.name,
+      agentType: agent.type,
+      entityType: 'meeting',
+      entityId: meeting.id,
+      actionType: 'protocol_generation',
+      result: JSON.stringify(analysis),
+      createdAt: new Date()
+    });
+    
     res.json({
-      success: true,
-      meeting: updatedMeeting
+      meeting: updatedMeeting,
+      analysis: analysis
     });
-  } catch (error) {
-    console.error(`Error generating protocol for meeting ${req.params.id}:`, error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to generate meeting protocol' 
-    });
+  } catch (error: any) {
+    console.error('Error generating protocol:', error);
+    res.status(500).json({ error: 'Failed to generate protocol', details: error.message });
   }
 }
 
@@ -226,90 +201,79 @@ export async function generateProtocol(req: Request, res: Response) {
  */
 export async function saveToBlockchain(req: Request, res: Response) {
   try {
-    const meetingId = parseInt(req.params.id);
-    
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid meeting ID' 
-      });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid meeting ID' });
     }
     
-    const meeting = await storage.getMeeting(meetingId);
-    
+    const meeting = await storage.getMeeting(id);
     if (!meeting) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Meeting not found' 
-      });
+      return res.status(404).json({ error: 'Meeting not found' });
     }
     
     if (!meeting.hasProtocol) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Meeting does not have a protocol to save to blockchain' 
-      });
+      return res.status(400).json({ error: 'Meeting has no protocol to save' });
     }
     
-    // Записываем в блокчейн
+    // Создаем запись в блокчейне
     const blockchainData = {
-      entityId: meetingId,
-      entityType: 'meeting_protocol',
-      action: 'save_protocol',
-      userId: req.session?.userId,
+      entityId: meeting.id,
+      entityType: 'meeting',
+      action: 'protocol_saved',
+      type: 'meeting_protocol',
+      title: meeting.title,
+      content: meeting.protocolContent || '',
       metadata: {
-        title: meeting.title,
+        decisions: meeting.decisions || [],
+        keyPoints: meeting.keyPoints || [],
+        actionItems: meeting.tasks || [],
         date: meeting.date,
+        location: meeting.location,
         participants: meeting.participants
       }
     };
     
-    const transactionHash = await recordToBlockchain(blockchainData);
+    const blockchainResult = await recordToBlockchain(blockchainData);
     
-    // Обновляем запись о встрече
-    const updatedMeeting = await storage.updateMeeting(meetingId, {
-      blockchainHash: transactionHash
-    });
-    
-    // Создаем запись о транзакции в блокчейне
-    await storage.createBlockchainRecord({
-      recordType: BlockchainRecordType.DOCUMENT,
-      title: `meeting_protocol #${meetingId}: saved_to_blockchain`,
-      entityType: 'meeting_protocol',
-      entityId: meetingId,
-      transactionHash,
-      status: 'confirmed',
+    // Создаем запись о блокчейне
+    const blockchainRecord = await storage.createBlockchainRecord({
+      recordType: 'meeting_protocol',
+      title: meeting.title,
+      transactionHash: blockchainResult.transactionHash,
+      status: blockchainResult.status,
       metadata: {
-        title: meeting.title,
-        action: 'save_protocol'
+        meetingId: meeting.id,
+        decisions: meeting.decisions,
+        keyPoints: meeting.keyPoints,
+        actionItems: meeting.tasks
       }
     });
     
-    // Логируем активность
+    // Обновляем встречу с хешем блокчейна
+    const updatedMeeting = await storage.updateMeeting(id, {
+      blockchainHash: blockchainResult.transactionHash,
+      blockchainStatus: blockchainResult.status,
+      updatedAt: new Date()
+    });
+    
+    // Логируем активность сохранения в блокчейне
     await logActivity({
       action: 'blockchain_record',
-      entityType: 'meeting_protocol',
-      entityId: meetingId,
-      userId: req.session?.userId,
-      details: `Протокол заседания #${meetingId} сохранен в блокчейне`,
-      metadata: {
-        transactionHash
-      }
+      entityType: 'meeting',
+      entityId: meeting.id,
+      blockchainHash: blockchainResult.transactionHash,
+      details: `Протокол заседания "${meeting.title}" сохранен в блокчейне`
     });
     
-    // Возвращаем JSON ответ
     res.json({
-      success: true,
       meeting: updatedMeeting,
       blockchain: {
-        transactionHash
+        transactionHash: blockchainResult.transactionHash,
+        status: blockchainResult.status
       }
     });
-  } catch (error) {
-    console.error(`Error saving protocol to blockchain for meeting ${req.params.id}:`, error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to save protocol to blockchain' 
-    });
+  } catch (error: any) {
+    console.error('Error saving meeting to blockchain:', error);
+    res.status(500).json({ error: 'Failed to save meeting to blockchain', details: error.message });
   }
 }
