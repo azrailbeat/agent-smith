@@ -669,7 +669,7 @@ export class AgentService {
           agentId,
           entityType: input.entityType,
           entityId: input.entityId,
-          taskType: input.taskType,
+          actionType: input.taskType, // Используем taskType как actionType
           result: JSON.stringify(result),
           transactionHash: blockchainResult.transactionHash,
           createdAt: new Date()
