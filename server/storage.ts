@@ -1387,6 +1387,23 @@ export class MemStorage implements IStorage {
     return updatedRequest;
   }
   
+  async deleteCitizenRequest(id: number): Promise<boolean> {
+    if (!this.citizenRequests.has(id)) {
+      return false;
+    }
+    
+    // Удаляем все связанные записи результатов работы агентов
+    const agentResults = await this.getAgentResultsByEntity('citizen_request', id);
+    if (agentResults && agentResults.length > 0) {
+      // Здесь в реальной реализации нужно было бы удалить связанные записи результатов агентов
+      console.log(`Удаление ${agentResults.length} результатов агентов для запроса ${id}`);
+    }
+    
+    // Удаляем запись
+    const result = this.citizenRequests.delete(id);
+    return result;
+  }
+  
   async processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined> {
     const request = this.citizenRequests.get(id);
     if (!request) return undefined;

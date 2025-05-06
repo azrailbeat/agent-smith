@@ -369,6 +369,27 @@ export class DatabaseStorage implements IStorage {
     return updatedRequest;
   }
 
+  async deleteCitizenRequest(id: number): Promise<boolean> {
+    try {
+      // Сначала удаляем связанные записи результатов работы агентов
+      await db.delete(agentResults)
+        .where(and(
+          eq(agentResults.entityType, 'citizen_request'),
+          eq(agentResults.entityId, id)
+        ));
+      
+      // Теперь удаляем само обращение
+      const result = await db.delete(citizenRequests)
+        .where(eq(citizenRequests.id, id))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting citizen request:', error);
+      return false;
+    }
+  }
+
   async processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined> {
     // This is just a placeholder - actual AI processing would be implemented in the agent service
     // Here we just mark the request as processed
