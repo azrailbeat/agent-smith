@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ALLOWED_AGENT_TYPES } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import RequestInsightPanel from "@/components/RequestInsightPanel";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -315,6 +316,9 @@ const CitizenRequests = () => {
     setSelectedRequest(request);
     setShowSummaryDialog(true);
     
+    // Загружаем результаты агентов, если они уже есть
+    fetchAgentResults(request.id);
+    
     try {
       // Находим подходящий агент для обработки
       const processingAgent = availableAgents.find(agent => 
@@ -433,6 +437,9 @@ const CitizenRequests = () => {
       queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
       queryClient.invalidateQueries({ queryKey: ['/api/blockchain/records'] });
+      
+      // Загружаем результаты агентов после обработки
+      await fetchAgentResults(request.id);
     } catch (error) {
       console.error('Ошибка при генерации резюме:', error);
       // В случае ошибки всё равно генерируем базовое резюме

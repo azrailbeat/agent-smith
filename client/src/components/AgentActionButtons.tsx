@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { 
   Bot, 
@@ -189,7 +190,24 @@ const AgentActionButtons: React.FC<AgentActionButtonsProps> = ({
         return;
       }
       
+      // Выполняем действие агента
       await onAgentAction(agent.id, agent.name, actionType);
+      
+      // Загружаем результаты агента, если указан entityId
+      if (entityId) {
+        // Задержка для завершения обработки на сервере
+        setTimeout(async () => {
+          try {
+            const response = await fetch(`/api/citizen-requests/${entityId}/agent-results`);
+            if (response.ok) {
+              // Данные обновятся автоматически через React Query
+              await queryClient.invalidateQueries({ queryKey: ['citizen-request-agent-results', entityId] });
+            }
+          } catch (error) {
+            console.warn('Error fetching agent results after action:', error);
+          }
+        }, 1000); // Даем время на обработку и сохранение результатов
+      }
     } catch (error) {
       console.error('Error performing agent action:', error);
       toast({
