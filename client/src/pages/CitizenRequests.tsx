@@ -194,7 +194,7 @@ const CitizenRequests = () => {
     requestProcessingMode: 'manual' | 'auto' | 'smart';
     defaultAgent: number | null;
   }>({
-    enabled: true,
+    enabled: false,
     requestProcessingMode: 'manual',
     defaultAgent: null
   });
