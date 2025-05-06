@@ -143,42 +143,42 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       ref={innerRef}
       {...draggableProps}
       {...dragHandleProps}
-      className={`mb-3 bg-white rounded-md border-l-4 ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200`}
+      className={`mb-2 bg-white rounded border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200`}
       onClick={onClick}
     >
-      <div className="p-3">
+      <div className="p-2">
         {/* Заголовок карточки */}
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-start mb-1.5">
+          <div className="flex items-center gap-1">
             {getStatusIcon()}
-            <span className="text-sm font-medium">
+            <span className="text-xs font-medium">
               {request.fullName}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full" onClick={e => e.stopPropagation()}>
-                  <MoreHorizontal className="h-3 w-3" />
+                <Button variant="ghost" size="icon" className="h-4 w-4 rounded-full" onClick={e => e.stopPropagation()}>
+                  <MoreHorizontal className="h-2.5 w-2.5" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" side="bottom" align="end">
+              <PopoverContent className="w-52 p-1.5" side="bottom" align="end">
                 <div className="space-y-1">
                   {/* Меню действий */}
-                  <div className="text-xs font-bold text-muted-foreground mb-1">Действия</div>
+                  <div className="text-[10px] font-bold text-muted-foreground mb-1">Действия</div>
                   {/* Назначить агента */}
-                  <div className="text-xs font-bold text-muted-foreground mt-2 mb-1">Назначить агенту</div>
-                  <div className="grid grid-cols-1 gap-1">
+                  <div className="text-[10px] font-bold text-muted-foreground mt-1.5 mb-1">Назначить агенту</div>
+                  <div className="grid grid-cols-1 gap-0.5">
                     {citizenRequestAgents.map(agent => (
                       <Button 
                         key={agent.id} 
                         variant="ghost" 
                         size="sm" 
-                        className="w-full justify-start text-xs h-7"
+                        className="w-full justify-start text-[10px] h-6"
                         onClick={(e) => handleProcessWithAgent(agent.id, e)}
                         disabled={isProcessing}
                       >
-                        <Bot className="h-3 w-3 mr-2" />
+                        <Bot className="h-2.5 w-2.5 mr-1.5" />
                         {agent.name}
                       </Button>
                     ))}
@@ -190,83 +190,75 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* ID и категория карточки */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-gray-500">ID: {request.id}</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] text-gray-500">ID: {request.id}</span>
           </div>
-          <Badge className={`${priorityColors[request.priority]}`} variant="outline">
+          <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4`} variant="outline">
             {request.priority || 'Обычный'}
           </Badge>
         </div>
         
         {/* Содержимое карточки */}
-        <h4 className="font-medium text-sm mb-2 line-clamp-1 pb-1 border-b border-gray-100">
+        <h4 className="font-medium text-xs mb-1.5 line-clamp-1 pb-0.5">
           {request.subject || request.title || "Без темы"}
         </h4>
         
-        <p className="text-xs text-gray-600 line-clamp-2 mb-2 bg-gray-50 p-2 rounded border border-gray-100 shadow-sm">
+        <p className="text-[10px] text-gray-600 line-clamp-2 mb-1.5">
           {request.description || request.content || "Без описания"}
         </p>
 
         {/* Дополнительные метки */}
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="flex flex-wrap gap-0.5 mb-1.5">
           {request.category && (
-            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs border-gray-200 shadow-sm">
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-[10px] border-gray-200 h-4 px-1">
               {request.category}
             </Badge>
           )}
           {request.aiClassification && (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs border-purple-200 shadow-sm">
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] border-purple-200 h-4 px-1">
               {request.aiClassification}
             </Badge>
           )}
         </div>
         
-        {/* Дополнительная информация (резюме AI) */}
-        {request.summary && (
-          <div className="bg-blue-50 p-2 rounded-md text-xs text-blue-800 mb-2 border border-blue-100 shadow-sm">
-            <span className="font-medium">Резюме: </span>
-            <span className="line-clamp-2">{request.summary}</span>
-          </div>
-        )}
-
         {/* Футер карточки */}
-        <div className="flex justify-between items-center text-xs text-gray-500 mt-3 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-gray-500">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
+        <div className="flex justify-between items-center text-[10px] text-gray-500 mt-1.5 pt-1 border-t border-gray-100">
+          <div className="flex items-center gap-1.5 text-gray-500">
+            <div className="flex items-center gap-0.5">
+              <Calendar className="h-2.5 w-2.5" />
               {new Date(request.createdAt).toLocaleDateString("ru-RU")}
             </div>
             
             {request.contactInfo && (
-              <div className="flex items-center gap-1">
-                <span className="inline-block w-1 h-1 rounded-full bg-gray-300"></span>
-                <span title={request.contactInfo} className="truncate max-w-[80px]">{request.contactInfo}</span>
+              <div className="flex items-center gap-0.5">
+                <span className="inline-block w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                <span title={request.contactInfo} className="truncate max-w-[60px]">{request.contactInfo}</span>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {/* Индикаторы */}
             {request.aiProcessed && (
-              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs flex items-center px-1 h-5 border-purple-200 shadow-sm">
-                <Bot className="h-3 w-3 mr-1" /> ИИ
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] flex items-center px-1 h-4 border-purple-200">
+                <Bot className="h-2.5 w-2.5 mr-0.5" /> ИИ
               </Badge>
             )}
             {request.blockchainHash && (
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex items-center px-1 h-5 border-blue-200 shadow-sm">
-                <Database className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px] flex items-center px-1 h-4 border-blue-200">
+                <Database className="h-2.5 w-2.5 mr-0.5" />
               </Badge>
             )}
             {assignedAgent && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center px-1 h-5 border-green-200 shadow-sm">
-                <User className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="bg-green-50 text-green-700 text-[10px] flex items-center px-1 h-4 border-green-200">
+                <User className="h-2.5 w-2.5 mr-0.5" />
                 {assignedAgent.name.split(' ')[0]}
               </Badge>
             )}
             {request.assignedTo && !assignedAgent && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center px-1 h-5 border-green-200 shadow-sm">
-                <User className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="bg-green-50 text-green-700 text-[10px] flex items-center px-1 h-4 border-green-200">
+                <User className="h-2.5 w-2.5 mr-0.5" />
               </Badge>
             )}
           </div>

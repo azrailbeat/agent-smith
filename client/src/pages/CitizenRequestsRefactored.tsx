@@ -465,69 +465,68 @@ const CitizenRequests: React.FC = () => {
     : citizenRequests;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-60px)]">
+    <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden">
       {/* Верхняя панель в стиле Etap Phuket */}
-      <div className="bg-white border-b py-3 px-6">
-        <div className="flex flex-wrap justify-between items-center gap-3">
-          <div className="flex items-center gap-4">
+      <div className="bg-white border-b py-2 px-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold">Воронка обращений</h1>
             <p className="text-sm text-gray-500">Управление и обслуживание процесса обработки обращений</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            <div className="flex items-center space-x-1">
-              <Badge variant="outline" className="px-2 py-0.5 text-xs">
-                Всего: {stats.total}
-              </Badge>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs">
-                Новых: {stats.new}
-              </Badge>
-              <Badge variant="outline" className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs">
-                В работе: {stats.inProgress}
-              </Badge>
-              <Badge variant="outline" className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs">
-                Ожидание: {stats.waiting}
-              </Badge>
-              <Badge variant="outline" className="bg-green-50 text-green-700 px-2 py-0.5 text-xs">
-                Выполнено: {stats.completed}
-              </Badge>
-            </div>
+          <div className="flex items-center gap-1">
+            <Badge variant="outline" className="px-2 py-0.5 text-xs">
+              Всего: {stats.total}
+            </Badge>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs">
+              Новых: {stats.new}
+            </Badge>
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs">
+              В работе: {stats.inProgress}
+            </Badge>
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs">
+              Ожидание: {stats.waiting}
+            </Badge>
+            <Badge variant="outline" className="bg-green-50 text-green-700 px-2 py-0.5 text-xs">
+              Выполнено: {stats.completed}
+            </Badge>
           </div>
         </div>
       </div>
       
       {/* Панель инструментов */}
-      <div className="bg-white border-b py-2 px-6 flex flex-wrap items-center justify-between gap-2">
-        <div className="relative w-full max-w-sm">
+      <div className="bg-white border-b py-1 px-4 flex items-center justify-between">
+        <div className="relative w-64">
           <Input
             placeholder="Поиск обращений..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-8"
+            className="h-8"
           />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">ИИ обработка:</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">ИИ обработка:</span>
             <Switch
+              className="h-4 w-7"
               checked={agentSettings.enabled}
               onCheckedChange={(checked) => setAgentSettings({ ...agentSettings, enabled: checked })}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setIsAutoProcessOpen(true)}>
-            <Bot className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsAutoProcessOpen(true)}>
+            <Bot className="h-3 w-3 mr-1" />
             Авто-обработка
           </Button>
-          <div className="bg-gray-100 rounded-md px-3 py-1.5 flex items-center text-sm gap-2">
+          <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center text-xs gap-1 h-8">
             <span>Все статусы</span>
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3" />
           </div>
-          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
+            <RefreshCw className="h-3 w-3 mr-1" />
             Обновить
           </Button>
-          <Button onClick={() => setIsNewRequestOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="sm" className="h-8 text-xs" onClick={() => setIsNewRequestOpen(true)}>
+            <Plus className="h-3 w-3 mr-1" />
             Создать обращение
           </Button>
         </div>
@@ -544,8 +543,8 @@ const CitizenRequests: React.FC = () => {
           </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="h-full overflow-x-auto py-4 px-6">
-              <div className="flex space-x-5 min-w-max">
+            <div className="h-full overflow-x-auto py-2 px-3">
+              <div className="flex gap-3 min-w-max h-full">
                 {board.columnOrder.map((columnId) => {
                   const column = board.columns[columnId];
                   const requestsInColumn = column.requestIds
@@ -565,18 +564,18 @@ const CitizenRequests: React.FC = () => {
                                      columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
 
                   return (
-                    <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white overflow-hidden flex flex-col h-full`}>
-                      <div className={`p-3 border-b sticky top-0 z-10 ${headerColor} rounded-t-lg`}>
+                    <div key={column.id} className={`flex-1 rounded-md border shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-[260px]`}>
+                      <div className={`p-2 border-b sticky top-0 z-10 ${headerColor}`}>
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold flex items-center">
+                          <h3 className="font-semibold flex items-center text-sm">
                             {statusIcons[column.id as keyof typeof statusIcons]}
-                            <span className="ml-2">{column.title}</span>
+                            <span className="ml-1">{column.title}</span>
                           </h3>
-                          <div className="flex items-center gap-2">
-                            <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[24px] text-center">
+                          <div className="flex items-center gap-1">
+                            <div className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[22px] text-center">
                               {requestsInColumn.length}
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white/80" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full hover:bg-white/80" onClick={(e) => e.stopPropagation()}>
                               <Plus className="h-3 w-3" />
                             </Button>
                           </div>
@@ -587,13 +586,13 @@ const CitizenRequests: React.FC = () => {
                           <div
                             {...provided.droppableProps}
                             ref={provided.innerRef}
-                            className="p-3 flex-1 overflow-y-auto bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition duration-200"
+                            className="p-2 flex-1 overflow-y-auto bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition duration-200"
                           >
                           {requestsInColumn.length === 0 ? (
-                            <div className="text-center py-6 px-4 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-3 transition-all duration-300 hover:bg-white hover:border-gray-400">
-                              <Inbox className="h-12 w-12 mx-auto mb-3 text-gray-400 opacity-70" />
-                              <p className="font-medium">Нет обращений</p>
-                              <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда или создайте новое обращение</p>
+                            <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2 transition-all duration-300 hover:bg-white hover:border-gray-400">
+                              <Inbox className="h-8 w-8 mx-auto mb-2 text-gray-400 opacity-70" />
+                              <p className="font-medium text-xs">Нет обращений</p>
+                              <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда</p>
                             </div>
                           ) : (
                             requestsInColumn.map((request, index) => (
