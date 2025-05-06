@@ -22,7 +22,7 @@ interface Agent {
 }
 
 interface AutoProcessDialogProps {
-  isOpen: boolean;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   settings: {
     enabled: boolean;
@@ -36,7 +36,7 @@ interface AutoProcessDialogProps {
 }
 
 const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
-  isOpen,
+  open,
   onOpenChange,
   settings,
   onSettingsChange,
