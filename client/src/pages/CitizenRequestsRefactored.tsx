@@ -414,8 +414,18 @@ const CitizenRequests: React.FC = () => {
   };
 
   // Обработка массовой обработки обращений с AI
-  const handleBatchProcess = async (settings: { agentId: number; autoProcess?: boolean; autoClassify?: boolean; autoRespond?: boolean }) => {
+  const handleBatchProcess = async (settings: { agentId?: number; autoProcess?: boolean; autoClassify?: boolean; autoRespond?: boolean }) => {
     try {
+      // Проверка наличия агента
+      if (!settings.agentId) {
+        toast({
+          title: "Ошибка",
+          description: "Выберите ИИ-агента для обработки обращений",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await apiRequest('POST', '/api/citizen-requests/process-batch', settings);
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
       toast({
@@ -543,7 +553,7 @@ const CitizenRequests: React.FC = () => {
                                    columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
 
                 return (
-                  <div key={column.id} className={`w-80 flex-shrink-0 rounded-lg border shadow-sm ${columnColor}`}>
+                  <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm ${columnColor}`}>
                     <div className="p-3 border-b sticky top-0 z-10 bg-white">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium flex items-center">

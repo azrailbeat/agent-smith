@@ -1844,8 +1844,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/citizen-requests/process-batch', async (req, res) => {
     const { agentId, autoProcess, autoClassify, autoRespond } = req.body;
     
-    if (!agentId) {
-      return res.status(400).json({ error: 'No agent specified for processing' });
+    // Проверяем, передан ли ID агента
+    // Если нет - используем первого активного агента для обработки обращений
+    let resolvedAgentId = agentId;
+    if (!resolvedAgentId) {
+      const agents = await storage.getAgentsByType("citizen_requests");
+      const activeAgents = agents.filter(a => a.isActive);
+      if (activeAgents.length > 0) {
+        resolvedAgentId = activeAgents[0].id;
+      } else {
+        return res.status(400).json({ error: 'No active agents found for citizen requests' });
+      }
     }
     
     try {
