@@ -2,7 +2,7 @@ import { db } from "./db";
 import { 
   users, tasks, documents, blockchainRecords, 
   messages, activities, systemStatus, integrations,
-  agents, citizenRequests, departments, positions,
+  agents, agentResults, citizenRequests, departments, positions,
   ministries, agentTypes, plankaLinks, organizationalRules
 } from "@shared/schema";
 import { eq, desc, sql, and, isNull, not } from 'drizzle-orm';
@@ -20,7 +20,8 @@ import {
   CitizenRequest, InsertCitizenRequest,
   Ministry, InsertMinistry,
   AgentType, InsertAgentType,
-  PlankaLink, InsertPlankaLink
+  PlankaLink, InsertPlankaLink,
+  InsertAgentResult
 } from "@shared/schema";
 
 // Database storage implementation

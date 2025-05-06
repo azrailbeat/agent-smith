@@ -8,7 +8,8 @@ import {
   SystemStatusItem, InsertSystemStatusItem,
   Integration, InsertIntegration,
   Agent, InsertAgent,
-  CitizenRequest, InsertCitizenRequest
+  CitizenRequest, InsertCitizenRequest,
+  InsertAgentResult
 } from "@shared/schema";
 
 // Import the DatabaseStorage class
@@ -117,6 +118,9 @@ export interface IStorage {
   createPlankaLink(link: any): Promise<any>;
   updatePlankaLink(id: number, link: any): Promise<any | undefined>;
   deletePlankaLink(id: number): Promise<boolean>;
+  
+  // Agent Result operations
+  createAgentResult(result: InsertAgentResult): Promise<any>;
 }
 
 // In-memory storage implementation
