@@ -689,14 +689,16 @@ export class AgentService {
       
       // Сохраняем результат в агентских результатах
       if (input.entityId) {
+        // Преобразуем taskType в actionType для совместимости с API и хранилищем
+        let actionType = action; // Используем переменную action, определенную ранее
+        
         await storage.createAgentResult({
           agentId,
           entityType: input.entityType,
           entityId: input.entityId,
-          actionType: input.taskType, // Используем taskType как actionType
-          result: JSON.stringify(result),
-          transactionHash: blockchainResult.transactionHash,
-          createdAt: new Date()
+          actionType: actionType, // Используем преобразованный actionType
+          result: result, // Уже является объектом, не нужно преобразовывать в JSON
+          feedback: null
         });
       }
       
@@ -725,6 +727,25 @@ export class AgentService {
     };
     
     return mapping[entityType] || BlockchainRecordType.SYSTEM_EVENT;
+  }
+  
+  /**
+   * Преобразование типа задачи (taskType) в тип действия (actionType)
+   * для совместимости с базой данных и API
+   */
+  private mapTaskTypeToActionType(taskType: AgentTaskType): string {
+    const mapping: Record<string, string> = {
+      [AgentTaskType.CLASSIFICATION]: 'classification',
+      [AgentTaskType.RESPONSE_GENERATION]: 'response',
+      [AgentTaskType.SUMMARIZATION]: 'summarization',
+      [AgentTaskType.TRANSCRIPTION]: 'transcription',
+      [AgentTaskType.TRANSLATION]: 'translation',
+      [AgentTaskType.VALIDATION]: 'validation',
+      [AgentTaskType.DATA_ANALYSIS]: 'analysis',
+      [AgentTaskType.DOCUMENT_ANALYSIS]: 'document_analysis',
+    };
+    
+    return mapping[taskType] || 'processing';
   }
   
   /**

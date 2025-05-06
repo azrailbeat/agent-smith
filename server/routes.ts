@@ -2296,9 +2296,11 @@ ${request.description || ''}
         return res.status(404).json({ error: 'Request not found' });
       }
       
-      // Инициализируем сервис агентов, если необходимо
-      if (!agentService.initialized) {
+      // Инициализируем сервис агентов
+      try {
         await agentService.initialize();
+      } catch (initError) {
+        console.error("Failed to initialize agent service:", initError);
       }
       
       // Формируем содержимое для обработки
