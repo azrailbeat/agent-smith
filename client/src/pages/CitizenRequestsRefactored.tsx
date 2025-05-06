@@ -36,7 +36,7 @@ import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection'
 import RequestInsightPanel from '@/components/RequestInsightPanel';
 import { AutoProcessDialog } from '../components/AutoProcessDialog';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
-import { Bot, Calendar, Check, Clock, Database, FileText, RefreshCw, User } from 'lucide-react';
+import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User } from 'lucide-react';
 
 // Типы данных
 interface CitizenRequest {

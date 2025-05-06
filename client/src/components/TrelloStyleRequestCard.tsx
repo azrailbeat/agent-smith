@@ -143,7 +143,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       ref={innerRef}
       {...draggableProps}
       {...dragHandleProps}
-      className={`mb-3 bg-white rounded-md border-l-4 ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg" : "shadow-sm"} hover:shadow-md transition-all duration-200`}
+      className={`mb-3 bg-white rounded-md border-l-4 ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200`}
       onClick={onClick}
     >
       <div className="p-3">
