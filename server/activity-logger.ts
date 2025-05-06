@@ -109,12 +109,22 @@ export async function getUserActivities(userId: number): Promise<any[]> {
  * @param blockchainHash Хэш транзакции в блокчейне
  */
 export async function addBlockchainHashToActivity(activityId: number, blockchainHash: string): Promise<void> {
-  const activity = await storage.getActivity(activityId);
-  if (activity) {
-    await storage.updateActivity(activityId, {
-      ...activity,
-      blockchainHash
-    });
+  try {
+    // Проверяем, существует ли метод getActivity
+    if (typeof storage.getActivity !== 'function') {
+      console.log(`Warning: storage.getActivity is not available. Cannot update activity ${activityId} with blockchain hash ${blockchainHash}`);
+      return;
+    }
+    
+    const activity = await storage.getActivity(activityId);
+    if (activity) {
+      await storage.updateActivity(activityId, {
+        ...activity,
+        blockchainHash
+      });
+    }
+  } catch (error) {
+    console.error(`Error updating activity ${activityId} with blockchain hash:`, error);
   }
 }
 

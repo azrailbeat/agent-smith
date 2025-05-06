@@ -1867,8 +1867,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Получаем все необработанные запросы
       const allRequests = await storage.getCitizenRequests();
       const unprocessedRequests = allRequests.filter(req => 
-        req.status === 'new' && !req.aiProcessed
+        (req.status === 'new' || req.status === 'Новый' || req.status === 'inProgress') 
+        && req.aiProcessed !== true
       );
+      
+      console.log(`Found ${unprocessedRequests.length} unprocessed requests from ${allRequests.length} total requests`);
       
       if (unprocessedRequests.length === 0) {
         return res.status(400).json({ error: 'No unprocessed requests found' });
