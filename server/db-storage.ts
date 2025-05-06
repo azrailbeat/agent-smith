@@ -679,4 +679,94 @@ export class DatabaseStorage implements IStorage {
       }
     }
   }
+  
+  // Meeting Protocol operations - временная реализация до создания таблицы в БД
+  async getMeetings(): Promise<any[]> {
+    // Временное решение без использования БД
+    return [
+      {
+        id: 1,
+        title: "Обсуждение разработки платформы Agent Smith",
+        description: "Еженедельное совещание по статусу разработки платформы Agent Smith",
+        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        location: "Большой конференц-зал",
+        organizer: "Министерство цифрового развития",
+        participants: ["Азамат Батыркожа", "Ержан Сулейманов", "Арман Сатбаев", "Анара Нургалиева"],
+        status: "completed",
+        duration: 120,
+        hasProtocol: true,
+        protocolContent: "Обсуждались вопросы разработки системы Agent Smith, сроки и ресурсы",
+        decisions: ["Ускорить разработку модуля ИИ", "Провести тестирование безопасности", "Подготовить презентацию для министра"],
+        tasks: [
+          { task: "Разработка модуля ИИ", assignee: "Арман Сатбаев", dueDate: "2025-05-15" },
+          { task: "Тестирование безопасности", assignee: "Анара Нургалиева", dueDate: "2025-05-20" }
+        ],
+        keyPoints: ["Обсуждены сроки запуска", "Выделены дополнительные ресурсы", "Обсуждены риски проекта"]
+      },
+      {
+        id: 2,
+        title: "Стратегия цифровизации на 2025-2030",
+        description: "Обсуждение стратегических планов цифровизации государственных услуг",
+        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        location: "Зал коллегии, 3 этаж",
+        organizer: "Министерство цифрового развития",
+        participants: ["Марат Жумагалиев", "Ержан Сулейманов", "Сакен Искаков", "Айгуль Сагинтаева"],
+        status: "completed",
+        duration: 180,
+        hasProtocol: true,
+        protocolContent: "Протокол совещания по формированию стратегии цифровизации...",
+        decisions: ["Сформировать рабочие группы", "Провести исследование международного опыта", "Разработать KPI"],
+        tasks: [],
+        keyPoints: ["Определение приоритетных направлений", "Бюджетирование проектов", "Интеграция с международными платформами"]
+      },
+      {
+        id: 3,
+        title: "Запуск платформы Agent Smith",
+        description: "Подготовка к запуску платформы Agent Smith в опытную эксплуатацию",
+        date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        location: "Онлайн (Zoom)",
+        organizer: "Комитет по цифровизации",
+        participants: ["Азамат Батыркожа", "Ержан Сулейманов", "Арман Сатбаев", "Анара Нургалиева"],
+        status: "scheduled",
+        duration: 90,
+        hasProtocol: false,
+        protocolContent: "",
+        decisions: [],
+        tasks: [],
+        keyPoints: []
+      }
+    ];
+  }
+
+  async getMeeting(id: number): Promise<any | undefined> {
+    const meetings = await this.getMeetings();
+    return meetings.find(m => m.id === id);
+  }
+
+  async createMeeting(meeting: any): Promise<any> {
+    // Временная реализация
+    return {
+      id: Date.now(),
+      ...meeting,
+      createdAt: new Date(),
+      status: meeting.status || "scheduled",
+      hasProtocol: false
+    };
+  }
+
+  async updateMeeting(id: number, meetingData: any): Promise<any | undefined> {
+    const meeting = await this.getMeeting(id);
+    if (!meeting) return undefined;
+    
+    return {
+      ...meeting,
+      ...meetingData,
+      updatedAt: new Date()
+    };
+  }
+
+  async deleteMeeting(id: number): Promise<boolean> {
+    // Временное решение
+    return true;
+  }
 }
