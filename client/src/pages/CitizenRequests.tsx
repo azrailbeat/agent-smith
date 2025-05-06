@@ -797,33 +797,53 @@ const CitizenRequests = () => {
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`p-3 mb-2 bg-card rounded-md border ${snapshot.isDragging ? "shadow-lg" : "shadow-sm"} hover:shadow-md transition-shadow`}
+                                  className={`p-4 mb-3 bg-card rounded-md border-l-4 ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border-t border-r border-b ${snapshot.isDragging ? "shadow-lg" : "shadow-sm"} hover:shadow-md transition-shadow`}
                                   onClick={() => {
                                     setSelectedRequest(request);
                                     setIsViewDetailsOpen(true);
                                   }}
                                 >
                                   <div className="flex justify-between items-start mb-2">
-                                    <div className="text-sm font-medium truncate max-w-[80%]">
+                                    <div className="text-sm font-medium">
                                       {request.fullName}
                                     </div>
                                     <Badge className={`${priorityColors[request.priority]}`} variant="outline">
-                                      {request.priority}
+                                      {request.priority || 'Обычный'}
                                     </Badge>
                                   </div>
-                                  <div className="mb-2 text-xs text-muted-foreground">
-                                    {new Date(request.createdAt).toLocaleDateString("ru-RU")}
-                                  </div>
-                                  <p className="text-sm line-clamp-2 mb-2">
+                                  
+                                  <h4 className="font-medium text-sm mb-2 line-clamp-1">
                                     {request.subject || request.title || "Без темы"}
+                                  </h4>
+                                  
+                                  <p className="text-xs text-gray-600 line-clamp-2 mb-3">
+                                    {request.description || request.content || "Без описания"}
                                   </p>
-                                  {request.aiProcessed && (
-                                    <div className="flex items-center gap-1">
-                                      <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
-                                        <Bot className="h-3 w-3 mr-1" /> ИИ
-                                      </Badge>
+                                  
+                                  <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-3 w-3" />
+                                      {new Date(request.createdAt).toLocaleDateString("ru-RU")}
                                     </div>
-                                  )}
+                                    
+                                    <div className="flex items-center gap-2">
+                                      {request.aiProcessed && (
+                                        <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs flex items-center">
+                                          <Bot className="h-3 w-3 mr-1" /> ИИ
+                                        </Badge>
+                                      )}
+                                      {request.blockchainHash && (
+                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs flex items-center">
+                                          <Database className="h-3 w-3 mr-1" />
+                                        </Badge>
+                                      )}
+                                      {request.assignedTo && (
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs flex items-center">
+                                          <User className="h-3 w-3 mr-1" />
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                             </Draggable>
