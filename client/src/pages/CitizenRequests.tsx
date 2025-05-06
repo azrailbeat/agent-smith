@@ -132,6 +132,7 @@ const CitizenRequests = () => {
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [activeTab, setActiveTab] = useState("new");
+  const [agentResults, setAgentResults] = useState<Record<number, any[]>>({});
   const [showAgentSettingsDialog, setShowAgentSettingsDialog] = useState(false);
   const [agentSettings, setAgentSettings] = useState({
     enabled: true,
