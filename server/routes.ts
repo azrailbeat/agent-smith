@@ -2065,6 +2065,119 @@ ${request.description || ''}
 
   // Documentolog integration route
   // API для приема обращений извне
+  // Create test citizen requests for demo purposes
+  app.post('/api/citizen-requests/generate-test', async (req, res) => {
+    try {
+      const { count = 10 } = req.body;
+      const results = [];
+      
+      // Test data for generating random requests
+      const names = [
+        'Нурсултан Бердыбаев',
+        'Дамир Сатпаев',
+        'Касым-Жомарт Токаев',
+        'Айгуль Нургалиева',
+        'Мадина Халыкова',
+        'Аслан Джумагулов',
+        'Бауыржан Баибек',
+        'Гульнара Сагинтаева',
+        'Акмарал Турганбаев',
+        'Максат Бекес',
+        'Дарига Назарбаева',
+        'Жансая Токтарова'
+      ];
+      
+      const contacts = [
+        'example1@mail.kz',
+        'example2@gmail.com',
+        'example3@yandex.kz',
+        '+7 (701) 123-45-67',
+        '+7 (702) 987-65-43',
+        '+7 (705) 555-33-22',
+        '+7 (777) 111-22-33',
+        'contact@mail.ru',
+        'user_mail@inbox.ru',
+        'profile@domain.com',
+        '+7 (747) 456-78-90',
+        '+7 (708) 987-56-34'
+      ];
+      
+      const subjects = [
+        'Запрос на получение справки о регистрации',
+        'Жалоба на качество работы коммунальных служб',
+        'Заявление на оформление государственной субсидии',
+        'Просьба о ремонте дороги в микрорайоне',
+        'Запрос на получение информации о социальных программах',
+        'Заявление о нарушении градостроительных норм',
+        'Обращение по вопросу трудоустройства',
+        'Запрос на получение выписки из домовой книги',
+        'Жалоба на работу общественного транспорта',
+        'Заявление на получение адресной помощи',
+        'Просьба об установке детской площадки',
+        'Запрос на разъяснение по налоговым льготам'
+      ];
+      
+      const descriptions = [
+        'Прошу выдать мне справку о регистрации по месту жительства для предоставления в банк. Ранее обращался в ЦОН, но получил отказ из-за отсутствия каких-то документов.',
+        'В нашем доме по ул. Абая, 45 уже третий день отсутствует горячая вода. Звонки в аварийную службу игнорируются. Прошу принять меры!',
+        'Прошу рассмотреть мою заявку на получение субсидии для малоимущих семей. Я одинокая мать с двумя детьми, работаю на неполную ставку. Все необходимые документы прилагаю.',
+        'На перекрестке улиц Жибек Жолы и Туран уже более месяца большая яма, которая создает аварийные ситуации. Прошу срочно провести ремонт.',
+        'Хотел бы узнать подробнее о программе поддержки молодых специалистов. Какие документы необходимы для участия в программе и каковы условия?',
+        'Рядом с нашим домом по адресу Манаса 37 ведется незаконное строительство высотного здания, которое закрывает доступ света в наши квартиры. Прошу провести проверку.',
+        'Я окончил университет по специальности "Информационные технологии" и ищу возможности трудоустройства в государственных организациях. Какие программы существуют для молодых специалистов?',
+        'Прошу выдать мне выписку из домовой книги для оформления наследства. Мой адрес: г. Астана, ул. Ауэзова, дом 15, кв. 47.',
+        'Автобус №7, следующий по маршруту Достык-Аэропорт, систематически не соблюдает график движения. Интервал между автобусами достигает 40 минут, что недопустимо в часы пик.',
+        'Я мать-одиночка с ребенком-инвалидом. Прошу предоставить информацию о возможности получения адресной социальной помощи и льгот на оплату коммунальных услуг.',
+        'В нашем дворе нет детской площадки, хотя в доме проживает более 50 детей. Просим рассмотреть возможность установки детской площадки по адресу Мкр. Саяхат, дом 17.',
+        'Прошу разъяснить, какие налоговые льготы положены пенсионерам старше 70 лет и какие документы необходимо предоставить для их получения.'
+      ];
+      
+      const requestTypes = [
+        'general', 'housing', 'social', 'transportation', 'document', 'utilities'
+      ];
+      
+      const priorities = ['low', 'medium', 'high', 'urgent'];
+      
+      // Create test requests
+      for (let i = 0; i < count; i++) {
+        // Generate random indices
+        const nameIndex = Math.floor(Math.random() * names.length);
+        const contactIndex = Math.floor(Math.random() * contacts.length);
+        const subjectIndex = Math.floor(Math.random() * subjects.length);
+        const descriptionIndex = Math.floor(Math.random() * descriptions.length);
+        const typeIndex = Math.floor(Math.random() * requestTypes.length);
+        const priorityIndex = Math.floor(Math.random() * priorities.length);
+        
+        // Create request
+        const request = await storage.createCitizenRequest({
+          fullName: names[nameIndex],
+          contactInfo: contacts[contactIndex],
+          subject: subjects[subjectIndex],
+          description: descriptions[descriptionIndex],
+          requestType: requestTypes[typeIndex],
+          status: 'new',
+          priority: priorities[priorityIndex],
+          createdAt: new Date(),
+          citizenInfo: {
+            name: names[nameIndex],
+            contact: contacts[contactIndex]
+          }
+        });
+        
+        results.push(request);
+      }
+      
+      res.json({
+        success: true,
+        message: `Successfully created ${results.length} test citizen requests`,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Error generating test requests:', error);
+      res.status(500).json({ error: 'Failed to generate test requests' });
+    }
+  });
+  
   app.post('/api/external/citizen-requests', async (req, res) => {
     try {
       const { fullName, contactInfo, subject, description, requestType, priority, citizenInfo } = req.body;

@@ -725,6 +725,34 @@ const CitizenRequests = () => {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => {
+              // Создаем 10 тестовых обращений
+              apiRequest('POST', '/api/citizen-requests/generate-test', { count: 10 })
+                .then(() => {
+                  queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+                  toast({
+                    title: 'Тестовые обращения созданы',
+                    description: 'Успешно создано 10 тестовых обращений',
+                    variant: 'default',
+                  });
+                })
+                .catch(error => {
+                  console.error('Failed to generate test requests:', error);
+                  toast({
+                    title: 'Ошибка',
+                    description: 'Не удалось создать тестовые обращения',
+                    variant: 'destructive',
+                  });
+                });
+            }}
+            className="bg-gradient-to-r from-green-50 to-teal-50 border-green-200"
+          >
+            <FileText className="h-4 w-4 mr-2 text-teal-600" />
+            Создать тестовые
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
