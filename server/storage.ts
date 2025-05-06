@@ -123,6 +123,13 @@ export interface IStorage {
   // Agent Result operations
   createAgentResult(result: InsertAgentResult): Promise<any>;
   getAgentResultsByEntity(entityType: string, entityId: number): Promise<any[]>;
+  
+  // Meeting Protocol operations
+  getMeetings(): Promise<any[]>;
+  getMeeting(id: number): Promise<any | undefined>;
+  createMeeting(meeting: any): Promise<any>;
+  updateMeeting(id: number, meeting: any): Promise<any | undefined>;
+  deleteMeeting(id: number): Promise<boolean>;
 }
 
 // In-memory storage implementation
@@ -1761,6 +1768,89 @@ export class MemStorage implements IStorage {
         createdAt: new Date(Date.now() - 1800000)
       }
     ];
+  }
+  // Meeting Protocol operations
+  async getMeetings(): Promise<any[]> {
+    // Для хранения в памяти возвращаем тестовые данные
+    return [
+      {
+        id: 1,
+        title: "Внедрение AI-инструментов в госуправление",
+        description: "Обсуждение планов внедрения AI-инструментов",
+        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        location: "Зал №2, Дом Правительства",
+        organizer: "Министерство цифрового развития",
+        participants: ["Аскар Жумагалиев", "Айдос Укибаев", "Данияр Акишев", "Айнур Бекова", "Мадина Абылкасымова"],
+        status: "completed",
+        duration: 120,
+        hasProtocol: true,
+        protocolContent: "Протокол совещания по внедрению AI-инструментов в госуправление...",
+        decisions: ["Утвердить дорожную карту", "Выделить финансирование", "Создать межведомственную группу"],
+        tasks: []
+      },
+      {
+        id: 2,
+        title: "Стратегия цифровизации 2026-2030",
+        description: "Формирование стратегии цифровизации на следующий период",
+        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        location: "Конференц-зал МЦРИАП",
+        organizer: "Министерство цифрового развития",
+        participants: ["Багдат Мусин", "Аскар Жумагалиев", "Ерлан Дурмагамбетов", "Динара Щеглова"],
+        status: "completed",
+        duration: 180,
+        hasProtocol: true,
+        protocolContent: "Протокол совещания по формированию стратегии цифровизации...",
+        decisions: ["Сформировать рабочие группы", "Провести исследование международного опыта", "Разработать KPI"],
+        tasks: []
+      },
+      {
+        id: 3,
+        title: "Запуск платформы Agent Smith",
+        description: "Подготовка к запуску платформы Agent Smith в опытную эксплуатацию",
+        date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        location: "Онлайн (Zoom)",
+        organizer: "Комитет по цифровизации",
+        participants: ["Азамат Батыркожа", "Ержан Сулейманов", "Арман Сатбаев", "Анара Нургалиева"],
+        status: "scheduled",
+        duration: 90,
+        hasProtocol: false,
+        protocolContent: "",
+        decisions: [],
+        tasks: []
+      }
+    ];
+  }
+  
+  async getMeeting(id: number): Promise<any | undefined> {
+    const meetings = await this.getMeetings();
+    return meetings.find(m => m.id === id);
+  }
+  
+  async createMeeting(meeting: any): Promise<any> {
+    // Для хранения в памяти просто возвращаем с добавленным ID
+    return {
+      id: Date.now(),
+      ...meeting,
+      createdAt: new Date(),
+      status: meeting.status || "scheduled",
+      hasProtocol: false
+    };
+  }
+  
+  async updateMeeting(id: number, meetingData: any): Promise<any | undefined> {
+    const meeting = await this.getMeeting(id);
+    if (!meeting) return undefined;
+    
+    return {
+      ...meeting,
+      ...meetingData,
+      updatedAt: new Date()
+    };
+  }
+  
+  async deleteMeeting(id: number): Promise<boolean> {
+    // Для хранения в памяти просто возвращаем успешный результат
+    return true;
   }
 }
 
