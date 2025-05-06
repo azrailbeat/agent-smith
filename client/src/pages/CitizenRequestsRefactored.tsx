@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection';
 import RequestInsightPanel from '@/components/RequestInsightPanel';
-import AutoProcessDialog from '@/components/AutoProcessDialog';
+import { AutoProcessDialog } from '../components/AutoProcessDialog';
 import { Bot, Calendar, Check, Clock, Database, FileText, RefreshCw, User } from 'lucide-react';
 
 // Типы данных

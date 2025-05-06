@@ -184,4 +184,5 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
   );
 };
 
+export { AutoProcessDialog };
 export default AutoProcessDialog;
