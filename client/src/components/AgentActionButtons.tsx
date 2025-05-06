@@ -162,6 +162,33 @@ const AgentActionButtons: React.FC<AgentActionButtonsProps> = ({
   // Обработка нажатия кнопки агента
   const handleAgentAction = async (agent: Agent, actionType: string) => {
     try {
+      // Проверяем, может ли агент выполнить это действие
+      const canPerformAction = (
+        // Анализ обращений для классификации и резюме
+        (actionType === "classify" || actionType === "summarize") && 
+        (agent.type === "citizen_requests" || agent.name === "Анализ обращений") ||
+        
+        // Генерация ответа для DocumentAI
+        (actionType === "respond") && 
+        (agent.type === "document_processing" || agent.name === "DocumentAI") ||
+        
+        // Блокчейн запись
+        (actionType === "blockchain" || actionType === "record") && 
+        (agent.type === "blockchain" || agent.name === "Блокчейн-агент") ||
+        
+        // Полная обработка для всех агентов
+        (actionType === "full")
+      );
+      
+      if (!canPerformAction) {
+        toast({
+          title: "Несовместимое действие",
+          description: `Агент "${agent.name}" не может выполнить действие "${actionType}". Пожалуйста, выберите подходящего агента для этого действия.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       await onAgentAction(agent.id, agent.name, actionType);
     } catch (error) {
       console.error('Error performing agent action:', error);

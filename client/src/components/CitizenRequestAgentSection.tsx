@@ -191,6 +191,7 @@ const CitizenRequestAgentSection: React.FC<CitizenRequestAgentSectionProps> = ({
                     { id: "classify", label: "Классифицировать", icon: <FileCheck className="h-4 w-4 mr-1" /> },
                     { id: "respond", label: "Предложить ответ", icon: <UserRound className="h-4 w-4 mr-1" /> },
                     { id: "summarize", label: "Сделать резюме", icon: <FileText className="h-4 w-4 mr-1" /> },
+                    { id: "blockchain", label: "Сохранить в блокчейн", icon: <Database className="h-4 w-4 mr-1" /> },
                     { id: "full", label: "Полная обработка", icon: <Sparkles className="h-4 w-4 mr-1" /> }
                   ]}
                 />

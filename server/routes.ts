@@ -1570,6 +1570,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
           summary: result.summary,
           keyPoints: result.keyPoints || []
         });
+      } else if (actionType === "blockchain" || actionType === "record") {
+        // Запись обращения в блокчейн
+        // Проверяем, что у обращения есть необходимые данные
+        if (!request.summary && !request.aiSuggestion) {
+          return res.status(400).json({
+            error: "Missing data for blockchain record",
+            message: "Обращение должно иметь резюме или ответ для записи в блокчейн"
+          });
+        }
+        
+        try {
+          // Формируем данные для блокчейна
+          const blockchainData = {
+            entityId: request.id,
+            entityType: "citizen_request",
+            action: "record",
+            userId: options.userId || null,
+            metadata: {
+              fullName: request.fullName,
+              requestType: request.requestType,
+              summary: request.summary,
+              suggestion: request.aiSuggestion,
+              classification: request.aiClassification
+            }
+          };
+          
+          // Записываем в блокчейн
+          const transactionHash = await recordToBlockchain(blockchainData);
+          
+          // Обновляем обращение
+          await storage.updateCitizenRequest(id, {
+            blockchainHash: transactionHash,
+          });
+          
+          // Создаем запись о результате работы агента
+          await storage.createAgentResult({
+            agentId,
+            entityType: "citizen_request",
+            entityId: id,
+            actionType: "blockchain_record",
+            result: JSON.stringify({
+              transactionHash,
+              recordedAt: new Date(),
+              metadata: blockchainData.metadata
+            }),
+            createdAt: new Date()
+          });
+          
+          // Создаем запись активности
+          await storage.createActivity({
+            actionType: "blockchain_record",
+            description: `Агент ${agent.name} сохранил обращение №${id} в блокчейне`,
+            relatedId: id,
+            relatedType: "citizen_request",
+            blockchainHash: transactionHash
+          });
+          
+          return res.json({
+            success: true,
+            blockchainHash: transactionHash,
+            recordedAt: new Date()
+          });
+        } catch (blockchainError) {
+          console.error('Error recording to blockchain:', blockchainError);
+          return res.status(500).json({
+            error: "Blockchain recording failed",
+            message: blockchainError.message || "Ошибка при записи в блокчейн"
+          });
+        }
       } else if (actionType === "full") {
         // Полная обработка - выполняем все три действия последовательно
         
