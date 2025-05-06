@@ -166,6 +166,127 @@ export default function OrganizationalStructurePage() {
     return user ? (user.fullName || user.username) : 'Не назначено';
   };
 
+  // Состояние и функции для диалога создания/редактирования сотрудника
+  const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // Форма для сотрудника
+  const userForm = useForm({
+    resolver: zodResolver(
+      z.object({
+        username: z.string().min(3, { message: 'Имя пользователя должно содержать минимум 3 символа' }),
+        fullName: z.string().min(3, { message: 'ФИО должно содержать минимум 3 символа' }),
+        email: z.string().email({ message: 'Введите корректный email' }).optional().nullable(),
+        role: z.string().optional(),
+        departmentId: z.string().optional(),
+        positionId: z.string().optional()
+      })
+    ),
+    defaultValues: {
+      username: '',
+      fullName: '',
+      email: '',
+      role: 'user',
+      departmentId: '',
+      positionId: ''
+    }
+  });
+
+  // Сброс формы сотрудника
+  const resetUserForm = useCallback(() => {
+    userForm.reset({
+      username: '',
+      fullName: '',
+      email: '',
+      role: 'user',
+      departmentId: '',
+      positionId: ''
+    });
+  }, [userForm]);
+
+  // Загрузка данных для редактирования
+  useEffect(() => {
+    if (editingUser) {
+      userForm.reset({
+        username: editingUser.username,
+        fullName: editingUser.fullName || '',
+        email: editingUser.email || '',
+        role: editingUser.role || 'user',
+        departmentId: editingUser.departmentId ? String(editingUser.departmentId) : '',
+        positionId: editingUser.positionId ? String(editingUser.positionId) : ''
+      });
+    }
+  }, [editingUser, userForm]);
+
+  // Обработка создания/редактирования сотрудника
+  const handleUserSubmit = async (values: any) => {
+    try {
+      setIsLoading(true);
+      const formattedValues = {
+        ...values,
+        departmentId: values.departmentId ? parseInt(values.departmentId) : null,
+        positionId: values.positionId ? parseInt(values.positionId) : null
+      };
+
+      if (editingUser) {
+        // Обновление существующего сотрудника
+        await apiRequest('PATCH', `/api/users/${editingUser.id}`, formattedValues);
+        toast({
+          title: 'Сотрудник обновлен',
+          description: `${values.fullName} успешно обновлен`,
+        });
+      } else {
+        // Создание нового сотрудника
+        await apiRequest('POST', '/api/users', formattedValues);
+        toast({
+          title: 'Сотрудник создан',
+          description: `${values.fullName} успешно добавлен`,
+        });
+      }
+
+      // Обновляем данные и закрываем диалог
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setNewUserDialogOpen(false);
+      setEditingUser(null);
+      resetUserForm();
+    } catch (error) {
+      console.error('Ошибка при сохранении сотрудника:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сохранить данные сотрудника',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Обработка удаления сотрудника
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm('Вы уверены, что хотите удалить этого сотрудника?')) return;
+    
+    try {
+      setIsLoading(true);
+      await apiRequest('DELETE', `/api/users/${userId}`);
+      
+      toast({
+        title: 'Сотрудник удален',
+        description: 'Сотрудник успешно удален из системы',
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    } catch (error) {
+      console.error('Ошибка при удалении сотрудника:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось удалить сотрудника',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -254,7 +375,17 @@ export default function OrganizationalStructurePage() {
                             ) : (
                               <div className="text-sm text-muted-foreground">Нет сотрудников в отделе</div>
                             )}
-                            <Button variant="outline" size="sm" className="mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-2"
+                              onClick={() => {
+                                setEditingUser(null);
+                                resetUserForm();
+                                userForm.setValue("departmentId", dept.id.toString());
+                                setNewUserDialogOpen(true);
+                              }}
+                            >
                               <UserPlus className="mr-2 h-4 w-4" />
                               Добавить сотрудника
                             </Button>
@@ -329,7 +460,15 @@ export default function OrganizationalStructurePage() {
                       <div className="flex justify-between">
                         <CardTitle className="text-lg">{user.fullName || user.username}</CardTitle>
                         <div className="flex space-x-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setEditingUser(user);
+                              setNewUserDialogOpen(true);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </div>
@@ -362,10 +501,171 @@ export default function OrganizationalStructurePage() {
                 <p className="text-muted-foreground mb-4">Пользователи не найдены</p>
               </div>
             )}
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => {
+              setEditingUser(null);
+              resetUserForm();
+              setNewUserDialogOpen(true);
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               Добавить сотрудника
             </Button>
+            
+            {/* Диалог создания/редактирования сотрудника */}
+            <Dialog open={newUserDialogOpen} onOpenChange={setNewUserDialogOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingUser ? `Редактирование сотрудника` : `Создание нового сотрудника`}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingUser
+                      ? 'Измените данные сотрудника и привязку к отделу и должности'
+                      : 'Введите данные нового сотрудника и привяжите его к отделу и должности'}
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...userForm}>
+                  <form onSubmit={userForm.handleSubmit(handleUserSubmit)} className="space-y-4">
+                    <FormField
+                      control={userForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Имя пользователя</FormLabel>
+                          <FormControl>
+                            <Input placeholder="user123" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={userForm.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ФИО</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Иванов Иван Иванович" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={userForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="user@example.com" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={userForm.control}
+                      name="departmentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Отдел</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Выберите отдел" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {departments.map((dept: Department) => (
+                                <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={userForm.control}
+                      name="positionId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Должность</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={!userForm.watch('departmentId')}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Выберите должность" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {userForm.watch('departmentId') ? (
+                                positions
+                                  .filter((pos: Position) => pos.departmentId === parseInt(userForm.watch('departmentId')))
+                                  .map((pos: Position) => (
+                                    <SelectItem key={pos.id} value={pos.id.toString()}>{pos.name}</SelectItem>
+                                  ))
+                              ) : (
+                                <SelectItem value="" disabled>Сначала выберите отдел</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={userForm.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Роль в системе</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Выберите роль" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="user">Пользователь</SelectItem>
+                              <SelectItem value="manager">Руководитель</SelectItem>
+                              <SelectItem value="admin">Администратор</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setNewUserDialogOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button type="submit" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {editingUser ? 'Сохранить' : 'Создать'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
           
           <TabsContent value="task-rules" className="space-y-4">
