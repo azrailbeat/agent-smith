@@ -125,20 +125,44 @@ export class AgentService {
         throw new Error('Moralis integration not found!');
       }
       
-      // Очищаем все предыдущие агенты - подход "чистого старта", за исключением агентов с ID 174 и 202
-      // которые используются в результатах (имеют foreign key constraints)
+      // Получаем существующих агентов и результаты их работы
       const existingAgents = await storage.getAgents();
+      
+      // Получаем ID агентов, которые используются в результатах (имеют foreign key constraints)
+      const agentResults = await storage.getAllAgentResults();
+      const referencedAgentIds = new Set(agentResults.map(result => result.agentId));
+      
+      // Проверяем, есть ли уже агенты и нужно ли их обновлять
       if (existingAgents && existingAgents.length > 0) {
+        // Сначала удаляем всех агентов, которые не используются в результатах
         for (const agent of existingAgents) {
           try {
-            // Пропускаем агентов с ID 174 и 202, которые упоминаются в таблице agent_results
-            if (agent.id === 174 || agent.id === 202) {
+            // Пропускаем агентов, которые упоминаются в таблице agent_results
+            if (referencedAgentIds.has(agent.id)) {
               console.log(`Skipping agent deletion for ID ${agent.id} (referenced in agent_results)`);
               continue;
             }
             await storage.deleteAgent(agent.id);
           } catch (error) {
             console.warn(`Не удалось удалить агента ${agent.id}:`, error);
+          }
+        }
+        
+        // Обновляем существующих агентов вместо создания новых
+        for (const agent of existingAgents) {
+          if (referencedAgentIds.has(agent.id)) {
+            // Обновляем информацию агента без изменения ID
+            try {
+              // Обновляем только метаданные, системный промпт и описание
+              await storage.updateAgent(agent.id, {
+                systemPrompt: agent.systemPrompt, // Обновляем с тем же значением, чтобы исправить проблемы кодировки
+                description: agent.description, // Обновляем с тем же значением, чтобы исправить проблемы кодировки
+                isActive: true
+              });
+              console.log(`Updated existing agent ${agent.name} (ID: ${agent.id})`);
+            } catch (updateError) {
+              console.error(`Failed to update agent ${agent.id}:`, updateError);
+            }
           }
         }
       }

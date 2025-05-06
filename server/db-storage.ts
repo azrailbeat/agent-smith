@@ -642,6 +642,18 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+  
+  async getAllAgentResults(): Promise<any[]> {
+    try {
+      const results = await db
+        .select()
+        .from(agentResults);
+      return results;
+    } catch (error) {
+      console.error("Error getting all agent results from database:", error);
+      return [];
+    }
+  }
 
   // Initialize default data
   async initializeDefaultData() {

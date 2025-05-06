@@ -2387,17 +2387,46 @@ ${request.description || ''}
         });
         
         // Create activity record
-        await storage.createActivity({
-          userId: request.assignedTo || 1,
-          actionType: 'ai_process',
-          description: `Запрос гражданина обработан AI-агентом`,
-          relatedId: request.id,
-          relatedType: 'citizen_request',
-          metadata: {
-            classification: classificationResult.classification,
-            transactionHash: responseResult.transactionHash
-          }
-        });
+        try {
+          await storage.createActivity({
+            userId: request.assignedTo || 1,
+            actionType: 'ai_process',
+            description: `Запрос гражданина обработан AI-агентом`,
+            relatedId: request.id,
+            relatedType: 'citizen_request',
+            metadata: {
+              classification: classificationResult.classification,
+              transactionHash: responseResult.transactionHash
+            }
+          });
+          
+          // Записываем результаты работы агента в таблицу agent_results
+          await storage.createAgentResult({
+            agentId: classificationResult.agentId || 202, // Используем AgentSmith или резервный ID
+            entityType: 'citizen_request',
+            entityId: request.id,
+            actionType: 'classification', // Важно: используем actionType, соответствующий типу задачи
+            result: {
+              classification: classificationResult.classification || 'general',
+              confidence: 0.8,
+              output: classificationResult.output
+            }
+          });
+          
+          // Записываем результат генерации ответа
+          await storage.createAgentResult({
+            agentId: responseResult.agentId || 202,
+            entityType: 'citizen_request',
+            entityId: request.id,
+            actionType: 'response_generation', // Важно: используем actionType, соответствующий типу задачи
+            result: {
+              response: responseResult.output,
+              transactionHash: responseResult.transactionHash
+            }
+          });
+        } catch (activityError) {
+          console.error("Ошибка при записи активности или результатов:", activityError);
+        }
       } catch (aiError) {
         console.error("Ошибка классификации обращения:", aiError);
       }
