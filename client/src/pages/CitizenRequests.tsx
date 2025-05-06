@@ -1278,10 +1278,20 @@ const CitizenRequests = () => {
                                           )}
                                           
                                           <div className="mt-3 flex justify-between items-center">
-                                            <div>
+                                            <div className="flex flex-wrap gap-1">
                                               {request.recordedAudio && (
                                                 <Badge variant="outline" className="bg-indigo-50 text-indigo-700">
                                                   <Play className="h-3 w-3 mr-1" /> Аудио
+                                                </Badge>
+                                              )}
+                                              {request.aiProcessed && (
+                                                <Badge variant="outline" className="bg-violet-50 text-violet-700">
+                                                  <Bot className="h-3 w-3 mr-1" /> AI
+                                                </Badge>
+                                              )}
+                                              {request.aiClassification && (
+                                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                                  <ListChecks className="h-3 w-3 mr-1" /> {request.aiClassification}
                                                 </Badge>
                                               )}
                                             </div>
