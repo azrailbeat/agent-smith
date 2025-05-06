@@ -1424,6 +1424,273 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Обработка обращения конкретным агентом
+  app.post('/api/citizen-requests/:id/process-with-agent', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid request ID" });
+      }
+
+      // Получаем обращение
+      const request = await storage.getCitizenRequest(id);
+      if (!request) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Получаем параметры запроса
+      const { agentId, actionType, text, requestType, options = {} } = req.body;
+      
+      if (!agentId) {
+        return res.status(400).json({ error: "Agent ID is required" });
+      }
+
+      if (!actionType) {
+        return res.status(400).json({ error: "Action type is required" });
+      }
+
+      // Получаем агента
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({ error: "Agent not found" });
+      }
+      
+      if (!agent.isActive) {
+        return res.status(400).json({ 
+          error: "Agent is inactive", 
+          message: "This agent is currently disabled. Enable it in AI Agents settings." 
+        });
+      }
+
+      // Формируем текст для обработки
+      const processText = text || request.description || '';
+      const processType = requestType || request.requestType || 'general';
+      
+      // Обрабатываем в зависимости от типа действия
+      if (actionType === "classify") {
+        // Классификация обращения
+        const result = await classifyRequest(processText, agent, processType);
+        
+        // Обновляем данные в базе, если указан флаг autoUpdate
+        if (options.autoUpdate) {
+          await storage.updateCitizenRequest(id, {
+            aiProcessed: true,
+            aiClassification: result.classification,
+            status: "in_progress"
+          });
+        }
+
+        // Создаем запись о результате работы агента
+        await storage.createAgentResult({
+          agentId,
+          entityType: "citizen_request",
+          entityId: id,
+          actionType: "classification",
+          result: JSON.stringify(result),
+          createdAt: new Date()
+        });
+        
+        // Создаем запись активности
+        await storage.createActivity({
+          actionType: "ai_process",
+          description: `Агент ${agent.name} классифицировал обращение №${id}`,
+          relatedId: id,
+          relatedType: "citizen_request"
+        });
+        
+        return res.json({
+          success: true,
+          classification: result.classification,
+          confidence: result.confidence,
+          aiClassification: result.classification,
+          aiProcessed: true
+        });
+        
+      } else if (actionType === "respond") {
+        // Генерация ответа на обращение
+        const result = await generateResponse(processText, agent, options.classification || processType);
+        
+        // Обновляем данные в базе, если указан флаг autoUpdate
+        if (options.autoUpdate || options.autoRespond) {
+          await storage.updateCitizenRequest(id, {
+            responseText: result.response,
+            aiSuggestion: result.response,
+            status: "in_progress"
+          });
+        }
+
+        // Создаем запись о результате работы агента
+        await storage.createAgentResult({
+          agentId,
+          entityType: "citizen_request",
+          entityId: id,
+          actionType: "response",
+          result: JSON.stringify(result),
+          createdAt: new Date()
+        });
+        
+        // Создаем запись активности
+        await storage.createActivity({
+          actionType: "ai_process",
+          description: `Агент ${agent.name} сгенерировал ответ на обращение №${id}`,
+          relatedId: id,
+          relatedType: "citizen_request"
+        });
+        
+        return res.json({
+          success: true,
+          responseText: result.response,
+          suggestions: result.suggestions || [],
+          aiSuggestion: result.response
+        });
+        
+      } else if (actionType === "summarize") {
+        // Генерация краткого резюме обращения
+        const result = await summarizeRequest(processText, agent);
+        
+        // Обновляем данные в базе, если указан флаг autoUpdate
+        if (options.autoUpdate) {
+          await storage.updateCitizenRequest(id, {
+            summary: result.summary
+          });
+        }
+
+        // Создаем запись о результате работы агента
+        await storage.createAgentResult({
+          agentId,
+          entityType: "citizen_request",
+          entityId: id,
+          actionType: "summarization",
+          result: JSON.stringify(result),
+          createdAt: new Date()
+        });
+        
+        return res.json({
+          success: true,
+          summary: result.summary,
+          keyPoints: result.keyPoints || []
+        });
+      } else {
+        return res.status(400).json({ 
+          error: "Invalid action type", 
+          message: `Action type '${actionType}' is not supported` 
+        });
+      }
+    } catch (error) {
+      console.error('Error processing with agent:', error);
+      return res.status(500).json({ 
+        error: "Processing failed", 
+        message: error.message || "Ошибка обработки обращения" 
+      });
+    }
+  });
+  
+  // Дополнительные функции обработки обращений
+  async function classifyRequest(text: string, agent: any, requestType: string) {
+    // Здесь можно добавить код для работы с AI API или локальными моделями
+    
+    // Для MVP используем упрощенную логику
+    const categories = [
+      'housing', 'utilities', 'social', 'healthcare', 'education', 'roads',  
+      'public_transport', 'safety', 'environmental', 'business', 'land', 'permits',
+      'taxation', 'legal', 'agriculture'
+    ];
+    
+    // Проверяем ключевые слова для каждой категории
+    const keywords: Record<string, string[]> = {
+      'housing': ['жилье', 'дом', 'квартира', 'проживание', 'жилищный'],
+      'utilities': ['коммунальн', 'водоснабжение', 'отопление', 'электричество', 'ЖКХ'],
+      'social': ['социальн', 'пособие', 'пенсия', 'материальная помощь', 'льготы'],
+      'healthcare': ['медицин', 'здравоохранение', 'больница', 'поликлиника', 'врач'],
+      'education': ['образование', 'школа', 'детский сад', 'университет', 'обучение'],
+      'roads': ['дорог', 'мост', 'асфальт', 'яма', 'транспортн'],
+      'public_transport': ['общественный транспорт', 'автобус', 'маршрут', 'остановка'],
+      'safety': ['безопасность', 'полиция', 'правопорядок', 'преступность', 'угроза'],
+      'environmental': ['экология', 'окружающая среда', 'загрязнение', 'мусор', 'отходы'],
+      'business': ['бизнес', 'предпринимательство', 'торговля', 'лицензия', 'предприятие'],
+      'land': ['земля', 'участок', 'кадастр', 'границы', 'земельный'],
+      'permits': ['разрешение', 'лицензия', 'согласование', 'разрешительн'],
+      'taxation': ['налог', 'налогов', 'налогообложение', 'вычет', 'ИИН'],
+      'legal': ['юридическ', 'правовой', 'закон', 'суд', 'документ'],
+      'agriculture': ['сельское хозяйство', 'аграрн', 'фермер', 'субсидия', 'урожай']
+    };
+    
+    // Посчитаем вхождения ключевых слов для каждой категории
+    const lowerText = text.toLowerCase();
+    const scores: Record<string, number> = {};
+    
+    categories.forEach(category => {
+      const categoryKeywords = keywords[category] || [];
+      let score = 0;
+      
+      categoryKeywords.forEach(keyword => {
+        if (lowerText.includes(keyword.toLowerCase())) {
+          score += 1;
+        }
+      });
+      
+      scores[category] = score;
+    });
+    
+    // Находим категорию с наибольшим совпадением
+    let bestCategory = requestType;
+    let maxScore = 0;
+    
+    Object.entries(scores).forEach(([category, score]) => {
+      if (score > maxScore) {
+        maxScore = score;
+        bestCategory = category;
+      }
+    });
+    
+    // Если нет совпадений, вернуть исходный тип
+    if (maxScore === 0) {
+      bestCategory = requestType;
+    }
+    
+    return {
+      classification: bestCategory,
+      confidence: maxScore > 0 ? Math.min(0.3 + (maxScore * 0.1), 0.95) : 0.5,
+      scores
+    };
+  }
+  
+  async function generateResponse(text: string, agent: any, category: string) {
+    // Шаблонные ответы для MVP
+    const responses: Record<string, string> = {
+      'housing': 'Ваше обращение по жилищному вопросу зарегистрировано. Для решения вашего вопроса будет привлечен специалист из Жилищного департамента. Срок рассмотрения вашего обращения составляет 7 рабочих дней.',
+      'utilities': 'Ваше обращение по вопросу коммунальных услуг зарегистрировано. Для оперативного решения вашего вопроса будет привлечен специалист из Департамента ЖКХ. В случае аварийной ситуации, требующей немедленного реагирования, пожалуйста, свяжитесь с аварийной службой по номеру 109.',
+      'social': 'Ваше обращение по вопросу социальной поддержки зарегистрировано. Для детального рассмотрения вашего вопроса будет привлечен специалист из Департамента социальной защиты. Пожалуйста, убедитесь, что у вас готовы все необходимые документы, подтверждающие ваше право на социальную поддержку.',
+      'default': 'Ваше обращение успешно зарегистрировано в системе. В ближайшее время компетентный специалист рассмотрит ваше обращение и свяжется с вами по указанным контактным данным. Ваше обращение будет рассмотрено в срок, установленный законодательством Республики Казахстан.'
+    };
+    
+    // Выбираем подходящий ответ или используем стандартный
+    const response = responses[category] || responses['default'];
+    
+    return {
+      response,
+      suggestions: [
+        'Уточнить дополнительные детали',
+        'Запросить консультацию специалиста',
+        'Предоставить дополнительные документы'
+      ]
+    };
+  }
+  
+  async function summarizeRequest(text: string, agent: any) {
+    // Для MVP делаем простое резюме
+    const summary = text.length > 100 ? 
+      `${text.substring(0, 100).trim()}...` : 
+      text;
+    
+    const keyPoints = [
+      'Требуется рассмотрение специалистом',
+      'Необходимо уточнить детали'
+    ];
+    
+    return { summary, keyPoints };
+  }
+  
   // Process citizen request with AI
   app.post('/api/citizen-requests/:id/process', async (req, res) => {
     const id = parseInt(req.params.id);
