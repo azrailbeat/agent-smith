@@ -164,6 +164,43 @@ const CitizenRequests: React.FC = () => {
     autoRespond: false,
   });
 
+  // Цвета для приоритетов
+  const priorityColors = {
+    low: 'bg-green-50 text-green-700',
+    medium: 'bg-blue-50 text-blue-700',
+    high: 'bg-amber-50 text-amber-700',
+    urgent: 'bg-red-50 text-red-700',
+  };
+
+  // Цвета бордеров для приоритетов
+  const priorityBorderColors = {
+    low: 'border-l-green-500',
+    medium: 'border-l-blue-500',
+    high: 'border-l-amber-500',
+    urgent: 'border-l-red-500',
+  };
+  
+  // Цвета для статусов
+  const statusColors = {
+    new: 'bg-blue-100 text-blue-800',
+    inProgress: 'bg-amber-100 text-amber-800',
+    waiting: 'bg-purple-100 text-purple-800',
+    completed: 'bg-green-100 text-green-800',
+  };
+  
+  // Иконки для статусов
+  const statusIcons = {
+    new: <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>,
+    inProgress: <span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>,
+    waiting: <span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>,
+    completed: <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>,
+  };
+
+  // Функция для получения обращения по ID
+  const getRequestById = (id: number): CitizenRequest | undefined => {
+    return citizenRequests.find(request => request.id === id);
+  };
+
   // Мутации для работы с данными
   const createRequestMutation = useMutation({
     mutationFn: (newRequest: any) => apiRequest('POST', '/api/citizen-requests', newRequest),
@@ -367,44 +404,35 @@ const CitizenRequests: React.FC = () => {
   // Обработчик изменений в форме
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   // Обработчик отправки формы
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newRequest = {
-      ...formData,
-      status: "new",
-      priority: "medium",
-      createdAt: new Date(),
-      source: "web"
-    };
-    
-    createRequestMutation.mutate(newRequest);
+    createRequestMutation.mutate(formData);
   };
 
-  // Получение запроса по его ID
-  const getRequestById = (id: number): CitizenRequest | undefined => {
-    return citizenRequests.find(request => request.id === id);
+  // Обработка массовой обработки обращений с AI
+  const handleBatchProcess = async (settings: { agentId: number; autoProcess?: boolean; autoClassify?: boolean; autoRespond?: boolean }) => {
+    try {
+      await apiRequest('POST', '/api/citizen-requests/process-batch', settings);
+      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+      toast({
+        title: "Обработка запущена",
+        description: "Массовая обработка обращений запущена",
+      });
+    } catch (error) {
+      console.error("Failed to batch process requests:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось запустить массовую обработку обращений",
+        variant: "destructive",
+      });
+    }
   };
 
-  // Фильтрация запросов по поисковому запросу
-  const filteredRequests = citizenRequests.filter(request => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      request.fullName.toLowerCase().includes(searchLower) ||
-      request.subject?.toLowerCase().includes(searchLower) ||
-      request.description?.toLowerCase().includes(searchLower) ||
-      request.requestType?.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Вычисляем статистику
+  // Подсчет статистики
   const stats = {
     total: citizenRequests.length,
     new: citizenRequests.filter(r => r.status === 'new').length,
@@ -414,146 +442,72 @@ const CitizenRequests: React.FC = () => {
     aiProcessed: citizenRequests.filter(r => r.aiProcessed).length
   };
 
-  // Статусные цвета и иконки
-  const statusColors: { [key: string]: string } = {
-    new: "bg-blue-100 text-blue-800",
-    inProgress: "bg-yellow-100 text-yellow-800",
-    waiting: "bg-purple-100 text-purple-800",
-    completed: "bg-green-100 text-green-800",
-  };
+  // Поиск обращений
+  const filteredRequests = searchQuery.length > 0
+    ? citizenRequests.filter(request => 
+        request.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        request.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (request.description && request.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : citizenRequests;
 
-  const statusIcons: { [key: string]: React.ReactNode } = {
-    new: <FileText className="h-4 w-4" />,
-    inProgress: <Clock className="h-4 w-4" />,
-    waiting: <Clock className="h-4 w-4" />,
-    completed: <Check className="h-4 w-4" />,
-  };
-
-  const priorityColors: { [key: string]: string } = {
-    low: "bg-blue-100 text-blue-800",
-    medium: "bg-yellow-100 text-yellow-800",
-    high: "bg-orange-100 text-orange-800",
-    urgent: "bg-red-100 text-red-800",
-  };
-
-  // Цвета бордеров для приоритетов
-  const priorityBorderColors: { [key: string]: string } = {
-    low: "border-l-blue-400",
-    medium: "border-l-yellow-400",
-    high: "border-l-orange-500",
-    urgent: "border-l-red-500",
-  };
-
-  // Генерация тестовых данных
-  const generateTestRequests = async (count: number = 10) => {
-    try {
-      await apiRequest('POST', '/api/citizen-requests/generate-test', { count });
-      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-      toast({
-        title: 'Тестовые обращения созданы',
-        description: `Успешно создано ${count} тестовых обращений`,
-        variant: 'default',
-      });
-    } catch (error) {
-      console.error('Failed to generate test requests:', error);
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось создать тестовые обращения',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Рендер компонента
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Заголовок и статистика */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto py-6">
+      <div className="mb-6 flex flex-wrap justify-between items-center gap-2">
         <div>
           <h1 className="text-2xl font-bold">Обращения граждан</h1>
-          <p className="text-muted-foreground">
-            Управление и обработка обращений с помощью ИИ
-          </p>
+          <p className="text-muted-foreground">Управление и обработка обращений с помощью ИИ</p>
         </div>
+
         <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-lg font-bold text-blue-600">{stats.total.toLocaleString('ru-RU')}</div>
-            <div className="text-xs text-gray-500">Всего обращений</div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="px-4 py-1">
+              Всего: {stats.total}
+            </Badge>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 px-4 py-1">
+              Новых: {stats.new}
+            </Badge>
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 px-4 py-1">
+              В работе: {stats.inProgress}
+            </Badge>
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 px-4 py-1">
+              Ожидание: {stats.waiting}
+            </Badge>
+            <Badge variant="outline" className="bg-green-50 text-green-700 px-4 py-1">
+              Выполнено: {stats.completed}
+            </Badge>
           </div>
-          <div className="h-10 border-r border-gray-200 mx-1"></div>
-          <div className="text-right">
-            <div className="text-lg font-bold text-green-600">{stats.completed.toLocaleString('ru-RU')}</div>
-            <div className="text-xs text-gray-500">Закрыто</div>
+
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setIsNewRequestOpen(true)}>
+              Новое обращение
+            </Button>
           </div>
-          <div className="h-10 border-r border-gray-200 mx-1"></div>
-          <Button
-            onClick={() => setIsNewRequestOpen(true)}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600"
-          >
-            Новое обращение
-          </Button>
         </div>
       </div>
 
-      {/* Панель инструментов */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="relative w-64">
-            <Input
-              placeholder="Поиск обращений..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">AI обработка:</span>
-            <Switch
-              checked={agentSettings.enabled}
-              onCheckedChange={(checked) => setAgentSettings(prev => ({ ...prev, enabled: checked }))}
-            />
-          </div>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="relative w-full max-w-sm">
+          <Input
+            placeholder="Поиск обращений..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-8"
+          />
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAutoProcessOpen(true)}
-            className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
-          >
-            <Bot className="h-4 w-4 mr-2 text-blue-600" />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">ИИ обработка:</span>
+            <Switch
+              checked={agentSettings.enabled}
+              onCheckedChange={(checked) => setAgentSettings({ ...agentSettings, enabled: checked })}
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setIsAutoProcessOpen(true)}>
+            <Bot className="h-4 w-4 mr-2" />
             Авто-обработка
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => generateTestRequests(10)}
-            className="bg-gradient-to-r from-green-50 to-teal-50 border-green-200"
-          >
-            <FileText className="h-4 w-4 mr-2 text-teal-600" />
-            Создать тестовые
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}
-          >
+          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Обновить
           </Button>
@@ -568,33 +522,46 @@ const CitizenRequests: React.FC = () => {
         </div>
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {board.columnOrder.map((columnId) => {
-              const column = board.columns[columnId];
-              const requestsInColumn = column.requestIds
-                .map((requestId) => getRequestById(requestId))
-                .filter((request): request is CitizenRequest => request !== undefined);
+          <div className="w-full overflow-x-auto pb-4">
+            <div className="flex space-x-5 min-w-max px-1">
+              {board.columnOrder.map((columnId) => {
+                const column = board.columns[columnId];
+                const requestsInColumn = column.requestIds
+                  .map((requestId) => getRequestById(requestId))
+                  .filter((request): request is CitizenRequest => request !== undefined);
+                
+                // Определяем цвет фона для колонки
+                const columnColor = columnId === 'new' ? 'bg-blue-50' :
+                                   columnId === 'inProgress' ? 'bg-amber-50' :
+                                   columnId === 'waiting' ? 'bg-purple-50' :
+                                   columnId === 'completed' ? 'bg-green-50' : 'bg-gray-50';
+                
+                // Определяем цвет заголовка для колонки
+                const headerColor = columnId === 'new' ? 'bg-blue-100 text-blue-800' :
+                                   columnId === 'inProgress' ? 'bg-amber-100 text-amber-800' :
+                                   columnId === 'waiting' ? 'bg-purple-100 text-purple-800' :
+                                   columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
 
-              return (
-                <div key={column.id} className="bg-background rounded-lg border border-border shadow-sm">
-                  <div className="p-3 border-b border-border">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium flex items-center">
-                        {statusIcons[column.id]}
-                        <span className="ml-2">{column.title}</span>
-                      </h3>
-                      <div className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">
-                        {requestsInColumn.length}
+                return (
+                  <div key={column.id} className={`w-80 flex-shrink-0 rounded-lg border shadow-sm ${columnColor}`}>
+                    <div className="p-3 border-b sticky top-0 z-10 bg-white">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium flex items-center">
+                          {statusIcons[column.id]}
+                          <span className="ml-2">{column.title}</span>
+                        </h3>
+                        <div className="px-2 py-1 rounded-full text-xs font-medium bg-white border">
+                          {requestsInColumn.length}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <Droppable droppableId={column.id}>
-                    {(provided) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className="p-2 min-h-[70vh]"
-                      >
+                    <Droppable droppableId={column.id}>
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className="p-2 min-h-[70vh] max-h-[calc(100vh-220px)] overflow-y-auto"
+                        >
                         {requestsInColumn.length === 0 ? (
                           <div className="text-center py-4 text-muted-foreground text-sm">
                             Нет обращений
@@ -626,11 +593,12 @@ const CitizenRequests: React.FC = () => {
                         )}
                         {provided.placeholder}
                       </div>
-                    )}
-                  </Droppable>
-                </div>
-              );
-            })}
+                      )}
+                    </Droppable>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </DragDropContext>
       )}
@@ -849,27 +817,13 @@ const CitizenRequests: React.FC = () => {
                               <Bot className="h-4 w-4 text-purple-700" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium">Обработано ИИ-агентом</p>
+                              <p className="text-sm font-medium">Обработано ИИ</p>
                               <p className="text-xs text-gray-500">
                                 {new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}
                               </p>
                             </div>
                           </div>
                         )}
-                        
-                        {selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? (
-                          <div className="flex items-center gap-3">
-                            <div className="bg-yellow-100 p-2 rounded-full">
-                              <Clock className="h-4 w-4 text-yellow-700" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Взято в работу</p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}
-                              </p>
-                            </div>
-                          </div>
-                        ) : null}
                         
                         {selectedRequest.status === 'completed' && (
                           <div className="flex items-center gap-3">
@@ -879,9 +833,7 @@ const CitizenRequests: React.FC = () => {
                             <div>
                               <p className="text-sm font-medium">Обращение выполнено</p>
                               <p className="text-xs text-gray-500">
-                                {(selectedRequest.completedAt || selectedRequest.updatedAt) 
-                                  ? new Date(selectedRequest.completedAt || selectedRequest.updatedAt).toLocaleString('ru-RU')
-                                  : 'Дата не указана'}
+                                {new Date(selectedRequest.completedAt || selectedRequest.updatedAt).toLocaleString('ru-RU')}
                               </p>
                             </div>
                           </div>
@@ -894,8 +846,8 @@ const CitizenRequests: React.FC = () => {
                             </div>
                             <div>
                               <p className="text-sm font-medium">Записано в блокчейн</p>
-                              <p className="text-xs text-gray-500 break-all">
-                                Хеш: {selectedRequest.blockchainHash}
+                              <p className="text-xs text-gray-500 font-mono">
+                                {selectedRequest.blockchainHash.substring(0, 16)}...{selectedRequest.blockchainHash.substring(selectedRequest.blockchainHash.length - 8)}
                               </p>
                             </div>
                           </div>
@@ -907,50 +859,20 @@ const CitizenRequests: React.FC = () => {
               </Tabs>
               
               <div className="mt-4 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>
-                  Закрыть
-                </Button>
-                {agentSettings.enabled && !selectedRequest.aiProcessed && (
-                  <Button 
-                    variant="default"
-                    onClick={() => processRequestWithAI(selectedRequest.id)}
-                  >
-                    <Bot className="h-4 w-4 mr-2" />
-                    Обработать с помощью ИИ
-                  </Button>
-                )}
+                <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>Закрыть</Button>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Диалог настроек авто-обработки */}
+      {/* Диалог автоматической обработки с ИИ */}
       <AutoProcessDialog
         isOpen={isAutoProcessOpen}
         onOpenChange={setIsAutoProcessOpen}
         settings={agentSettings}
         onSettingsChange={setAgentSettings}
-        onProcess={(settings) => {
-          // Запускаем массовую обработку с выбранными настройками
-          apiRequest('POST', '/api/citizen-requests/process-batch', settings)
-            .then(() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-              toast({
-                title: 'Автоматическая обработка',
-                description: 'Обработка обращений запущена',
-                variant: 'default',
-              });
-            })
-            .catch(error => {
-              console.error('Failed to process requests:', error);
-              toast({
-                title: 'Ошибка',
-                description: 'Не удалось запустить автоматическую обработку',
-                variant: 'destructive',
-              });
-            });
-        }}
+        onProcess={handleBatchProcess}
       />
     </div>
   );

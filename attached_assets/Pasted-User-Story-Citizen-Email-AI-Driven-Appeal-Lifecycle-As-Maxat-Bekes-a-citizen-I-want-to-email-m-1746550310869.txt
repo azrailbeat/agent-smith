@@ -1,0 +1,91 @@
+User Story: “Citizen Email → AI‑Driven Appeal Lifecycle”
+As Maxat Bekes, a citizen
+I want to email my question to a government address
+So that the system automatically understands the topic, assigns it to the right department, and keeps me (and the clerk) fully updated via a clear Kanban UI.
+
+1 ⠀Entry Point — Email Inbound
+Step	UI / UX Detail	System Action
+1.1 Citizen sends an email to appeals@gov.kz with subject “Не работает ИИ‑услуга” and attachments (screenshots).	– No UI yet (citizen’s mail client).	Ingest micro‑service parses MIME → stores raw body & files in Appeal #13654.
+1.2 Auto‑acknowledgement ⏤ citizen receives “We got it ✅ Appeal #13654”.	– Localised email template (KK/RU/EN)
+– SLA clock badge (“24 h to first response”).	status = new, received_at, sla_due_at calculated.
+1.3 New Kanban card appears in Новые column (left‑most).	Card chip shows:
+• Sender avatar/initials
+• Medium priority pill
+• 1‑line subject
+• Mini‑preview: first 80 chars of body
+• 📎 icon = attachments present
+• Date stamp	Real‑time push over WebSocket to all operators with AI обработка: ON toggle.
+
+2 ⠀AI Auto‑Processing Modal
+(exactly the dialog from your screenshot)
+
+Clerk clicks “⚙ Auto‑обработка” in top bar → modal pops.
+
+Toggles “Включить обработку ИИ” → chooses agent “AgentSmith – Агент для обработки обращений граждан”.
+
+Leaves Автоматическая классификация ON, enables Автоматическое резюмирование, leaves Автоматические ответы OFF.
+
+Clicks Запустить обработку.
+
+Toast: “AI processing started for 1 unhandled appeal, this may take ~30 s.”
+
+3 ⠀Behind‑the‑Scenes AI Tasks
+Order	Micro‑Task	Output stored on card
+① Classification (LLM + taxonomy)	category = documents, topic = eGov, urgency = medium	
+② Summarisation	summary = “Запрос гражданина касается получения документов...”	
+③ Named‑Entity & Intent extraction	entities = [“ИИ‑услуга”, “документы”]	
+④ Routing rule (Org matrix)	assigned_to = Digital Services Dept.	
+⑤ Risk score (previous model)	risk = 37 / 100 (green)	
+
+Each sub‑task appends a Timeline event (see §5).
+
+4 ⠀Automated Column Movements
+status changes New → В работе once assigned_to ≠ null.
+
+If AI detects missing info, card moves to Ожидание with yellow tag “Need citizen clarification” and auto‑email sent.
+
+When clerk posts resolution, they click Закрыть → card slides to Выполнено (green).
+
+If unanswered > SLA, red pill SLA Breach and auto‑move to Urgent swim‑lane inside В работе.
+
+All moves are drag‑and‑drop capable; manual drags log the same Timeline events.
+
+5 ⠀Card Detail View (Sidebar or Modal)
+Zone	Elements
+Header	Subject, current status pill, priority selector, risk bar, SLA countdown.
+Left Pane	Original Email (rich‑text), collapsible Attachments gallery, Reply thread (if auto‑answers enabled).
+Right Pane	• AI Summary
+• Classification chips (category, topic, urgency)
+• Suggested Response Draft (if feature ON)
+• Recommended Knowledge Articles (vector search links).
+Bottom – Timeline (reverse chronological)	– 05 May 12:41 🟢 “Clerk Anna moved card to В работе.”
+– 05 May 12:40 🤖 “Auto‑assigned to Digital Services Dept.”
+– 05 May 12:40 🤖 “AI summary & classification complete.”
+– 05 May 12:39 📧 “Appeal received by system.”
+Meta Tab	Blockchain Tx hashes of each mutation (Hyperledger Besu) for audit.
+
+6 ⠀End‑to‑End Scenario Walk‑Through
+New Appeal appears (citizen email).
+
+Auto‑processing classifies → card jumps to В работе, clerk gets bell notification.
+
+Clerk opens card, reads AI summary, clicks “Answer with template”, edits, hits Send & Close.
+
+Card animates rightwards into Выполнено.
+
+Citizen gets closure email with ticket link + CSAT stars.
+
+Supervisor views Analytics dashboard: conversion funnel, median time per column, risk heat‑map.
+
+Acceptance Criteria (Dev / QA)
+Email ingestion must create card within 3 s (95‑percentile).
+
+AI classification accuracy ≥ 90 % on test set of 500 labeled appeals.
+
+Every status change emits TIMELINE_EVENT row and Besu smart‑contract tx (tx id visible).
+
+UI drag‑and‑drop latency < 150 ms; optimistic update with rollback on API error.
+
+Citizen receives first auto‑ack now, final closure later; bounce handling covered.
+
+Result: A fully traceable, AI‑augmented workflow where both citizen experience and internal efficiency are maximised, and every step is auditable down to individual column moves.
