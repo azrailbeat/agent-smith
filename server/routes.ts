@@ -903,6 +903,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/users', async (req, res) => {
+    try {
+      const userData = req.body;
+      // Базовая валидация
+      if (!userData.username) {
+        return res.status(400).json({ error: 'Username is required' });
+      }
+
+      // Проверка существования пользователя с таким именем
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ error: 'User with this username already exists' });
+      }
+
+      // Создаем пользователя
+      const newUser = await storage.createUser(userData);
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: 'Failed to create user', details: error.message });
+    }
+  });
+
+  app.patch('/api/users/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+
+      // Проверяем существование пользователя
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Обновляем данные пользователя
+      const updatedUser = await storage.updateUser(id, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ error: 'Failed to update user', details: error.message });
+    }
+  });
+
+  app.delete('/api/users/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+
+      // Проверяем существование пользователя
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Удаляем пользователя
+      await storage.deleteUser(id);
+      res.json({ success: true, message: 'User successfully deleted' });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: 'Failed to delete user', details: error.message });
+    }
+  });
+
   app.get('/api/users/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
