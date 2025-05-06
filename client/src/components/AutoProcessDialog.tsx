@@ -198,6 +198,9 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
     }
   });
 
+  // Состояние для отслеживания, нужно ли перезапускать уже обработанные запросы
+  const [forceReprocess, setForceReprocess] = useState<boolean>(false);
+
   // Обработчик для запуска процесса
   const startProcessing = () => {
     if (!settings.enabled || !settings.agentId) {
@@ -216,7 +219,10 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
     
     // После завершения анимации запускаем реальную обработку
     setTimeout(() => {
-      onProcess(settings as any);
+      onProcess({
+        ...settings as any, 
+        forceReprocess // Добавляем параметр для повторной обработки
+      });
     }, 5000);
   };
 
@@ -420,29 +426,53 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
               disabled={!settings.enabled}
             />
           </div>
+          
+          <div className="pt-2 mt-2 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="force-reprocess" className="flex items-center gap-2">
+                Повторная обработка
+                <span className="text-xs text-gray-500">
+                  Повторно обработать уже обработанные запросы
+                </span>
+              </Label>
+              <Switch
+                id="force-reprocess"
+                checked={forceReprocess}
+                onCheckedChange={setForceReprocess}
+                disabled={!settings.enabled}
+              />
+            </div>
+          </div>
         </div>
         
-        {newRequests.length > 0 ? (
+        {newRequests.length > 0 || forceReprocess ? (
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800 mb-4">
             <p className="flex items-center"><AlertCircle className="h-4 w-4 inline-block mr-2" />
-              Найдено {newRequests.length} необработанных обращений
+              {forceReprocess 
+                ? `Найдены обращения для повторной обработки` 
+                : `Найдено ${newRequests.length} необработанных обращений`
+              }
             </p>
             <div className="mt-2 text-xs">
-              {newRequests.slice(0, 3).map(req => (
+              {(forceReprocess ? requests : newRequests).slice(0, 3).map(req => (
                 <div key={req.id} className="py-1 border-t border-blue-100 flex justify-between">
                   <span className="font-medium truncate max-w-[150px]">{req.fullName}</span>
-                  <Badge variant="outline" className="ml-2">{req.subject.substring(0, 15)}...</Badge>
+                  <Badge variant={req.aiProcessed && forceReprocess ? "secondary" : "outline"} className="ml-2">
+                    {req.aiProcessed && forceReprocess ? "Повторно" : req.subject.substring(0, 15)+'...'}
+                  </Badge>
                 </div>
               ))}
-              {newRequests.length > 3 && (
-                <div className="text-center pt-1 text-blue-600">+ еще {newRequests.length - 3}</div>
+              {(forceReprocess ? requests : newRequests).length > 3 && (
+                <div className="text-center pt-1 text-blue-600">
+                  + еще {(forceReprocess ? requests : newRequests).length - 3}
+                </div>
               )}
             </div>
           </div>
         ) : (
           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800 mb-4">
             <AlertCircle className="h-4 w-4 inline-block mr-2" />
-            Не найдено необработанных обращений.
+            Не найдено необработанных обращений. Включите опцию "Повторная обработка", чтобы обработать существующие запросы.
           </div>
         )}
       </div>
@@ -453,11 +483,11 @@ const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
         </Button>
         <Button 
           onClick={startProcessing}
-          disabled={!settings.enabled || !settings.agentId || newRequests.length === 0}
+          disabled={!settings.enabled || !settings.agentId || (newRequests.length === 0 && !forceReprocess)}
           className="bg-gradient-to-r from-blue-600 to-indigo-600"
         >
           <Bot className="h-4 w-4 mr-2" />
-          Запустить обработку
+          {forceReprocess ? "Повторно обработать" : "Запустить обработку"}
         </Button>
       </DialogFooter>
     </>

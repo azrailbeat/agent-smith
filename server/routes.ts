@@ -1866,15 +1866,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Получаем все необработанные запросы
       const allRequests = await storage.getCitizenRequests();
-      const unprocessedRequests = allRequests.filter(req => 
-        (req.status === 'new' || req.status === 'Новый' || req.status === 'inProgress') 
-        && req.aiProcessed !== true
-      );
       
-      console.log(`Found ${unprocessedRequests.length} unprocessed requests from ${allRequests.length} total requests`);
+      // Определяем фильтр в зависимости от параметров запроса
+      let unprocessedRequests;
+      // Если флаг forceReprocess установлен, обрабатываем все запросы в статусе 'new', 'Новый' или 'inProgress'
+      // независимо от того, были ли они обработаны ранее
+      if (req.body.forceReprocess) {
+        unprocessedRequests = allRequests.filter(req => 
+          (req.status === 'new' || req.status === 'Новый' || req.status === 'inProgress')
+        );
+        console.log(`Force reprocessing ${unprocessedRequests.length} requests regardless of aiProcessed status`);
+      } else {
+        // Иначе фильтруем только необработанные
+        unprocessedRequests = allRequests.filter(req => 
+          (req.status === 'new' || req.status === 'Новый' || req.status === 'inProgress') 
+          && req.aiProcessed !== true
+        );
+        console.log(`Found ${unprocessedRequests.length} unprocessed requests from ${allRequests.length} total requests`);
+      }
       
       if (unprocessedRequests.length === 0) {
-        return res.status(400).json({ error: 'No unprocessed requests found' });
+        return res.status(400).json({ error: 'No unprocessed requests found. Use forceReprocess=true to reprocess already processed requests.' });
       }
       
       // Определяем ID запросов для обработки
