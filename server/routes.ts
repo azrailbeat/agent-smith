@@ -1570,6 +1570,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
           summary: result.summary,
           keyPoints: result.keyPoints || []
         });
+      } else if (actionType === "full") {
+        // Полная обработка - выполняем все три действия последовательно
+        
+        // 1. Классификация
+        const classifyResult = await classifyRequest(processText, agent, processType);
+        
+        // 2. Генерация ответа с учетом классификации
+        const responseResult = await generateResponse(processText, agent, classifyResult.classification);
+        
+        // 3. Генерация резюме
+        const summaryResult = await summarizeRequest(processText, agent);
+        
+        // Обновляем данные в базе
+        await storage.updateCitizenRequest(id, {
+          aiProcessed: true,
+          aiClassification: classifyResult.classification,
+          aiSuggestion: responseResult.response,
+          summary: summaryResult.summary,
+          status: "in_progress"
+        });
+        
+        // Создаем записи о результатах
+        await storage.createAgentResult({
+          agentId,
+          entityType: "citizen_request",
+          entityId: id,
+          actionType: "classification",
+          result: JSON.stringify(classifyResult),
+          createdAt: new Date()
+        });
+        
+        await storage.createAgentResult({
+          agentId,
+          entityType: "citizen_request",
+          entityId: id,
+          actionType: "response",
+          result: JSON.stringify(responseResult),
+          createdAt: new Date()
+        });
+        
+        await storage.createAgentResult({
+          agentId,
+          entityType: "citizen_request",
+          entityId: id,
+          actionType: "summarization",
+          result: JSON.stringify(summaryResult),
+          createdAt: new Date()
+        });
+        
+        // Создаем запись активности
+        await storage.createActivity({
+          actionType: "ai_process",
+          description: `Агент ${agent.name} выполнил полную обработку обращения №${id}`,
+          relatedId: id,
+          relatedType: "citizen_request"
+        });
+        
+        return res.json({
+          success: true,
+          classification: classifyResult.classification,
+          confidence: classifyResult.confidence,
+          responseText: responseResult.response,
+          summary: summaryResult.summary,
+          keyPoints: summaryResult.keyPoints || [],
+          aiClassification: classifyResult.classification,
+          aiSuggestion: responseResult.response,
+          aiProcessed: true
+        });
       } else {
         return res.status(400).json({ 
           error: "Invalid action type", 
