@@ -1122,11 +1122,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Получение результатов работы агентов по обращению
+  // Получение результатов работы агентов по обращению (по ID обращения)
   app.get('/api/citizen-requests/:id/agent-results', async (req, res) => {
     try {
       const requestId = parseInt(req.params.id);
       const results = await storage.getAgentResultsByEntity('citizen_request', requestId);
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching agent results:', error);
+      res.status(500).json({ error: 'Failed to fetch agent results' });
+    }
+  });
+  
+  // Получение результатов работы агентов по типу и ID сущности (общий эндпоинт)
+  app.get('/api/agent-results', async (req, res) => {
+    try {
+      const { entityId, entityType } = req.query;
+      
+      if (!entityId || !entityType) {
+        return res.status(400).json({ error: 'Entity ID and entity type are required' });
+      }
+      
+      const id = parseInt(entityId as string);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid entity ID' });
+      }
+      
+      const results = await storage.getAgentResultsByEntity(entityType as string, id);
       res.json(results);
     } catch (error) {
       console.error('Error fetching agent results:', error);
