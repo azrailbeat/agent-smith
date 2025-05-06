@@ -543,9 +543,8 @@ const CitizenRequests: React.FC = () => {
           </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="h-full overflow-x-auto py-2 px-3">
-              <div className="flex gap-3 min-w-max h-full">
-                {board.columnOrder.map((columnId) => {
+            <div className="h-full w-full py-2 px-1 flex gap-1">
+              {board.columnOrder.map((columnId) => {
                   const column = board.columns[columnId];
                   const requestsInColumn = column.requestIds
                     .map((requestId) => getRequestById(requestId))
@@ -626,7 +625,6 @@ const CitizenRequests: React.FC = () => {
                     </div>
                   );
                 })}
-              </div>
             </div>
           </DragDropContext>
         )}
