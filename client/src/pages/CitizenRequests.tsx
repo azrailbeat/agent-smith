@@ -44,7 +44,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription, 
-  DialogFooter 
+  DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1949,31 +1950,116 @@ const CitizenRequests = () => {
           fetchAgentResults(selectedRequest.id);
         }
       }}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto p-0">
           {selectedRequest && (
             <>
-              <DialogHeader>
+              <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
                   <div>
-                    <DialogTitle>{selectedRequest.title}</DialogTitle>
-                    <DialogDescription>
-                      Обращение #{selectedRequest.id} | {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}
-                    </DialogDescription>
+                    <h2 className="text-lg font-semibold">Карточка обращения</h2>
                   </div>
-                  <div className="flex gap-2">
-                    {renderStatusBadge(selectedRequest.status)}
-                    {renderPriorityBadge(selectedRequest.priority)}
-                    {selectedRequest.blockchainHash && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        <Database className="h-3 w-3 mr-1" /> GovChain
-                      </Badge>
-                    )}
+                  <DialogClose className="rounded-full p-1 hover:bg-neutral-100">
+                    <X className="h-5 w-5" />
+                  </DialogClose>
+                </div>
+              </div>
+              
+              <div className="p-4">
+                {/* Основная информация о клиенте и обращении */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <h3 className="text-sm text-muted-foreground mb-1">Имя клиента</h3>
+                    <p className="font-medium">{selectedRequest.fullName}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm text-muted-foreground mb-1">Детали обращения</h3>
+                    <p className="font-medium">{selectedRequest.requestType}, {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm text-muted-foreground mb-1">Email</h3>
+                    <p className="font-medium">{selectedRequest.contactInfo}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm text-muted-foreground mb-1">Телефон</h3>
+                    <p className="font-medium">{selectedRequest.citizenInfo?.contact || "-"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <h3 className="text-sm text-muted-foreground mb-1">Источник</h3>
+                    <p className="font-medium flex items-center">
+                      {selectedRequest.source === "telegram" ? (
+                        <>
+                          <MessageSquare className="h-4 w-4 mr-1 text-blue-500" />
+                          Telegram
+                        </>
+                      ) : selectedRequest.source === "email" ? (
+                        <>
+                          <Mail className="h-4 w-4 mr-1 text-purple-500" />
+                          Email
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="h-4 w-4 mr-1 text-green-500" />
+                          Веб-форма
+                        </>
+                      )}
+                    </p>
                   </div>
                 </div>
-              </DialogHeader>
+                
+                {/* Кнопка анализа с помощью AI */}
+                <Button 
+                  className="w-full mt-2"
+                  size="lg"
+                  onClick={() => {
+                    if (!selectedRequest) return;
+                    
+                    // Получаем все активные агенты из настроек
+                    const activeAgents = availableAgents.filter(agent => 
+                      agent.isActive && ALLOWED_AGENT_TYPES.includes(agent.type)
+                    );
+                    
+                    if (activeAgents.length === 0) {
+                      toast({
+                        title: "Ошибка",
+                        description: "Не найдены активные AI агенты для обработки. Перейдите в раздел Настройки и активируйте агентов.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
+                    // Начинаем с агента для обработки обращений
+                    const citizenRequestAgent = activeAgents.find(agent => agent.type === 'citizen_requests');
+                    
+                    toast({
+                      title: "Запуск комплексного анализа AI",
+                      description: "Запущено полное аналитическое исследование обращения..."
+                    });
+                    
+                    // Запускаем полную обработку обращения
+                    if (citizenRequestAgent) {
+                      processRequestWithAgent(selectedRequest, citizenRequestAgent.id, "full");
+                    }
+                    
+                    // Запускаем блокчейн-агента, если такой есть
+                    const blockchainAgent = activeAgents.find(agent => agent.type === 'blockchain');
+                    
+                    if (blockchainAgent) {
+                      setTimeout(() => {
+                        processRequestWithAgent(selectedRequest, blockchainAgent.id, "blockchain");
+                      }, 1500); // Небольшая задержка для последовательной обработки
+                    }
+                    
+                    // Загружаем результаты после всех обработок
+                    setTimeout(() => {
+                      fetchAgentResults(selectedRequest.id);
+                    }, 3000);
+                  }}
+                >
+                  <Bot className="mr-2 h-5 w-5" /> Анализировать с помощью AI
+                </Button>
+              </div>
               
-              {/* Пустой отступ вместо кнопок */}
-              <div className="border-t border-border pt-4 mt-4"></div>
+              <div className="border-t border-border"></div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
                 {/* Основная информация */}
