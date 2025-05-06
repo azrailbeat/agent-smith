@@ -1122,6 +1122,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Получение результатов работы агентов по обращению
+  app.get('/api/citizen-requests/:id/agent-results', async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const results = await storage.getAgentResultsByEntity('citizen_request', requestId);
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching agent results:', error);
+      res.status(500).json({ error: 'Failed to fetch agent results' });
+    }
+  });
+  
   app.get('/api/citizen-requests/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
