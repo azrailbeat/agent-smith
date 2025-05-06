@@ -1842,45 +1842,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Batch process citizen requests with AI
   app.post('/api/citizen-requests/process-batch', async (req, res) => {
-    const { requests, agents, targetStage } = req.body;
+    const { agentId, autoProcess, autoClassify, autoRespond } = req.body;
     
-    if (!Array.isArray(requests) || requests.length === 0) {
-      return res.status(400).json({ error: 'No requests provided for processing' });
-    }
-    
-    if (!Array.isArray(agents) || agents.length === 0) {
-      return res.status(400).json({ error: 'No agents provided for processing' });
+    if (!agentId) {
+      return res.status(400).json({ error: 'No agent specified for processing' });
     }
     
     try {
-      const results = [];
+      // Получаем агента
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
       
-      // Обрабатываем каждый запрос всеми указанными агентами
-      for (const requestId of requests) {
+      // Получаем все необработанные запросы
+      const allRequests = await storage.getCitizenRequests();
+      const unprocessedRequests = allRequests.filter(req => 
+        req.status === 'new' && !req.aiProcessed
+      );
+      
+      if (unprocessedRequests.length === 0) {
+        return res.status(400).json({ error: 'No unprocessed requests found' });
+      }
+      
+      // Определяем ID запросов для обработки
+      const requestIds = unprocessedRequests.map(req => req.id);
+      
+      // Массив с типами действий для обработки
+      const actions = [];
+      if (autoClassify) actions.push('classification');
+      if (autoProcess) actions.push('summarization');
+      if (autoRespond) actions.push('response_generation');
+      
+      if (actions.length === 0) {
+        actions.push('classification'); // По умолчанию добавляем классификацию
+      }
+      const results = [];
+      const processedCount = { success: 0, error: 0 };
+      
+      // Инициализируем сервис агентов, если необходимо
+      try {
+        await agentService.initialize();
+      } catch (initError) {
+        console.error("Failed to initialize agent service:", initError);
+      }
+
+      // Обрабатываем каждый запрос выбранным агентом
+      for (const requestId of requestIds) {
         const request = await storage.getCitizenRequest(requestId);
         if (!request) {
           results.push({ requestId, success: false, error: 'Request not found' });
+          processedCount.error++;
           continue;
         }
         
-        // Обрабатываем запрос всеми агентами
-        const agentResults = [];
-        for (const agentId of agents) {
-          const agent = await storage.getAgent(agentId);
-          if (!agent) {
-            agentResults.push({ agentId, success: false, error: 'Agent not found' });
-            continue;
-          }
-          
-          // Определяем тип действия агента в зависимости от его типа
-          const actionType = agent.type === 'classifier' ? 'classification' : 
-                           agent.type === 'responder' ? 'response_generation' : 
-                           agent.type === 'summarizer' ? 'summarization' : 'processing';
-          
-          // Обрабатываем запрос этим агентом
-          try {
-            // Формируем содержимое для обработки
-            const content = `Тема: ${request.subject || ''}
+        // Формируем содержимое для обработки
+        const content = `Тема: ${request.subject || ''}
 
 Описание:
 ${request.description || ''}
@@ -1888,51 +1905,173 @@ ${request.description || ''}
 Контактная информация:
 ФИО: ${request.fullName}
 Контакты: ${request.contactInfo}`;
-            
+        
+        // Определяем новый статус для запроса
+        const newRequestStatus = 'in_progress';
+        let updateData: any = { status: newRequestStatus };
+        
+        // Выполняем выбранные действия
+        const actionResults = [];
+        let success = true;
+        
+        // Выполняем все выбранные действия
+        for (const actionType of actions) {
+          try {
             const result = await agentService.processRequest({
-              taskType: actionType,
-              entityType: 'citizen_request',
+              taskType: actionType as any,
+              entityType: 'citizen_request' as any,
               entityId: requestId,
               content,
               userId: 1
             });
-            agentResults.push({ agentId, success: true, result });
-          } catch (error) {
-            console.error(`Error processing request ${requestId} with agent ${agentId}:`, error);
-            agentResults.push({ agentId, success: false, error: 'Processing failed' });
+            
+            // Добавляем результаты в данные для обновления обращения
+            if (actionType === 'classification' && result.classification) {
+              updateData.aiClassification = result.classification;
+            } else if (actionType === 'response_generation' && result.output) {
+              updateData.aiSuggestion = result.output;
+            } else if (actionType === 'summarization' && result.output) {
+              updateData.summary = result.output;
+            }
+            
+            actionResults.push({ type: actionType, success: true, result });
+          } catch (actionError: any) {
+            console.error(`Error in ${actionType} for request ${requestId}:`, actionError);
+            actionResults.push({ type: actionType, success: false, error: actionError.message || 'Processing failed' });
+            success = false;
           }
         }
         
-        // Определяем новый статус для запроса
-        let newStatus = request.status;
-        if (targetStage === 'auto') {
-          // Автоматически определяем следующий этап
-          // Если есть результаты от классификатора и респондера, считаем, что можно перевести в обработку
-          const hasClassifier = agentResults.some(r => r.success);
-          const hasResponder = agentResults.some(r => r.success);
+        // Обновляем запрос в базе данных
+        try {
+          // Устанавливаем флаг aiProcessed
+          updateData.aiProcessed = true;
           
-          if (hasClassifier && hasResponder) {
-            newStatus = 'inProgress';
-          } else if (hasClassifier) {
-            newStatus = 'waiting';
-          }
-        } else {
-          // Используем указанный статус
-          newStatus = targetStage;
+          // Обновляем запрос в хранилище
+          await storage.updateCitizenRequest(requestId, updateData);
+          
+          // Создаем запись активности
+          await storage.createActivity({
+            actionType: "ai_process",
+            description: `Автоматическая обработка обращения №${requestId}`,
+            relatedId: requestId,
+            relatedType: "citizen_request"
+          });
+          
+          results.push({ 
+            requestId, 
+            success: true, 
+            actionResults, 
+            newStatus: updateData.status
+          });
+          processedCount.success++;
+        } catch (updateError: any) {
+          console.error(`Error updating request ${requestId}:`, updateError);
+          results.push({ 
+            requestId, 
+            success: false, 
+            error: updateError.message || "Failed to update request with results"
+          });
+          processedCount.error++;
         }
-        
-        // Обновляем статус запроса
-        if (newStatus !== request.status) {
-          await storage.updateCitizenRequest(requestId, { status: newStatus });
-        }
-        
-        results.push({ requestId, success: true, agentResults, newStatus });
       }
       
-      return res.json({ success: true, results });
+      return res.json({ success: true, results, processedCount });
     } catch (error) {
       console.error('Error during batch processing:', error);
       return res.status(500).json({ error: 'Internal server error during batch processing' });
+    }
+  });
+  
+  // Process citizen request with specific agent
+  app.post('/api/citizen-requests/:id/process-with-agent', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { agentId } = req.body;
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    if (!agentId) {
+      return res.status(400).json({ error: 'Agent ID is required' });
+    }
+    
+    try {
+      // Получаем обращение гражданина
+      const request = await storage.getCitizenRequest(id);
+      if (!request) {
+        return res.status(404).json({ error: 'Request not found' });
+      }
+      
+      // Получаем агента
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      
+      // Формируем содержимое для обработки
+      const content = `Тема: ${request.subject || ''}
+
+Описание:
+${request.description || ''}
+
+Контактная информация:
+ФИО: ${request.fullName}
+Контакты: ${request.contactInfo}`;
+      
+      // Обновляем статус на in_progress
+      await storage.updateCitizenRequest(id, {
+        status: 'in_progress',
+        assignedTo: agentId
+      });
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        actionType: "auto_assign",
+        description: `Обращение №${id} назначено агенту ${agent.name}`,
+        relatedId: id,
+        relatedType: "citizen_request",
+        metadata: {
+          agentId,
+          agentName: agent.name,
+          agentType: agent.type
+        }
+      });
+      
+      // Обрабатываем запрос с помощью выбранного агента
+      const classificationResult = await agentService.processRequest({
+        taskType: 'classification' as any,
+        entityType: 'citizen_request' as any,
+        entityId: id,
+        content,
+        userId: agentId
+      });
+      
+      // Затем генерация ответа с учетом результата классификации
+      const responseResult = await agentService.processRequest({
+        taskType: 'response_generation' as any,
+        entityType: 'citizen_request' as any,
+        entityId: id,
+        content,
+        metadata: {
+          classification: classificationResult.classification || 'general'
+        },
+        userId: agentId
+      });
+      
+      // Обновляем обращение с результатами
+      const updatedRequest = await storage.updateCitizenRequest(id, {
+        aiProcessed: true,
+        aiClassification: classificationResult.classification || 'general',
+        aiSuggestion: responseResult.output || 'Рекомендуется обработка специалистом',
+        summary: classificationResult.output || 'Требуется дополнительная информация'
+      });
+      
+      // Возвращаем обновленное обращение
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error processing request with agent:", error);
+      res.status(500).json({ error: 'Failed to process request with agent' });
     }
   });
   

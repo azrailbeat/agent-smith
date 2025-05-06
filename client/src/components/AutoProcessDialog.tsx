@@ -32,7 +32,7 @@ interface AutoProcessDialogProps {
     autoRespond?: boolean;
   };
   onSettingsChange: (settings: any) => void;
-  onProcess: (settings: any) => void;
+  onProcess: (settings: { agentId: number, autoProcess?: boolean, autoClassify?: boolean, autoRespond?: boolean }) => void;
 }
 
 const AutoProcessDialog: React.FC<AutoProcessDialogProps> = ({
