@@ -556,12 +556,17 @@ const CitizenRequests: React.FC = () => {
                   <div key={column.id} className={`w-72 flex-shrink-0 rounded-lg border shadow-sm bg-white overflow-hidden`}>
                     <div className={`p-3 border-b sticky top-0 z-10 ${headerColor} rounded-t-lg`}>
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium flex items-center">
+                        <h3 className="font-semibold flex items-center">
                           {statusIcons[column.id]}
                           <span className="ml-2">{column.title}</span>
                         </h3>
-                        <div className="px-2 py-1 rounded-full text-xs font-medium bg-white border shadow-sm">
-                          {requestsInColumn.length}
+                        <div className="flex items-center gap-2">
+                          <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[24px] text-center">
+                            {requestsInColumn.length}
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white/80" onClick={(e) => e.stopPropagation()}>
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -570,12 +575,13 @@ const CitizenRequests: React.FC = () => {
                         <div
                           {...provided.droppableProps}
                           ref={provided.innerRef}
-                          className="p-3 min-h-[70vh] max-h-[calc(100vh-220px)] overflow-y-auto bg-gray-50/50"
+                          className="p-3 min-h-[70vh] max-h-[calc(100vh-220px)] overflow-y-auto bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition duration-200"
                         >
                         {requestsInColumn.length === 0 ? (
-                          <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2">
-                            <Inbox className="h-10 w-10 mx-auto mb-2 text-gray-400" />
-                            Нет обращений
+                          <div className="text-center py-6 px-4 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-3 transition-all duration-300 hover:bg-white hover:border-gray-400">
+                            <Inbox className="h-12 w-12 mx-auto mb-3 text-gray-400 opacity-70" />
+                            <p className="font-medium">Нет обращений</p>
+                            <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда или создайте новое обращение</p>
                           </div>
                         ) : (
                           requestsInColumn.map((request, index) => (
