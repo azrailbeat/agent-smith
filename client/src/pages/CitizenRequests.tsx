@@ -1404,6 +1404,12 @@ const CitizenRequests = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Диалоговое окно автоматической обработки обращений */}
+      <AutoProcessDialog 
+        open={isAutoProcessOpen} 
+        onOpenChange={setIsAutoProcessOpen} 
+      />
     </div>
   );
 };

@@ -58,10 +58,7 @@ export function AutoProcessDialog({ open, onOpenChange }: AutoProcessDialogProps
   // Мутация для обработки запросов
   const processMutation = useMutation({
     mutationFn: async (data: { requests: number[], agents: number[], targetStage: string }) => {
-      return await apiRequest('/api/citizen-requests/process-batch', {
-        method: 'POST',
-        data,
-      });
+      return await apiRequest('POST', '/api/citizen-requests/process-batch', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });

@@ -1840,6 +1840,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { summary, keyPoints };
   }
   
+  // Batch process citizen requests with AI
+  app.post('/api/citizen-requests/process-batch', async (req, res) => {
+    const { requests, agents, targetStage } = req.body;
+    
+    if (!Array.isArray(requests) || requests.length === 0) {
+      return res.status(400).json({ error: 'No requests provided for processing' });
+    }
+    
+    if (!Array.isArray(agents) || agents.length === 0) {
+      return res.status(400).json({ error: 'No agents provided for processing' });
+    }
+    
+    try {
+      const results = [];
+      
+      // Обрабатываем каждый запрос всеми указанными агентами
+      for (const requestId of requests) {
+        const request = await storage.getCitizenRequest(requestId);
+        if (!request) {
+          results.push({ requestId, success: false, error: 'Request not found' });
+          continue;
+        }
+        
+        // Обрабатываем запрос всеми агентами
+        const agentResults = [];
+        for (const agentId of agents) {
+          const agent = await storage.getAgent(agentId);
+          if (!agent) {
+            agentResults.push({ agentId, success: false, error: 'Agent not found' });
+            continue;
+          }
+          
+          // Определяем тип действия агента в зависимости от его типа
+          const actionType = agent.type === 'classifier' ? 'classification' : 
+                           agent.type === 'responder' ? 'response_generation' : 
+                           agent.type === 'summarizer' ? 'summarization' : 'processing';
+          
+          // Обрабатываем запрос этим агентом
+          try {
+            // Формируем содержимое для обработки
+            const content = `Тема: ${request.subject || ''}
+
+Описание:
+${request.description || ''}
+
+Контактная информация:
+ФИО: ${request.fullName}
+Контакты: ${request.contactInfo}`;
+            
+            const result = await agentService.processRequest({
+              taskType: actionType,
+              entityType: 'citizen_request',
+              entityId: requestId,
+              content,
+              userId: 1
+            });
+            agentResults.push({ agentId, success: true, result });
+          } catch (error) {
+            console.error(`Error processing request ${requestId} with agent ${agentId}:`, error);
+            agentResults.push({ agentId, success: false, error: 'Processing failed' });
+          }
+        }
+        
+        // Определяем новый статус для запроса
+        let newStatus = request.status;
+        if (targetStage === 'auto') {
+          // Автоматически определяем следующий этап
+          // Если есть результаты от классификатора и респондера, считаем, что можно перевести в обработку
+          const hasClassifier = agentResults.some(r => r.success);
+          const hasResponder = agentResults.some(r => r.success);
+          
+          if (hasClassifier && hasResponder) {
+            newStatus = 'inProgress';
+          } else if (hasClassifier) {
+            newStatus = 'waiting';
+          }
+        } else {
+          // Используем указанный статус
+          newStatus = targetStage;
+        }
+        
+        // Обновляем статус запроса
+        if (newStatus !== request.status) {
+          await storage.updateCitizenRequest(requestId, { status: newStatus });
+        }
+        
+        results.push({ requestId, success: true, agentResults, newStatus });
+      }
+      
+      return res.json({ success: true, results });
+    } catch (error) {
+      console.error('Error during batch processing:', error);
+      return res.status(500).json({ error: 'Internal server error during batch processing' });
+    }
+  });
+  
   // Process citizen request with AI
   app.post('/api/citizen-requests/:id/process', async (req, res) => {
     const id = parseInt(req.params.id);
