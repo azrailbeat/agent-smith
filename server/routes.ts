@@ -2066,7 +2066,7 @@ ${request.description || ''}
   // Documentolog integration route
   // API для приема обращений извне
   // Create test citizen requests for demo purposes
-  app.post('/api/citizen-requests/generate-test', async (req, res) => {
+  app.post('/api/v1/citizen-requests/generate-test', async (req, res) => {
     try {
       const { count = 10 } = req.body;
       const results = [];

@@ -727,7 +727,7 @@ const CitizenRequests = () => {
             size="sm"
             onClick={() => {
               // Создаем 10 тестовых обращений
-              apiRequest('POST', '/api/citizen-requests/generate-test', { count: 10 })
+              apiRequest('POST', '/api/v1/citizen-requests/generate-test', { count: 10 })
                 .then(() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
                   toast({
