@@ -1232,6 +1232,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/citizen-requests/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      await storage.deleteCitizenRequest(id);
+      res.status(200).json({ success: true, message: 'Citizen request deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting citizen request:', error);
+      res.status(500).json({ error: 'Failed to delete citizen request', message: error.message });
+    }
+  });
+
   // Organization structure and task rules API
   // Task Rules routes
   app.get('/api/task-rules', async (req, res) => {

@@ -79,6 +79,7 @@ export interface IStorage {
   getCitizenRequest(id: number): Promise<CitizenRequest | undefined>;
   createCitizenRequest(request: InsertCitizenRequest): Promise<CitizenRequest>;
   updateCitizenRequest(id: number, request: Partial<InsertCitizenRequest>): Promise<CitizenRequest | undefined>;
+  deleteCitizenRequest(id: number): Promise<boolean>;
   processCitizenRequestWithAI(id: number): Promise<CitizenRequest | undefined>;
   
   // Department and Position operations
