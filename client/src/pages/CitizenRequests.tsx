@@ -1978,6 +1978,14 @@ const CitizenRequests = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
                 {/* Основная информация */}
                 <div className="md:col-span-2 space-y-4">
+                  {/* Панель результатов обработки AI */}
+                  {selectedRequest.id && agentResults[selectedRequest.id]?.length > 0 && (
+                    <RequestInsightPanel
+                      requestId={selectedRequest.id}
+                      agentResults={agentResults[selectedRequest.id] || []}
+                    />
+                  )}
+                  
                   <div>
                     <h3 className="text-sm font-medium mb-2">Описание обращения</h3>
                     <div className="p-3 bg-neutral-50 rounded-md border text-sm whitespace-pre-wrap">
@@ -2133,10 +2141,12 @@ const CitizenRequests = () => {
                     <h3 className="text-sm font-medium mb-2">ИИ агенты</h3>
                     
                     {/* Панель результатов обработки */}
-                    {selectedRequest && agentResults[selectedRequest.id]?.length > 0 && (
+                    {selectedRequest?.id && agentResults[selectedRequest.id]?.length > 0 && (
                       <div className="mb-4">
                         <RequestInsightPanel 
-                          results={agentResults[selectedRequest.id] || []} 
+                          requestId={selectedRequest.id}
+                          agentResults={agentResults[selectedRequest.id] || []}
+                          compact={true}
                         />
                       </div>
                     )}
