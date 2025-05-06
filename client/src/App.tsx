@@ -11,7 +11,7 @@ import Tasks from "@/pages/Tasks";
 import HistoryPage from "@/pages/History";
 import Analytics from "@/pages/Analytics";
 import Translate from "@/pages/Translate";
-import CitizenRequests from "@/pages/CitizenRequests";
+import CitizenRequests from "@/pages/CitizenRequestsRefactored";
 import Meetings from "@/pages/Meetings";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";

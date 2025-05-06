@@ -465,6 +465,7 @@ const CitizenRequests = () => {
           newBoard.columns.new.requestIds.push(request.id);
           break;
         case "in_progress":
+        case "inProgress": // Поддержка обоих форматов
           newBoard.columns.inProgress.requestIds.push(request.id);
           break;
         case "waiting":
@@ -616,7 +617,7 @@ const CitizenRequests = () => {
   const stats = {
     total: citizenRequests.length,
     new: citizenRequests.filter(r => r.status === 'new').length,
-    inProgress: citizenRequests.filter(r => r.status === 'in_progress').length,
+    inProgress: citizenRequests.filter(r => r.status === 'in_progress' || r.status === 'inProgress').length,
     waiting: citizenRequests.filter(r => r.status === 'waiting').length,
     completed: citizenRequests.filter(r => r.status === 'completed').length,
     aiProcessed: citizenRequests.filter(r => r.aiProcessed).length
