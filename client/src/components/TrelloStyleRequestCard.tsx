@@ -227,7 +227,25 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               {request.category}
             </Badge>
           )}
+          {request.aiSuggestion && (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 text-[10px] flex items-center px-1 h-4 border-amber-200">
+              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Результат
+            </Badge>
+          )}
         </div>
+        
+        {/* Отображение результатов AI обработки */}
+        {request.aiSuggestion && (
+          <div className="bg-amber-50 p-1.5 rounded text-[10px] text-amber-800 mb-2 border border-amber-200">
+            <div className="font-medium mb-0.5 flex items-center">
+              <Bot className="h-2.5 w-2.5 mr-1" /> 
+              Результат обработки:
+            </div>
+            <div className="line-clamp-2">
+              {request.aiSuggestion}
+            </div>
+          </div>
+        )}
         
         {/* Футер карточки */}
         <div className="flex justify-between items-center text-[10px] text-gray-500 pt-2 border-t border-gray-100">
