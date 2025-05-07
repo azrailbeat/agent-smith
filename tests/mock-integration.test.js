@@ -254,8 +254,18 @@ describe('Mock Integration Tests', () => {
         // Simulate an error during processing
         throw new Error('Simulated processing error');
       } catch (error) {
-        // Log the error
-        await activityLogger.logError(error, 'request_processing', 1);
+        // Log the error - this will create an activity with action='error'
+        await activityLogger.logActivity({
+          action: 'error',
+          entityType: 'citizen_request',
+          entityId: request.id,
+          details: error.message,
+          metadata: { 
+            context: 'request_processing',
+            stack: error.stack
+          },
+          userId: 1
+        });
         
         // Update request status to error
         const updated = await requestRepo.update(request.id, {
@@ -300,9 +310,11 @@ describe('Mock Integration Tests', () => {
       
       const errorActivity = activities.find(a => a.action === 'error');
       expect(errorActivity).toBeDefined();
+      expect(errorActivity.details).toBe('Simulated processing error');
       
       const recoveryActivity = activities.find(a => a.action === 'request_recovery');
       expect(recoveryActivity).toBeDefined();
+      expect(recoveryActivity.details).toBe('Восстановление после ошибки');
     });
   });
   
