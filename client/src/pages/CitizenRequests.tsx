@@ -40,7 +40,8 @@ import {
   Building,
   Mail, 
   MessageSquare,
-  X
+  X,
+  Inbox as InboxIcon
 } from "lucide-react";
 import { 
   Dialog, 
@@ -802,8 +803,12 @@ const CitizenRequests = () => {
                         className="p-2 min-h-[70vh]"
                       >
                         {requestsInColumn.length === 0 ? (
-                          <div className="text-center py-4 text-muted-foreground text-sm">
-                            Нет обращений
+                          <div className="flex flex-col items-center justify-center py-6 px-2 border-2 border-dashed border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-2">
+                              <InboxIcon className="h-8 w-8 text-gray-300" />
+                            </div>
+                            <h4 className="text-sm font-medium text-gray-600 mb-1">Нет обращений</h4>
+                            <p className="text-xs text-gray-500 text-center">Переместите карточки сюда</p>
                           </div>
                         ) : (
                           requestsInColumn.map((request, index) => (
