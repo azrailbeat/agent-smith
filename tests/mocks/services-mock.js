@@ -118,6 +118,9 @@ class MockActivityLoggerService {
   async logActivity(data) {
     this.lastId++;
     
+    // Add a small delay between activities to ensure different timestamps
+    await new Promise(resolve => setTimeout(resolve, 1));
+    
     const activity = {
       id: this.lastId,
       timestamp: new Date(),
@@ -129,8 +132,13 @@ class MockActivityLoggerService {
   }
 
   async getRecentActivities(limit = 50) {
-    return this.activities
-      .sort((a, b) => b.timestamp - a.timestamp)
+    // Make a copy of the array before sorting to avoid modifying the original
+    return [...this.activities]
+      .sort((a, b) => {
+        // Ensure proper sorting by timestamp
+        if (!a.timestamp || !b.timestamp) return 0;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      })
       .slice(0, limit);
   }
 
