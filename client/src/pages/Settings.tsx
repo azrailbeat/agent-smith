@@ -331,6 +331,38 @@ const Settings = () => {
   const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false);
   const [currentIntegration, setCurrentIntegration] = useState<Integration | undefined>(undefined);
   const [currentAgent, setCurrentAgent] = useState<Agent | undefined>(undefined);
+  
+  // State for API settings
+  const [apiSettings, setApiSettings] = useState({
+    enabled: false,
+    authType: "apikey",
+    apiKey: "sk-123456789abcdef",
+    autoProcess: false,
+    defaultAgentId: ""
+  });
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  
+  // State for widget form builder
+  const [widgetSettings, setWidgetSettings] = useState({
+    title: "Форма обращения",
+    description: "Пожалуйста, заполните форму обращения",
+    theme: "light",
+    primaryColor: "#1e40af",
+    logo: "",
+    fields: [
+      { id: "1", type: "text", label: "ФИО", placeholder: "Введите ваше полное имя", required: true },
+      { id: "2", type: "email", label: "Email", placeholder: "Введите ваш email", required: true },
+      { id: "3", type: "select", label: "Тип обращения", options: ["Жалоба", "Предложение", "Запрос информации"], required: true },
+      { id: "4", type: "textarea", label: "Текст обращения", placeholder: "Опишите ваше обращение", required: true }
+    ],
+    buttonText: "Отправить обращение",
+    successMessage: "Ваше обращение успешно отправлено"
+  });
+  
+  const [previewMode, setPreviewMode] = useState(false);
+  const [widgetCode, setWidgetCode] = useState("");
+  const [isEditingField, setIsEditingField] = useState(false);
+  const [currentField, setCurrentField] = useState<any>(null);
 
   // Fetch integrations
   const { 
@@ -613,6 +645,204 @@ const Settings = () => {
     };
     return types[type] || type;
   };
+  
+  // API settings mutations and handlers
+  const saveApiSettingsMutation = useMutation({
+    mutationFn: (data: any) => 
+      apiRequest('POST', '/api/system/settings/api', data),
+    onSuccess: () => {
+      toast({
+        title: "Успех",
+        description: "Настройки API успешно сохранены",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось сохранить настройки API",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const generateApiKeyMutation = useMutation({
+    mutationFn: () => 
+      apiRequest('POST', '/api/system/settings/api/generate-key'),
+    onSuccess: (response) => {
+      response.json().then(data => {
+        setApiSettings(prev => ({
+          ...prev,
+          apiKey: data.apiKey
+        }));
+        
+        toast({
+          title: "Успех",
+          description: "Новый API ключ успешно сгенерирован",
+        });
+      });
+      
+      setIsGeneratingKey(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось сгенерировать API ключ",
+        variant: "destructive",
+      });
+      
+      setIsGeneratingKey(false);
+    }
+  });
+  
+  // Load API settings
+  useEffect(() => {
+    fetch('/api/system/settings/api')
+      .then(res => res.json())
+      .then(data => {
+        setApiSettings(data || {
+          enabled: false,
+          authType: "apikey",
+          apiKey: "sk-123456789abcdef",
+          autoProcess: false,
+          defaultAgentId: ""
+        });
+      })
+      .catch(err => {
+        console.error('Ошибка при загрузке настроек API:', err);
+      });
+  }, []);
+  
+  // API settings handlers
+  const handleGenerateApiKey = () => {
+    if (window.confirm("Вы уверены, что хотите сгенерировать новый ключ API? Это сделает предыдущий ключ недействительным.")) {
+      setIsGeneratingKey(true);
+      generateApiKeyMutation.mutate();
+    }
+  };
+  
+  const handleSaveApiSettings = () => {
+    saveApiSettingsMutation.mutate(apiSettings);
+  };
+  
+  const handleApiSettingChange = (key: string, value: any) => {
+    setApiSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  // Widget form builder handlers
+  const handleAddField = () => {
+    const newField = {
+      id: Date.now().toString(),
+      type: "text",
+      label: "Новое поле",
+      placeholder: "Введите значение",
+      required: false
+    };
+    
+    setWidgetSettings(prev => ({
+      ...prev,
+      fields: [...prev.fields, newField]
+    }));
+  };
+  
+  const handleDeleteField = (fieldId: string) => {
+    setWidgetSettings(prev => ({
+      ...prev,
+      fields: prev.fields.filter(field => field.id !== fieldId)
+    }));
+  };
+  
+  const handleEditField = (field: any) => {
+    setCurrentField(field);
+    setIsEditingField(true);
+  };
+  
+  const handleFieldUpdate = (updatedField: any) => {
+    setWidgetSettings(prev => ({
+      ...prev,
+      fields: prev.fields.map(field => 
+        field.id === updatedField.id ? updatedField : field
+      )
+    }));
+    
+    setCurrentField(null);
+    setIsEditingField(false);
+  };
+  
+  const handleWidgetSettingChange = (key: string, value: any) => {
+    setWidgetSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  const handleMoveField = (fieldId: string, direction: 'up' | 'down') => {
+    const fieldIndex = widgetSettings.fields.findIndex(f => f.id === fieldId);
+    if (fieldIndex === -1) return;
+    
+    const newFields = [...widgetSettings.fields];
+    
+    if (direction === 'up' && fieldIndex > 0) {
+      // Перемещаем вверх - меняем местами с предыдущим
+      [newFields[fieldIndex], newFields[fieldIndex - 1]] = [newFields[fieldIndex - 1], newFields[fieldIndex]];
+    } else if (direction === 'down' && fieldIndex < newFields.length - 1) {
+      // Перемещаем вниз - меняем местами со следующим
+      [newFields[fieldIndex], newFields[fieldIndex + 1]] = [newFields[fieldIndex + 1], newFields[fieldIndex]];
+    }
+    
+    setWidgetSettings(prev => ({
+      ...prev,
+      fields: newFields
+    }));
+  };
+  
+  const generateWidgetCode = () => {
+    // Создаем код для встраивания виджета
+    const code = `
+<div id="agent-smith-citizen-request-widget"></div>
+<script src="${window.location.origin}/widget.js"></script>
+<script>
+  AgentSmithWidget.init({
+    container: '#agent-smith-citizen-request-widget',
+    apiKey: '${apiSettings.apiKey}',
+    widgetId: 'default',
+    theme: '${widgetSettings.theme}',
+    primaryColor: '${widgetSettings.primaryColor}'
+  });
+</script>
+    `.trim();
+    
+    setWidgetCode(code);
+    
+    toast({
+      title: "Код виджета сгенерирован",
+      description: "Код виджета готов для копирования и вставки на ваш сайт"
+    });
+    
+    // Предварительно сохраняем настройки виджета на сервере
+    saveWidgetSettingsMutation.mutate(widgetSettings);
+  };
+  
+  // Мутация для сохранения настроек виджета
+  const saveWidgetSettingsMutation = useMutation({
+    mutationFn: (data: any) => 
+      apiRequest('POST', '/api/system/settings/widget', data),
+    onSuccess: () => {
+      toast({
+        title: "Успех",
+        description: "Настройки виджета успешно сохранены",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось сохранить настройки виджета",
+        variant: "destructive",
+      });
+    }
+  });
 
   return (
     <div className="container mx-auto py-6">
