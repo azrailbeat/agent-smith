@@ -43,10 +43,11 @@ import {
   processRequestByOrgStructure,
   createDefaultOrgStructure
 } from "./services/org-structure";
-import { initializeSettings } from "./services/system-settings";
+import { initializeSettings, getSystemSettings, updateSystemSettings } from "./services/system-settings";
 import { agentService } from "./services/agent-service";
 import { databaseConnector, DatabaseProvider } from "./services/database-connector";
 import { z } from "zod";
+import crypto from "crypto";
 import { 
   insertTaskSchema, 
   insertDocumentSchema, 
@@ -2557,25 +2558,26 @@ ${request.description || ''}
   
   app.post('/api/external/citizen-requests', async (req, res) => {
     try {
-      const { fullName, contactInfo, subject, description, requestType, priority, citizenInfo } = req.body;
+      const { fullName, contactInfo, subject, description, requestType, priority, citizenInfo, sourceSystem, externalId } = req.body;
       
       // Базовая валидация
-      if (!fullName || !contactInfo || !description) {
+      if (!fullName || !description) {
         return res.status(400).json({ 
           error: 'Missing required fields', 
-          message: 'Fields fullName, contactInfo, and description are required' 
+          message: 'Fields fullName and description are required' 
         });
       }
       
       // Создаем обращение
       const newRequest = await storage.createCitizenRequest({
         fullName,
-        contactInfo,
+        contactInfo: contactInfo || "",
         subject: subject || 'Новое обращение',
         description,
         requestType: requestType || 'general',
-        priority: priority || 'normal',
+        priority: priority || 'medium',
         status: 'new',
+        source: sourceSystem || 'external_api',
         createdAt: new Date(),
         citizenInfo: citizenInfo || {}
       });
@@ -2583,13 +2585,14 @@ ${request.description || ''}
       // Логируем активность
       await storage.createActivity({
         actionType: 'citizen_request_created',
-        description: `Создано новое обращение от ${fullName}`,
+        description: `Создано новое внешнее обращение: ${newRequest.subject}`,
         relatedId: newRequest.id,
         relatedType: 'citizen_request'
       });
       
       // Автоматическая обработка, если включена
-      let processingResult = {};
+      let processingResult = { autoProcessing: false };
+      
       const agentEnabled = await storage.getAgentsByType("citizen_requests")
         .then(agents => agents.length > 0 ? agents[0].isActive : false);
       

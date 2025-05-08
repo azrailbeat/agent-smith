@@ -621,6 +621,7 @@ const Settings = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="integrations">Внешние интеграции</TabsTrigger>
           <TabsTrigger value="agents">AI Агенты</TabsTrigger>
+          <TabsTrigger value="api">API для обращений</TabsTrigger>
           <TabsTrigger value="monitoring">Мониторинг LLM</TabsTrigger>
         </TabsList>
         
