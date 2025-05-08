@@ -896,15 +896,24 @@ const CitizenRequests = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto p-0">
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-auto p-0">
           <DialogTitle className="sr-only">Карточка обращения</DialogTitle>
           <DialogDescription className="sr-only">Просмотр и обработка обращения гражданина</DialogDescription>
           {selectedRequest && (
             <>
               <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-lg font-semibold">Карточка обращения</h2>
+                  <div className="flex items-center">
+                    <h2 className="text-lg font-semibold">Обращение №{selectedRequest.id}</h2>
+                    <Badge className={`ml-3 ${priorityColors[selectedRequest.priority]}`}>
+                      {selectedRequest.priority}
+                    </Badge>
+                    <Badge variant="outline" className="ml-2">
+                      {selectedRequest.status === 'new' ? 'Новое' : 
+                       selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? 'В обработке' : 
+                       selectedRequest.status === 'waiting' ? 'Ожидание' : 
+                       selectedRequest.status === 'completed' ? 'Выполнено' : selectedRequest.status}
+                    </Badge>
                   </div>
                   <DialogClose className="rounded-full p-1 hover:bg-neutral-100">
                     <X className="h-5 w-5" />
@@ -912,41 +921,37 @@ const CitizenRequests = () => {
                 </div>
               </div>
               
-              <div className="p-4">
+              <div className="px-4 py-3 bg-muted/30">
                 {/* Основная информация о клиенте и обращении */}
-                <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <h3 className="text-sm text-muted-foreground mb-1">Имя клиента</h3>
-                    <p className="font-medium">{selectedRequest.fullName}</p>
+                    <h3 className="text-xs text-muted-foreground">ФИО</h3>
+                    <p className="font-medium text-sm">{selectedRequest.fullName}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-muted-foreground mb-1">Детали обращения</h3>
-                    <p className="font-medium">{selectedRequest.requestType}, {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}</p>
+                    <h3 className="text-xs text-muted-foreground">Контакт</h3>
+                    <p className="font-medium text-sm">{selectedRequest.contactInfo}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-muted-foreground mb-1">Email</h3>
-                    <p className="font-medium">{selectedRequest.contactInfo}</p>
+                    <h3 className="text-xs text-muted-foreground">Создано</h3>
+                    <p className="font-medium text-sm">{new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-muted-foreground mb-1">Телефон</h3>
-                    <p className="font-medium">{selectedRequest.citizenInfo?.contact || "-"}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <h3 className="text-sm text-muted-foreground mb-1">Источник</h3>
-                    <p className="font-medium flex items-center">
+                    <h3 className="text-xs text-muted-foreground">Источник</h3>
+                    <p className="font-medium text-sm flex items-center">
                       {selectedRequest.source === "telegram" ? (
                         <>
-                          <MessageSquare className="h-4 w-4 mr-1 text-blue-500" />
+                          <MessageSquare className="h-3 w-3 mr-1 text-blue-500" />
                           Telegram
                         </>
                       ) : selectedRequest.source === "email" ? (
                         <>
-                          <Mail className="h-4 w-4 mr-1 text-purple-500" />
+                          <Mail className="h-3 w-3 mr-1 text-purple-500" />
                           Email
                         </>
                       ) : (
                         <>
-                          <Globe className="h-4 w-4 mr-1 text-green-500" />
+                          <Globe className="h-3 w-3 mr-1 text-green-500" />
                           Веб-форма
                         </>
                       )}
@@ -960,68 +965,93 @@ const CitizenRequests = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
                 {/* Основная информация */}
                 <div className="md:col-span-2 space-y-4">
-                  {/* Панель результатов обработки AI */}
-                  {selectedRequest.id && agentResults[selectedRequest.id]?.length > 0 && (
-                    <RequestInsightPanel
-                      requestId={selectedRequest.id}
-                      agentResults={agentResults[selectedRequest.id] || []}
-                    />
-                  )}
-                  
+                  {/* Заголовок и описание обращения */}
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Описание обращения</h3>
-                    <div className="p-3 bg-neutral-50 rounded-md border text-sm whitespace-pre-wrap">
+                    <h3 className="text-lg font-medium mb-1">{selectedRequest.subject || selectedRequest.title || "Без темы"}</h3>
+                    <div className="p-3 bg-neutral-50 rounded-md border text-sm whitespace-pre-wrap mb-4">
                       {selectedRequest.description || selectedRequest.content || "Содержание обращения не указано"}
                     </div>
                   </div>
                   
-                  {selectedRequest.summary && (
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">
-                        <div className="flex items-center">
-                          AI-резюме
-                          <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-700">
-                            <Bot className="h-3 w-3 mr-1" /> AI Agent
-                          </Badge>
+                  {/* Результаты ИИ обработки */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium flex items-center gap-1">
+                      <Bot className="h-4 w-4" /> 
+                      Результаты обработки ИИ
+                      {selectedRequest.aiProcessed && (
+                        <Badge variant="outline" className="ml-1 bg-purple-50 text-purple-700">
+                          Обработано
+                        </Badge>
+                      )}
+                    </h3>
+                    
+                    {/* Показываем результаты AI в карточках */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* AI-классификация */}
+                      <div className="bg-blue-50 rounded-md border border-blue-200 p-3">
+                        <div className="flex items-center text-xs font-medium text-blue-700 mb-1">
+                          <Tag className="h-3 w-3 mr-1" />
+                          Классификация
                         </div>
-                      </h3>
-                      <div className="p-3 bg-neutral-50 rounded-md border text-sm">
-                        {selectedRequest.summary}
+                        <div className="text-sm">
+                          {selectedRequest.aiClassification || "Не классифицировано"}
+                        </div>
+                      </div>
+                      
+                      {/* AI-резюме */}
+                      <div className="bg-indigo-50 rounded-md border border-indigo-200 p-3">
+                        <div className="flex items-center text-xs font-medium text-indigo-700 mb-1">
+                          <FileText className="h-3 w-3 mr-1" />
+                          Резюме
+                        </div>
+                        <div className="text-sm">
+                          {selectedRequest.summary || "Резюме не создано"}
+                        </div>
                       </div>
                     </div>
-                  )}
-                  
-                  {selectedRequest.aiClassification && (
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">
-                        <div className="flex items-center">
-                          AI-классификация
-                          <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700">
-                            <BarChart2 className="h-3 w-3 mr-1" /> AI Аналитик
-                          </Badge>
-                        </div>
-                      </h3>
-                      <div className="p-3 bg-blue-50 rounded-md border border-blue-200 text-sm">
-                        {selectedRequest.aiClassification}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedRequest.aiSuggestion && (
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">
-                        <div className="flex items-center">
+                    
+                    {/* Предлагаемый ответ */}
+                    {selectedRequest.aiSuggestion && (
+                      <div className="bg-amber-50 rounded-md border border-amber-200 p-3">
+                        <div className="flex items-center text-xs font-medium text-amber-700 mb-1">
+                          <Lightbulb className="h-3 w-3 mr-1" />
                           Предлагаемый ответ
-                          <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700">
-                            <Zap className="h-3 w-3 mr-1" /> AI Assistant
-                          </Badge>
                         </div>
-                      </h3>
-                      <div className="p-3 bg-amber-50 rounded-md border border-amber-200 text-sm">
-                        {selectedRequest.aiSuggestion}
+                        <div className="text-sm whitespace-pre-wrap">
+                          {selectedRequest.aiSuggestion}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    
+                    {/* Дополнительные результаты агентов */}
+                    {selectedRequest.id && agentResults[selectedRequest.id]?.length > 0 && (
+                      <div className="bg-neutral-50 rounded-md border p-3">
+                        <div className="flex items-center text-xs font-medium mb-2">
+                          <Bot className="h-3 w-3 mr-1" />
+                          Результаты работы ИИ-агентов
+                        </div>
+                        <div className="space-y-2">
+                          {agentResults[selectedRequest.id].map((result, index) => (
+                            <div key={index} className="text-sm border-l-2 border-primary pl-2 py-1">
+                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <span>Агент ID: {result.agentId}</span>
+                                <span>{new Date(result.timestamp).toLocaleString('ru-RU')}</span>
+                              </div>
+                              <div className="whitespace-pre-wrap">{result.content}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Если нет результатов AI */}
+                    {!selectedRequest.aiClassification && !selectedRequest.summary && !selectedRequest.aiSuggestion && 
+                     (!selectedRequest.id || !agentResults[selectedRequest.id] || agentResults[selectedRequest.id].length === 0) && (
+                      <div className="text-center py-4 text-sm text-gray-500">
+                        Обращение еще не обрабатывалось ИИ-агентами или результаты отсутствуют
+                      </div>
+                    )}
+                  </div>
                   
                   <div>
                     <h3 className="text-sm font-medium mb-2">История обработки</h3>
@@ -1038,6 +1068,21 @@ const CitizenRequests = () => {
                           </div>
                         </div>
                       </div>
+                      
+                      {selectedRequest.aiProcessed && (
+                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
+                          <div className="bg-purple-100 p-1 rounded-full mr-2">
+                            <Bot className="h-4 w-4 text-purple-700" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium">Обработано ИИ-ассистентом</div>
+                            <div className="text-xs text-neutral-500">
+                              {new Date(selectedRequest.updatedAt).toLocaleDateString('ru-RU')}, 
+                              {new Date(selectedRequest.updatedAt).toLocaleTimeString('ru-RU')}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {selectedRequest.assignedTo && (
                         <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
