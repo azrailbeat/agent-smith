@@ -915,7 +915,7 @@ const CitizenRequests = () => {
         </DragDropContext>
       )}
 
-      {/* Диалог с деталями обращения */}
+      {/* Диалог с деталями обращения в стиле Trello */}
       <Dialog
         open={isViewDetailsOpen} 
         onOpenChange={(open) => {
@@ -926,348 +926,144 @@ const CitizenRequests = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-auto p-0">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto p-0">
           <DialogTitle className="sr-only">Карточка обращения</DialogTitle>
           <DialogDescription className="sr-only">Просмотр и обработка обращения гражданина</DialogDescription>
           {selectedRequest && (
             <>
-              <div className="p-4 border-b">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <h2 className="text-lg font-semibold">Обращение №{selectedRequest.id}</h2>
-                    <Badge className={`ml-3 ${priorityColors[selectedRequest.priority]}`}>
-                      {selectedRequest.priority}
-                    </Badge>
-                    <Badge variant="outline" className="ml-2">
-                      {selectedRequest.status === 'new' ? 'Новое' : 
-                       selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? 'В обработке' : 
-                       selectedRequest.status === 'waiting' ? 'Ожидание' : 
-                       selectedRequest.status === 'completed' ? 'Выполнено' : selectedRequest.status}
-                    </Badge>
+              {/* Шапка с заголовком и приоритетом */}
+              <div className="p-4 border-b flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-semibold">{selectedRequest.subject || selectedRequest.title || "Обращение через виджет"}</h2>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    От: {selectedRequest.fullName} ({selectedRequest.contactInfo})
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={`${priorityColors[selectedRequest.priority]}`}>
+                    {selectedRequest.priority}
+                  </Badge>
                   <DialogClose className="rounded-full p-1 hover:bg-neutral-100">
                     <X className="h-5 w-5" />
                   </DialogClose>
                 </div>
               </div>
               
-              <div className="px-4 py-3 bg-muted/30">
-                {/* Основная информация о клиенте и обращении */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <h3 className="text-xs text-muted-foreground">ФИО</h3>
-                    <p className="font-medium text-sm">{selectedRequest.fullName}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-xs text-muted-foreground">Контакт</h3>
-                    <p className="font-medium text-sm">{selectedRequest.contactInfo}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-xs text-muted-foreground">Создано</h3>
-                    <p className="font-medium text-sm">{new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-xs text-muted-foreground">Источник</h3>
-                    <p className="font-medium text-sm flex items-center">
-                      {selectedRequest.source === "telegram" ? (
-                        <>
-                          <MessageSquare className="h-3 w-3 mr-1 text-blue-500" />
-                          Telegram
-                        </>
-                      ) : selectedRequest.source === "email" ? (
-                        <>
-                          <Mail className="h-3 w-3 mr-1 text-purple-500" />
-                          Email
-                        </>
-                      ) : (
-                        <>
-                          <Globe className="h-3 w-3 mr-1 text-green-500" />
-                          Веб-форма
-                        </>
+              {/* Информация о создании */}
+              <div className="px-4 pt-2 text-sm text-muted-foreground">
+                Создано: {new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}
+              </div>
+              
+              {/* Табы для переключения разделов */}
+              <div className="px-4 pt-2">
+                <div className="border-b">
+                  <div className="flex -mb-px">
+                    <Button 
+                      variant="ghost" 
+                      className={`relative rounded-none px-4 py-2 text-sm font-medium ${viewMode === 'details' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+                      onClick={() => setViewMode('details')}
+                    >
+                      Детали
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className={`relative rounded-none px-4 py-2 text-sm font-medium ${viewMode === 'ai' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+                      onClick={() => setViewMode('ai')}
+                    >
+                      ИИ обработка
+                      {selectedRequest.aiProcessed && (
+                        <div className="w-2 h-2 rounded-full bg-green-500 absolute top-2 right-2"></div>
                       )}
-                    </p>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className={`relative rounded-none px-4 py-2 text-sm font-medium ${viewMode === 'history' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+                      onClick={() => setViewMode('history')}
+                    >
+                      История
+                    </Button>
                   </div>
                 </div>
               </div>
-              
-              <div className="border-t border-border"></div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
-                {/* Основная информация */}
-                <div className="md:col-span-2 space-y-4">
-                  {/* Заголовок и описание обращения */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-1">{selectedRequest.subject || selectedRequest.title || "Без темы"}</h3>
-                    <div className="p-3 bg-neutral-50 rounded-md border text-sm whitespace-pre-wrap mb-4">
-                      {selectedRequest.description || selectedRequest.content || "Содержание обращения не указано"}
-                    </div>
-                  </div>
-                  
-                  {/* Результаты ИИ обработки */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium flex items-center gap-1">
-                      <Bot className="h-4 w-4" /> 
-                      Результаты обработки ИИ
-                      {selectedRequest.aiProcessed && (
-                        <Badge variant="outline" className="ml-1 bg-purple-50 text-purple-700">
-                          Обработано
-                        </Badge>
-                      )}
-                    </h3>
-                    
-                    {/* Показываем результаты AI в карточках */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {/* AI-классификация */}
-                      <div className="bg-blue-50 rounded-md border border-blue-200 p-3">
-                        <div className="flex items-center text-xs font-medium text-blue-700 mb-1">
-                          <Tag className="h-3 w-3 mr-1" />
-                          Классификация
-                        </div>
-                        <div className="text-sm">
-                          {selectedRequest.aiClassification || "Не классифицировано"}
-                        </div>
-                      </div>
+              {/* Содержимое вкладки "Детали" */}
+              {viewMode === 'details' && (
+                <div className="p-4">
+                  <div className="space-y-6">
+                    {/* Информация об обращении */}
+                    <div>
+                      <h3 className="text-base font-medium mb-2">Информация об обращении</h3>
                       
-                      {/* AI-резюме */}
-                      <div className="bg-indigo-50 rounded-md border border-indigo-200 p-3">
-                        <div className="flex items-center text-xs font-medium text-indigo-700 mb-1">
-                          <FileText className="h-3 w-3 mr-1" />
-                          Резюме
-                        </div>
-                        <div className="text-sm">
-                          {selectedRequest.summary || "Резюме не создано"}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Предлагаемый ответ */}
-                    {selectedRequest.aiSuggestion && (
-                      <div className="bg-amber-50 rounded-md border border-amber-200 p-3">
-                        <div className="flex items-center text-xs font-medium text-amber-700 mb-1">
-                          <Lightbulb className="h-3 w-3 mr-1" />
-                          Предлагаемый ответ
-                        </div>
-                        <div className="text-sm whitespace-pre-wrap">
-                          {selectedRequest.aiSuggestion}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Дополнительные результаты агентов */}
-                    {selectedRequest.id && agentResults[selectedRequest.id]?.length > 0 && (
-                      <div className="bg-neutral-50 rounded-md border p-3">
-                        <div className="flex items-center text-xs font-medium mb-2">
-                          <Bot className="h-3 w-3 mr-1" />
-                          Результаты работы ИИ-агентов
-                        </div>
-                        <div className="space-y-2">
-                          {agentResults[selectedRequest.id].map((result, index) => (
-                            <div key={index} className="text-sm border-l-2 border-primary pl-2 py-1">
-                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                <span>Агент ID: {result.agentId}</span>
-                                <span>{new Date(result.timestamp).toLocaleString('ru-RU')}</span>
-                              </div>
-                              <div className="whitespace-pre-wrap">{result.content}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Если нет результатов AI */}
-                    {!selectedRequest.aiClassification && !selectedRequest.summary && !selectedRequest.aiSuggestion && 
-                     (!selectedRequest.id || !agentResults[selectedRequest.id] || agentResults[selectedRequest.id].length === 0) && (
-                      <div className="text-center py-4 text-sm text-gray-500">
-                        Обращение еще не обрабатывалось ИИ-агентами или результаты отсутствуют
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">История обработки</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
-                        <div className="bg-green-100 p-1 rounded-full mr-2">
-                          <Check className="h-4 w-4 text-green-700" />
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <div className="text-sm font-medium mb-1">Тип обращения</div>
+                          <div className="text-sm">{selectedRequest.requestType || "Жалоба"}</div>
                         </div>
                         <div>
-                          <div className="text-sm font-medium">Обращение зарегистрировано</div>
-                          <div className="text-xs text-neutral-500">
-                            {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}, 
-                            {new Date(selectedRequest.createdAt).toLocaleTimeString('ru-RU')}
-                          </div>
+                          <div className="text-sm font-medium mb-1">Статус</div>
+                          <Badge variant="outline">
+                            {selectedRequest.status === 'new' ? 'Новое' : 
+                             selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? 'В обработке' : 
+                             selectedRequest.status === 'waiting' ? 'Ожидание' : 
+                             selectedRequest.status === 'completed' ? 'Выполнено' : selectedRequest.status}
+                          </Badge>
                         </div>
                       </div>
                       
-                      {selectedRequest.aiProcessed && (
-                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
-                          <div className="bg-purple-100 p-1 rounded-full mr-2">
-                            <Bot className="h-4 w-4 text-purple-700" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium">Обработано ИИ-ассистентом</div>
-                            <div className="text-xs text-neutral-500">
-                              {new Date(selectedRequest.updatedAt).toLocaleDateString('ru-RU')}, 
-                              {new Date(selectedRequest.updatedAt).toLocaleTimeString('ru-RU')}
-                            </div>
-                          </div>
+                      <div className="mb-4">
+                        <div className="text-sm font-medium mb-1">Описание</div>
+                        <div className="p-3 bg-neutral-50 rounded-md border text-sm whitespace-pre-wrap">
+                          {selectedRequest.description || selectedRequest.content || "Содержание обращения не указано"}
                         </div>
-                      )}
+                      </div>
                       
-                      {selectedRequest.assignedTo && (
-                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
-                          <div className="bg-blue-100 p-1 rounded-full mr-2">
-                            <User className="h-4 w-4 text-blue-700" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium">Назначено исполнителю</div>
-                            <div className="text-xs text-neutral-500">
-                              {selectedRequest.assignedTo} | {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}
-                            </div>
-                          </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm font-medium mb-1">Создано</div>
+                          <div className="text-sm">{new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}</div>
                         </div>
-                      )}
-                      
-                      {selectedRequest.blockchainHash && (
-                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
-                          <div className="bg-emerald-100 p-1 rounded-full mr-2">
-                            <Database className="h-4 w-4 text-emerald-700" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium">Сохранено в блокчейне (GovChain)</div>
-                            <div className="text-xs text-neutral-500">
-                              Хэш: {selectedRequest.blockchainHash}
-                            </div>
-                          </div>
+                        <div>
+                          <div className="text-sm font-medium mb-1">Обновлено</div>
+                          <div className="text-sm">{new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}</div>
                         </div>
-                      )}
-                      
-                      {selectedRequest.status === 'completed' && selectedRequest.completedAt && (
-                        <div className="flex items-start p-2 bg-neutral-50 rounded-md border">
-                          <div className="bg-green-100 p-1 rounded-full mr-2">
-                            <FileCheck className="h-4 w-4 text-green-700" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium">Обращение выполнено</div>
-                            <div className="text-xs text-neutral-500">
-                              {new Date(selectedRequest.completedAt).toLocaleDateString('ru-RU')}, 
-                              {new Date(selectedRequest.completedAt).toLocaleTimeString('ru-RU')}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-                
-                {/* Боковая панель */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Данные гражданина</h3>
-                    <div className="p-3 bg-neutral-50 rounded-md border">
-                      <div className="space-y-2 text-sm">
-                        {selectedRequest.citizenInfo?.name && (
+                    
+                    {/* Данные гражданина */}
+                    <div>
+                      <h3 className="text-base font-medium mb-2">Данные гражданина</h3>
+                      <div className="p-3 bg-neutral-50 rounded-md border">
+                        <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-neutral-500">ФИО:</span>
-                            <span className="font-medium">{selectedRequest.citizenInfo.name}</span>
+                            <span className="font-medium">{selectedRequest.citizenInfo?.name || selectedRequest.fullName}</span>
                           </div>
-                        )}
-                        {selectedRequest.citizenInfo?.contact && (
                           <div className="flex justify-between">
                             <span className="text-neutral-500">Контакт:</span>
-                            <span className="font-medium">{selectedRequest.citizenInfo.contact}</span>
+                            <span className="font-medium">{selectedRequest.citizenInfo?.contact || selectedRequest.contactInfo}</span>
                           </div>
-                        )}
-                        {selectedRequest.citizenInfo?.address && (
-                          <div className="flex justify-between">
-                            <span className="text-neutral-500">Адрес:</span>
-                            <span className="font-medium">{selectedRequest.citizenInfo.address}</span>
-                          </div>
-                        )}
-                        {selectedRequest.citizenInfo?.iin && (
-                          <div className="flex justify-between">
-                            <span className="text-neutral-500">ИИН:</span>
-                            <span className="font-medium">{selectedRequest.citizenInfo.iin}</span>
-                          </div>
-                        )}
+                          {selectedRequest.citizenInfo?.address && (
+                            <div className="flex justify-between">
+                              <span className="text-neutral-500">Адрес:</span>
+                              <span className="font-medium">{selectedRequest.citizenInfo.address}</span>
+                            </div>
+                          )}
+                          {selectedRequest.citizenInfo?.iin && (
+                            <div className="flex justify-between">
+                              <span className="text-neutral-500">ИИН:</span>
+                              <span className="font-medium">{selectedRequest.citizenInfo.iin}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">ИИ агенты</h3>
                     
-                    {/* Панель результатов обработки */}
-                    {selectedRequest?.id && agentResults[selectedRequest.id]?.length > 0 && (
-                      <div className="mb-4">
-                        <RequestInsightPanel 
-                          requestId={selectedRequest.id}
-                          agentResults={agentResults[selectedRequest.id] || []}
-                          compact={true}
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      {/* Добавляем кнопки для всех доступных и активных агентов */}
-                      {availableAgents
-                        .filter(agent => agent.isActive)
-                        .filter(agent => ALLOWED_AGENT_TYPES.includes(agent.type))
-                        .map(agent => (
-                          <Button 
-                            key={agent.id}
-                            variant="outline"
-                            className="w-full justify-start mb-2 text-sm"
-                            onClick={() => {
-                              if (selectedRequest) {
-                                // Определяем тип действия в зависимости от типа агента
-                                const actionType = agent.type === 'citizen_requests' ? "full" : 
-                                                   agent.type === 'blockchain' ? "blockchain" : "full";
-                                                   
-                                processRequestWithAgent(selectedRequest, agent.id, actionType);
-                                
-                                toast({
-                                  title: "Запуск обработки AI",
-                                  description: `Запущена обработка с использованием агента ${agent.name}...`
-                                });
-                                
-                                // Загружаем результаты через 2 секунды
-                                setTimeout(() => {
-                                  fetchAgentResults(selectedRequest.id);
-                                }, 2000);
-                              }
-                            }}
-                          >
-                            {agent.type === 'citizen_requests' ? (
-                              <User className="mr-2 h-4 w-4" />
-                            ) : agent.type === 'blockchain' ? (
-                              <Database className="mr-2 h-4 w-4" />
-                            ) : (
-                              <Bot className="mr-2 h-4 w-4" />
-                            )}
-                            {agent.name}
-                          </Button>
-                        ))
-                      }
-                      
-                      {/* Настройки агентов */}
-                      <Button 
-                        variant="outline"
-                        className="w-full justify-start mb-2 text-sm"
-                        onClick={() => {
-                          location.pathname = '/ai-agents';
-                        }}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        Настройки ИИ агентов
-                      </Button>
-                      
-                      {/* Действия */}
-                      <div className="mt-6">
-                        <h3 className="text-sm font-medium mb-2">Действия</h3>
-                        
+                    {/* Действия с обращением */}
+                    <div>
+                      <h3 className="text-base font-medium mb-2">Действия</h3>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button 
-                          className="w-full justify-start mb-2 text-sm bg-green-600 hover:bg-green-700 text-white"
+                          className="justify-start text-sm bg-green-600 hover:bg-green-700 text-white"
                           onClick={() => {
                             toast({
                               title: "Отправка ответа",
@@ -1280,48 +1076,7 @@ const CitizenRequests = () => {
                         
                         <Button 
                           variant="outline"
-                          className="w-full justify-start mb-2 text-sm text-amber-600 border-amber-200"
-                          onClick={() => {
-                            toast({
-                              title: "Генерация ответа",
-                              description: "Автоматически сформирован ответ на обращение"
-                            });
-                          }}
-                        >
-                          <Zap className="mr-2 h-4 w-4" /> Сгенерировать ответ
-                        </Button>
-                        
-                        <Button 
-                          variant="outline"
-                          className="w-full justify-start mb-2 text-sm"
-                          onClick={() => {
-                            if (selectedRequest) {
-                              saveToBlockchain(selectedRequest.id);
-                            }
-                          }}
-                        >
-                          <Database className="mr-2 h-4 w-4" /> Сохранить в блокчейне
-                        </Button>
-                        
-                        {/* Кнопка удаления обращения */}
-                        <Button 
-                          variant="outline"
-                          className="w-full justify-start mb-2 text-sm text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => {
-                            if (selectedRequest) {
-                              // Показываем диалог подтверждения
-                              if (window.confirm(`Вы уверены, что хотите удалить обращение "${selectedRequest.subject || selectedRequest.title || "Без темы"}"?`)) {
-                                deleteRequestMutation.mutate(selectedRequest.id);
-                              }
-                            }
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Удалить обращение
-                        </Button>
-                        
-                        <Button 
-                          variant="outline"
-                          className="w-full justify-start text-sm"
+                          className="justify-start text-sm"
                           onClick={() => {
                             if (selectedRequest) {
                               const updateData = {
@@ -1345,11 +1100,257 @@ const CitizenRequests = () => {
                         >
                           <Check className="mr-2 h-4 w-4" /> Отметить выполненным
                         </Button>
+                        
+                        <Button 
+                          variant="outline"
+                          className="justify-start text-sm"
+                          onClick={() => {
+                            if (selectedRequest) {
+                              saveToBlockchain(selectedRequest.id);
+                            }
+                          }}
+                        >
+                          <Database className="mr-2 h-4 w-4" /> Сохранить в блокчейне
+                        </Button>
+                        
+                        {/* Кнопка удаления обращения */}
+                        <Button 
+                          variant="outline"
+                          className="justify-start text-sm text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            if (selectedRequest) {
+                              // Показываем диалог подтверждения
+                              if (window.confirm(`Вы уверены, что хотите удалить обращение "${selectedRequest.subject || selectedRequest.title || "Без темы"}"?`)) {
+                                deleteRequestMutation.mutate(selectedRequest.id);
+                              }
+                            }
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Удалить обращение
+                        </Button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+              
+              {/* Содержимое вкладки "ИИ обработка" */}
+              {viewMode === 'ai' && (
+                <div className="p-4">
+                  <div className="space-y-4">
+                    {/* Кнопки для обработки ИИ */}
+                    <div className="mb-6">
+                      <h3 className="text-base font-medium mb-2">Запустить ИИ обработку</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {availableAgents
+                          .filter(agent => agent.isActive)
+                          .filter(agent => ALLOWED_AGENT_TYPES.includes(agent.type))
+                          .map(agent => (
+                            <Button 
+                              key={agent.id}
+                              variant="outline"
+                              className="justify-start text-sm"
+                              onClick={() => {
+                                if (selectedRequest) {
+                                  // Определяем тип действия в зависимости от типа агента
+                                  const actionType = agent.type === 'citizen_requests' ? "full" : 
+                                                    agent.type === 'blockchain' ? "blockchain" : "full";
+                                                    
+                                  processRequestWithAgent(selectedRequest, agent.id, actionType);
+                                  
+                                  toast({
+                                    title: "Запуск обработки AI",
+                                    description: `Запущена обработка с использованием агента ${agent.name}...`
+                                  });
+                                  
+                                  // Загружаем результаты через 2 секунды
+                                  setTimeout(() => {
+                                    fetchAgentResults(selectedRequest.id);
+                                  }, 2000);
+                                }
+                              }}
+                            >
+                              {agent.type === 'citizen_requests' ? (
+                                <User className="mr-2 h-4 w-4" />
+                              ) : agent.type === 'blockchain' ? (
+                                <Database className="mr-2 h-4 w-4" />
+                              ) : (
+                                <Bot className="mr-2 h-4 w-4" />
+                              )}
+                              {agent.name}
+                            </Button>
+                          ))
+                        }
+                        
+                        <Button 
+                          variant="outline"
+                          className="justify-start text-sm text-amber-600 border-amber-200"
+                          onClick={() => {
+                            toast({
+                              title: "Генерация ответа",
+                              description: "Автоматически сформирован ответ на обращение"
+                            });
+                          }}
+                        >
+                          <Zap className="mr-2 h-4 w-4" /> Сгенерировать ответ
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Результаты ИИ обработки */}
+                    <div>
+                      <h3 className="text-base font-medium mb-3">Результаты обработки ИИ</h3>
+                      {selectedRequest.aiProcessed ? (
+                        <div className="space-y-4">
+                          {/* Показываем результаты AI в карточках */}
+                          <div className="grid grid-cols-1 gap-3">
+                            {/* AI-классификация */}
+                            <div className="bg-blue-50 rounded-md border border-blue-200 p-3">
+                              <div className="flex items-center text-xs font-medium text-blue-700 mb-1">
+                                <GanttChartSquare className="h-3 w-3 mr-1" />
+                                Классификация
+                              </div>
+                              <div className="text-sm">
+                                {selectedRequest.aiClassification || "Не классифицировано"}
+                              </div>
+                            </div>
+                            
+                            {/* AI-резюме */}
+                            {selectedRequest.summary && (
+                              <div className="bg-indigo-50 rounded-md border border-indigo-200 p-3">
+                                <div className="flex items-center text-xs font-medium text-indigo-700 mb-1">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Резюме
+                                </div>
+                                <div className="text-sm">
+                                  {selectedRequest.summary}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Предлагаемый ответ */}
+                            {selectedRequest.aiSuggestion && (
+                              <div className="bg-amber-50 rounded-md border border-amber-200 p-3">
+                                <div className="flex items-center text-xs font-medium text-amber-700 mb-1">
+                                  <MessageCircle className="h-3 w-3 mr-1" />
+                                  Предлагаемый ответ
+                                </div>
+                                <div className="text-sm whitespace-pre-wrap">
+                                  {selectedRequest.aiSuggestion}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Дополнительные результаты агентов */}
+                          {selectedRequest.id && agentResults[selectedRequest.id]?.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">История обработки агентами</h4>
+                              <div className="bg-neutral-50 rounded-md border p-3">
+                                <div className="space-y-2">
+                                  {agentResults[selectedRequest.id].map((result, index) => (
+                                    <div key={index} className="text-sm border-l-2 border-primary pl-2 py-1">
+                                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                        <span>Агент ID: {result.agentId}</span>
+                                        <span>{new Date(result.timestamp).toLocaleString('ru-RU')}</span>
+                                      </div>
+                                      <div className="whitespace-pre-wrap">{result.content}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center p-6 bg-neutral-50 rounded-md border">
+                          <Bot className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                          <h4 className="text-base font-medium mb-1">Обращение не обрабатывалось ИИ</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Нажмите на одну из кнопок выше, чтобы запустить обработку обращения с помощью ИИ.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Содержимое вкладки "История" */}
+              {viewMode === 'history' && (
+                <div className="p-4">
+                  <h3 className="text-base font-medium mb-3">История обработки</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <div className="bg-green-100 p-1 rounded-full mt-0.5 mr-3">
+                        <Check className="h-4 w-4 text-green-700" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">Обращение зарегистрировано</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {selectedRequest.aiProcessed && (
+                      <div className="flex items-start">
+                        <div className="bg-purple-100 p-1 rounded-full mt-0.5 mr-3">
+                          <Bot className="h-4 w-4 text-purple-700" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">Обработано ИИ-ассистентом</div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedRequest.assignedTo && (
+                      <div className="flex items-start">
+                        <div className="bg-blue-100 p-1 rounded-full mt-0.5 mr-3">
+                          <User className="h-4 w-4 text-blue-700" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">Назначено исполнителю</div>
+                          <div className="text-xs text-muted-foreground">
+                            {selectedRequest.assignedTo} | {new Date(selectedRequest.createdAt).toLocaleDateString('ru-RU')}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedRequest.blockchainHash && (
+                      <div className="flex items-start">
+                        <div className="bg-emerald-100 p-1 rounded-full mt-0.5 mr-3">
+                          <Database className="h-4 w-4 text-emerald-700" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">Сохранено в блокчейне (GovChain)</div>
+                          <div className="text-xs text-muted-foreground">
+                            Хэш: {selectedRequest.blockchainHash}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedRequest.status === 'completed' && selectedRequest.completedAt && (
+                      <div className="flex items-start">
+                        <div className="bg-green-100 p-1 rounded-full mt-0.5 mr-3">
+                          <FileCheck className="h-4 w-4 text-green-700" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">Обращение выполнено</div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(selectedRequest.completedAt).toLocaleString('ru-RU')}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               {/* Нижние кнопки */}
               <DialogFooter className="px-4 py-3 border-t">
