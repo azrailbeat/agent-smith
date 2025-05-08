@@ -268,6 +268,30 @@ const CitizenRequests = () => {
     },
   });
 
+  // Мутация для удаления обращения
+  const deleteRequestMutation = useMutation({
+    mutationFn: (id: number) => {
+      return apiRequest("DELETE", `/api/citizen-requests/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+      setIsViewDetailsOpen(false);
+      setSelectedRequest(null);
+      toast({
+        title: "Обращение удалено",
+        description: "Обращение успешно удалено из системы",
+      });
+    },
+    onError: (error) => {
+      console.error("Ошибка при удалении обращения:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить обращение",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Мутация для обработки обращения агентом AI
   const processWithAgentMutation = useMutation({
     mutationFn: ({ requestId, agentId, actionType }: { requestId: number; agentId: number; actionType: string }) => {
@@ -1271,6 +1295,22 @@ const CitizenRequests = () => {
                           }}
                         >
                           <Database className="mr-2 h-4 w-4" /> Сохранить в блокчейне
+                        </Button>
+                        
+                        {/* Кнопка удаления обращения */}
+                        <Button 
+                          variant="outline"
+                          className="w-full justify-start mb-2 text-sm text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            if (selectedRequest) {
+                              // Показываем диалог подтверждения
+                              if (window.confirm(`Вы уверены, что хотите удалить обращение "${selectedRequest.subject || selectedRequest.title || "Без темы"}"?`)) {
+                                deleteRequestMutation.mutate(selectedRequest.id);
+                              }
+                            }
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Удалить обращение
                         </Button>
                         
                         <Button 
