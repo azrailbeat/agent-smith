@@ -819,15 +819,18 @@ const Settings = () => {
       successMessage: widgetSettings.successMessage
     };
     
-    // Кодируем в base64 с поддержкой Unicode
-    const encodedConfig = btoa(unescape(encodeURIComponent(JSON.stringify(widgetConfig))));
+    // Кодируем в base64 с надежной поддержкой Unicode
+    const jsonString = JSON.stringify(widgetConfig);
+    const encodedConfig = btoa(encodeURIComponent(jsonString));
     
-    // Создаем код для встраивания виджета
+    // Создаем более надежный код для встраивания виджета
     const code = `
 <div id="${widgetId}"></div>
 <script src="${apiBaseUrl}/widget.js"></script>
 <script>
-  AgentSmithWidget.init('${widgetId}', '${encodedConfig}');
+  document.addEventListener('DOMContentLoaded', function() {
+    AgentSmithWidget.init('${widgetId}', '${encodedConfig}');
+  });
 </script>
     `.trim();
     

@@ -15,7 +15,8 @@
       try {
         // Получаем настройки из base64 с поддержкой Unicode
         const decodedConfig = atob(configBase64);
-        const config = JSON.parse(decodeURIComponent(escape(decodedConfig)));
+        // Используем decodeURIComponent напрямую для декодирования
+        const config = JSON.parse(decodeURIComponent(decodedConfig));
         
         // Находим контейнер
         const container = typeof containerId === 'string' 
