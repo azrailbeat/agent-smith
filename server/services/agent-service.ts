@@ -136,11 +136,11 @@ export class AgentService {
       if (existingAgents && existingAgents.length > 0) {
         // Обновляем имена существующих агентов для более понятного использования
         const agentNameMap = {
-          202: { name: "ГражданИнфо" }, // Агент обработки обращений граждан
-          640: { name: "ГражданИнфо" }, // Основной агент обработки обращений граждан
-          642: { name: "БлокчейнЛедж" }, // Блокчейн-агент
-          842: { name: "ДокументАИ" }, // Агент анализа документов
-          843: { name: "ПротоколМастер" }, // Агент для протоколов заседаний
+          202: { name: "Обработка обращений граждан" }, // Агент обработки обращений граждан
+          640: { name: "Обработка обращений граждан" }, // Основной агент обработки обращений граждан
+          642: { name: "Запись в блокчейн Hyperledger" }, // Блокчейн-агент
+          842: { name: "Анализ и проверка документов" }, // Агент анализа документов
+          843: { name: "Автопротокол совещаний" }, // Агент для протоколов заседаний
         };
         
         // Сначала удаляем всех агентов, которые не используются в результатах и не являются ключевыми
@@ -149,10 +149,12 @@ export class AgentService {
             // Пропускаем агентов, которые упоминаются в таблице agent_results или являются ключевыми
             const isReferenced = referencedAgentIds.has(agent.id);
             const isBlockchainAgent = agent.type === "blockchain";
+            const isNonDeletable = isBlockchainAgent || 
+              (agent.config && agent.config.moralisApiSettings && agent.config.moralisApiSettings.nonDeletable);
             const isKeyAgent = [202, 640, 642, 842, 843].includes(agent.id);
             
-            if (isReferenced || isBlockchainAgent || isKeyAgent) {
-              console.log(`Skipping agent deletion for ID ${agent.id} (referenced in agent_results)`);
+            if (isReferenced || isNonDeletable || isKeyAgent) {
+              console.log(`Skipping agent deletion for ID ${agent.id} (${isNonDeletable ? 'non-deletable agent' : 'referenced in agent_results'})`);
               continue;
             }
             await storage.deleteAgent(agent.id);
@@ -189,7 +191,7 @@ export class AgentService {
       
       // 1. Агент для обработки обращений граждан (ID 640)
       await storage.createAgent({
-        name: "ГражданИнфо",
+        name: "Обработка обращений граждан",
         type: "citizen_requests",
         description: "Универсальный агент для обработки обращений граждан в государственные органы Казахстана",
         systemPrompt: "Вы - специалист гос. службы поддержки Agent Smith. Ваша задача - помогать гражданам Казахстана с их обращениями в государственные органы. Вы должны корректно классифицировать обращения, генерировать информативные ответы, направлять обращения в соответствующие ведомства по правилам организационной структуры, и сопровождать весь жизненный цикл обращений от подачи до завершения. В ваших ответах используйте официальный, вежливый тон, соответствующий государственной коммуникации. Предоставляйте точную информацию согласно действующему законодательству Казахстана.",
@@ -208,7 +210,7 @@ export class AgentService {
       
       // 2. Блокчейн агент для записи транзакций (ID 642)
       await storage.createAgent({
-        name: "БлокчейнЛедж",
+        name: "Запись в блокчейн Hyperledger",
         type: "blockchain",
         description: "Агент для записи данных в блокчейн через Moralis API",
         systemPrompt: "Вы эксперт по блокчейн технологиям и смарт-контрактам. Ваша задача - обрабатывать запросы на сохранение данных в блокчейне и создавать хеши транзакций.",
@@ -219,13 +221,23 @@ export class AgentService {
           maxTokens: 1000,
           departmentId: 5,
           capabilities: ["data_analysis", "validation"],
-          integrationIds: [moralisIntegration.id]
+          integrationIds: [moralisIntegration.id],
+          moralisApiSettings: {
+            apiUrl: "https://deep-index.moralis.io/api/v2",
+            apiKey: process.env.MORALIS_API_KEY || "",
+            chain: "eth",
+            network: "mainnet",
+            nonDeletable: true,
+            web3Version: "1.0.0",
+            web3Features: ["transactions", "smartcontracts", "events", "balances"],
+            verificationEnabled: true
+          }
         }
       });
 
       // 3. Агент для анализа документов (ID 842)
       await storage.createAgent({
-        name: "ДокументАИ",
+        name: "Анализ и проверка документов",
         type: "document_processing",
         description: "Интеллектуальная обработка и анализ документов для государственных органов",
         systemPrompt: "Вы - эксперт по анализу и обработке официальных документов в системе государственного управления Казахстана. Ваша задача - анализировать структуру и юридическую корректность документов, проверять их на соответствие законодательству, извлекать ключевую информацию, обнаруживать противоречия и готовить краткие резюме. При обработке документов следуйте официальному стилю государственной документации Казахстана и используйте соответствующую юридическую терминологию.",
@@ -243,7 +255,7 @@ export class AgentService {
 
       // 4. Агент для протоколов совещаний (ID 843)
       await storage.createAgent({
-        name: "ПротоколМастер",
+        name: "Автопротокол совещаний",
         type: "meeting_protocols",
         description: "Анализ и формирование протоколов заседаний и совещаний государственных органов",
         systemPrompt: "Вы - эксперт по анализу и составлению протоколов совещаний государственных органов Казахстана. Ваша задача - обрабатывать записи совещаний, определять ключевые моменты, решения и задачи, формировать официальные протоколы заседаний в соответствии с регламентом госструктур, создавать планы действий и контролировать их выполнение. При работе используйте официальный деловой стиль, соответствующий нормам государственной документации Казахстана. Учитывайте иерархию и субординацию при назначении задач в зависимости от должностных полномочий участников совещания.",
