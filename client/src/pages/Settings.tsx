@@ -19,6 +19,8 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Integration, Agent } from "@shared/schema";
 import { SecretField } from "@/components/ui/secret-field";
 import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
+import FormFieldEditor, { FormField } from "@/components/widget/FormFieldEditor";
+import WidgetPreview from "@/components/widget/WidgetPreview";
 
 // Integration form for add/edit
 interface IntegrationFormProps {
@@ -348,16 +350,16 @@ const Settings = () => {
   // State for widget form builder
   const [widgetSettings, setWidgetSettings] = useState({
     title: "Форма обращения",
-    description: "Пожалуйста, заполните форму обращения",
+    subtitle: "Пожалуйста, заполните форму обращения",
     theme: "light",
     primaryColor: "#1e40af",
     logo: "",
     fields: [
-      { id: "1", type: "text", label: "ФИО", placeholder: "Введите ваше полное имя", required: true },
-      { id: "2", type: "email", label: "Email", placeholder: "Введите ваш email", required: true },
-      { id: "3", type: "select", label: "Тип обращения", options: ["Жалоба", "Предложение", "Запрос информации"], required: true },
-      { id: "4", type: "textarea", label: "Текст обращения", placeholder: "Опишите ваше обращение", required: true }
-    ],
+      { id: "1", type: "text", label: "ФИО", placeholder: "Введите ваше полное имя", required: true, options: undefined },
+      { id: "2", type: "email", label: "Email", placeholder: "Введите ваш email", required: true, options: undefined },
+      { id: "3", type: "select", label: "Тип обращения", options: ["Жалоба", "Предложение", "Запрос информации"], required: true, placeholder: undefined },
+      { id: "4", type: "textarea", label: "Текст обращения", placeholder: "Опишите ваше обращение", required: true, options: undefined }
+    ] as FormField[],
     buttonText: "Отправить обращение",
     successMessage: "Ваше обращение успешно отправлено"
   });
@@ -365,7 +367,7 @@ const Settings = () => {
   const [previewMode, setPreviewMode] = useState(false);
   const [widgetCode, setWidgetCode] = useState("");
   const [isEditingField, setIsEditingField] = useState(false);
-  const [currentField, setCurrentField] = useState<any>(null);
+  const [currentField, setCurrentField] = useState<FormField | null>(null);
 
   // Fetch integrations
   const { 
@@ -1643,6 +1645,190 @@ const Settings = () => {
               <Button>Сохранить изменения</Button>
             </CardFooter>
           </Card>
+        </TabsContent>
+        
+        {/* Widget Tab */}
+        <TabsContent value="widget">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Виджет для сайта</h2>
+              <Button onClick={generateWidgetCode}>
+                <Code className="mr-2 h-4 w-4" /> Сгенерировать код
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Настройки виджета</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="widget-title">Заголовок</Label>
+                      <Input
+                        id="widget-title"
+                        value={widgetSettings.title}
+                        onChange={(e) => setWidgetSettings(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="Обращение граждан"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="widget-subtitle">Подзаголовок</Label>
+                      <Input
+                        id="widget-subtitle"
+                        value={widgetSettings.subtitle}
+                        onChange={(e) => setWidgetSettings(prev => ({ ...prev, subtitle: e.target.value }))}
+                        placeholder="Оставьте ваше обращение"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Тема оформления</Label>
+                      <RadioGroup 
+                        value={widgetSettings.theme}
+                        onValueChange={(value) => setWidgetSettings(prev => ({ ...prev, theme: value }))}
+                        className="flex space-x-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="light" id="theme-light" />
+                          <Label htmlFor="theme-light" className="flex items-center">
+                            <Sun className="mr-1 h-4 w-4" /> Светлая
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="dark" id="theme-dark" />
+                          <Label htmlFor="theme-dark" className="flex items-center">
+                            <Moon className="mr-1 h-4 w-4" /> Тёмная
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="widget-color">Основной цвет</Label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          id="widget-color"
+                          value={widgetSettings.primaryColor}
+                          onChange={(e) => setWidgetSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
+                          className="h-10 w-10 rounded cursor-pointer"
+                        />
+                        <Input
+                          value={widgetSettings.primaryColor}
+                          onChange={(e) => setWidgetSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Поля формы</CardTitle>
+                    <CardDescription>
+                      Настройте поля, которые будут отображаться в форме обращений
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FormFieldEditor 
+                      fields={widgetSettings.fields}
+                      onChange={(fields) => setWidgetSettings(prev => ({ ...prev, fields }))}
+                    />
+                  </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button
+                      onClick={() => saveWidgetSettingsMutation.mutate(widgetSettings)}
+                      disabled={saveWidgetSettingsMutation.isPending}
+                    >
+                      {saveWidgetSettingsMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Сохранение...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Сохранить настройки
+                        </>
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+              
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Предпросмотр виджета</CardTitle>
+                    <CardDescription>
+                      Так виджет будет выглядеть на вашем сайте
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex justify-center p-4">
+                    <div className="w-full max-w-md">
+                      <WidgetPreview
+                        title={widgetSettings.title}
+                        subtitle={widgetSettings.subtitle}
+                        fields={widgetSettings.fields}
+                        primaryColor={widgetSettings.primaryColor}
+                        theme={widgetSettings.theme}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {widgetCode && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Код для встраивания</CardTitle>
+                      <CardDescription>
+                        Скопируйте этот код и вставьте его на ваш сайт
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="relative">
+                        <Textarea
+                          value={widgetCode}
+                          readOnly
+                          rows={10}
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(widgetCode);
+                            toast({
+                              title: "Код скопирован",
+                              description: "Код для встраивания виджета скопирован в буфер обмена"
+                            });
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <div className="text-sm text-muted-foreground">
+                        <p className="flex items-center">
+                          <Info className="mr-2 h-4 w-4" />
+                          Виджет будет отправлять данные на адрес: {" "}
+                          <code className="ml-1 px-1 py-0.5 bg-gray-100 rounded text-gray-800">
+                            https://agent-smith.replit.app/api/external/citizen-requests
+                          </code>
+                        </p>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
