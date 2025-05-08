@@ -96,11 +96,17 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Специальный маршрут для виджета с CORS
-  app.use('/widget.js', (req, res, next) => {
+  // CORS middleware для API маршрутов, используемых внешними виджетами
+  app.use(['/widget.js', '/api/citizen-requests'], (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    // Предварительные запросы OPTIONS
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
     next();
   });
   
