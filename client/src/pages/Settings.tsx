@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText, Mic } from "lucide-react";
+import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText, Mic, Copy } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Integration, Agent } from "@shared/schema";
 import { SecretField } from "@/components/ui/secret-field";
 import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
@@ -1291,6 +1292,119 @@ const Settings = () => {
               />
             </DialogContent>
           </Dialog>
+        </TabsContent>
+        
+        {/* API Tab */}
+        <TabsContent value="api">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>API для внешних обращений</CardTitle>
+              <CardDescription>
+                Настройки API для получения обращений от граждан через внешние системы
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Switch id="api-enabled" />
+                    <Label htmlFor="api-enabled">Включить внешний API</Label>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Сгенерировать новый ключ
+                  </Button>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <h3 className="text-sm font-medium mb-2">Доступ к API</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="auth-type">Тип авторизации</Label>
+                      <Select defaultValue="apikey">
+                        <SelectTrigger id="auth-type">
+                          <SelectValue placeholder="Выберите тип авторизации" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="apikey">API ключ</SelectItem>
+                          <SelectItem value="jwt">JWT токен</SelectItem>
+                          <SelectItem value="none">Без авторизации</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="api-key">API Ключ</Label>
+                      <div className="flex mt-1">
+                        <Input id="api-key" value="••••••••••••••••••••••••••••••" readOnly className="flex-1" />
+                        <Button variant="outline" size="sm" className="ml-2">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        API ключ используется для авторизации запросов от внешних систем
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <h3 className="text-sm font-medium mb-2">Обработка обращений</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch id="auto-process" />
+                      <Label htmlFor="auto-process">Автоматически обрабатывать обращения</Label>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="default-agent">AI Агент по умолчанию</Label>
+                      <Select>
+                        <SelectTrigger id="default-agent">
+                          <SelectValue placeholder="Выберите агента" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Агент по обработке обращений</SelectItem>
+                          <SelectItem value="2">Классификатор запросов</SelectItem>
+                          <SelectItem value="3">Распределитель задач</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Агент, который будет использоваться для автоматической обработки входящих обращений
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <h3 className="text-sm font-medium mb-2">Пример использования API</h3>
+                  <div className="bg-muted p-3 rounded-md">
+                    <p className="text-sm mb-2 font-medium">POST /api/external/citizen-requests</p>
+                    <pre className="text-xs overflow-auto max-h-60 bg-slate-800 text-slate-200 p-3 rounded">
+{`curl -X POST https://agent-smith.gov.kz/api/external/citizen-requests \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: your_api_key_here" \\
+  -d '{
+  "fullName": "Иван Петров",
+  "contactInfo": "ivan@example.com",
+  "subject": "Запрос на получение справки",
+  "description": "Прошу предоставить справку о составе семьи",
+  "requestType": "Справка",
+  "priority": "medium",
+  "externalId": "REQ-12345",
+  "sourceSystem": "portal"
+}'`}
+                    </pre>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Используйте этот эндпоинт для отправки обращений граждан из внешних систем
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button className="mr-2" variant="outline">Отмена</Button>
+              <Button>Сохранить изменения</Button>
+            </CardFooter>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
