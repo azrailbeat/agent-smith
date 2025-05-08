@@ -41,7 +41,12 @@ import {
   Mail, 
   MessageSquare,
   X,
-  Inbox as InboxIcon
+  Inbox as InboxIcon,
+  Trash2,
+  GanttChartSquare,
+  MessageCircle,
+  Tag,
+  Lightbulb
 } from "lucide-react";
 import { 
   Dialog, 
@@ -148,6 +153,7 @@ const CitizenRequests = () => {
   const [isAutoProcessOpen, setIsAutoProcessOpen] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
+  const [viewMode, setViewMode] = useState<'details' | 'ai' | 'history'>('details');
   const [formData, setFormData] = useState<{
     fullName: string;
     contactInfo: string;
