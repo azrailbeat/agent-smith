@@ -634,11 +634,37 @@ const AIAgentsPage = () => {
     { id: 5, title: "Ежедневный отчет о блокчейн-транзакциях", description: "Сформировать отчет о транзакциях в блокчейне за 22.04.2025", status: "completed", agentId: 5 }
   ];
   
-  // Запросы к API
-  const { data: agents = demoAgents, isLoading: isAgentsLoading } = useQuery<Agent[]>({
+  // Запросы к API и фильтрация дубликатов агентов
+  const { data: rawAgents = demoAgents, isLoading: isAgentsLoading } = useQuery<Agent[]>({
     queryKey: ['/api/agents'],
     enabled: true, // Используем API
   });
+  
+  // Фильтруем дубликаты - оставляем только уникальные агенты по типу
+  const agents = React.useMemo(() => {
+    // Создаем карту уникальных агентов по типу
+    const uniqueAgentsMap = new Map<string, Agent>();
+    
+    // Добавляем агентов с ключевыми ID в приоритете (640, 643, и т.д.)
+    const priorityIds = [640, 843, 842]; // ID ключевых агентов (Citizen Requests, Meeting Protocols, Document Processing)
+    
+    // Сначала добавляем приоритетных агентов
+    rawAgents.forEach(agent => {
+      if (priorityIds.includes(agent.id)) {
+        uniqueAgentsMap.set(agent.type, agent);
+      }
+    });
+    
+    // Теперь добавляем остальных агентов, если их типа еще нет в карте
+    rawAgents.forEach(agent => {
+      if (!uniqueAgentsMap.has(agent.type)) {
+        uniqueAgentsMap.set(agent.type, agent);
+      }
+    });
+    
+    // Возвращаем массив уникальных агентов
+    return Array.from(uniqueAgentsMap.values());
+  }, [rawAgents]);
   
   const { data: integrations = demoIntegrations, isLoading: isIntegrationsLoading } = useQuery<Integration[]>({
     queryKey: ['/api/integrations'],
