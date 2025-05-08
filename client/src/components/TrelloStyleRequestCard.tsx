@@ -80,9 +80,11 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
     refetchOnWindowFocus: false,
   });
 
-  // Фильтруем агентов по типу (citizen_requests)
+  // Фильтруем агентов и оставляем только основных ключевых
   const citizenRequestAgents = agents.filter(agent => 
-    agent.type === "citizen_requests" && agent.id !== 174 && agent.id !== 202
+    agent.type === "citizen_requests" && 
+    // Оставляем только ключевого агента (640) и удаляем все остальные дубликаты
+    agent.id === 640
   );
 
   // Мутация для обработки обращения агентом

@@ -87,12 +87,12 @@ const CitizenRequestAgentSection: React.FC<CitizenRequestAgentSectionProps> = ({
 
   // Фильтруем агентов по типу (citizen_requests)
   /**
-   * Фильтруем агентов по типу (citizen_requests)
-   * Исключаем тестовые агенты с id 174 и 202
+   * Фильтруем агентов и оставляем только ключевых
+   * Оставляем только главного агента с ID 640 для обработки обращений граждан
    * @type {Agent[]}
    */
   const citizenRequestAgents = agents.filter(agent => 
-    agent.type === "citizen_requests"
+    agent.type === "citizen_requests" && agent.id === 640
   );
 
   /**
