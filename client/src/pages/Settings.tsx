@@ -11,8 +11,11 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText, Mic, Copy } from "lucide-react";
+import { AlertCircle, Check, Trash2, Pencil, Plus, Unlock, Lock, Database, Cloud, Server, Disc, Layers, MessageSquare, FileText, Mic, Copy, CheckCircle, ArrowDown, ArrowUp, Eye, Code, ExternalLink, FormInput, Globe, Image, Info, LayoutGrid, Loader2, Moon, MoveDown, MoveUp, Palette, RefreshCw, Save, Sun, Text, Download, Type } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Integration, Agent } from "@shared/schema";
 import { SecretField } from "@/components/ui/secret-field";
 import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
@@ -799,14 +802,18 @@ const Settings = () => {
   };
   
   const generateWidgetCode = () => {
+    // Используем константный адрес приложения вместо window.location.origin
+    const apiBaseUrl = "https://agent-smith.replit.app";
+    
     // Создаем код для встраивания виджета
     const code = `
 <div id="agent-smith-citizen-request-widget"></div>
-<script src="${window.location.origin}/widget.js"></script>
+<script src="${apiBaseUrl}/widget.js"></script>
 <script>
   AgentSmithWidget.init({
     container: '#agent-smith-citizen-request-widget',
     apiKey: '${apiSettings.apiKey}',
+    apiUrl: '${apiBaseUrl}/api/external/citizen-requests',
     widgetId: 'default',
     theme: '${widgetSettings.theme}',
     primaryColor: '${widgetSettings.primaryColor}'
@@ -853,6 +860,7 @@ const Settings = () => {
           <TabsTrigger value="integrations">Внешние интеграции</TabsTrigger>
           <TabsTrigger value="agents">AI Агенты</TabsTrigger>
           <TabsTrigger value="api">API для обращений</TabsTrigger>
+          <TabsTrigger value="widget">Виджет для сайта</TabsTrigger>
           <TabsTrigger value="monitoring">Мониторинг LLM</TabsTrigger>
         </TabsList>
         
