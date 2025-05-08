@@ -806,20 +806,28 @@ const Settings = () => {
   const generateWidgetCode = () => {
     // Используем константный адрес приложения вместо window.location.origin
     const apiBaseUrl = "https://agent-smith.replit.app";
+    const widgetId = "agent-smith-citizen-request-widget";
+    
+    // Создаем конфигурацию для виджета и кодируем ее в base64
+    const widgetConfig = {
+      title: widgetSettings.title,
+      subtitle: widgetSettings.subtitle,
+      theme: widgetSettings.theme,
+      primaryColor: widgetSettings.primaryColor,
+      fields: widgetSettings.fields,
+      buttonText: widgetSettings.buttonText,
+      successMessage: widgetSettings.successMessage
+    };
+    
+    // Кодируем в base64 с поддержкой Unicode
+    const encodedConfig = btoa(unescape(encodeURIComponent(JSON.stringify(widgetConfig))));
     
     // Создаем код для встраивания виджета
     const code = `
-<div id="agent-smith-citizen-request-widget"></div>
+<div id="${widgetId}"></div>
 <script src="${apiBaseUrl}/widget.js"></script>
 <script>
-  AgentSmithWidget.init({
-    container: '#agent-smith-citizen-request-widget',
-    apiKey: '${apiSettings.apiKey}',
-    apiUrl: '${apiBaseUrl}/api/external/citizen-requests',
-    widgetId: 'default',
-    theme: '${widgetSettings.theme}',
-    primaryColor: '${widgetSettings.primaryColor}'
-  });
+  AgentSmithWidget.init('${widgetId}', '${encodedConfig}');
 </script>
     `.trim();
     
