@@ -618,10 +618,11 @@ const AIAgentsPage = () => {
   ];
   
   // Демо данные для моделей (интеграций)
+  // Интеграции с языковыми моделями и блокчейном
   const demoIntegrations: Integration[] = [
-    { id: 1, name: "GPT-4o", type: "openai", apiUrl: "https://api.openai.com", isActive: true, config: { model: "gpt-4o" } },
-    { id: 2, name: "Local Whisper", type: "vllm", apiUrl: "http://localhost:8000", isActive: true, config: { model: "whisper-large-v3" } },
-    { id: 3, name: "Task LLM", type: "ollama", apiUrl: "http://localhost:11434", isActive: true, config: { model: "llama3:8b" } },
+    { id: 1, name: "OpenAI GPT-4o", type: "openai", apiUrl: "https://api.openai.com", isActive: true, config: { model: "gpt-4o" } },
+    { id: 2, name: "Anthropic Claude 3", type: "anthropic", apiUrl: "https://api.anthropic.com", isActive: true, config: { model: "claude-3-sonnet-20240229" } },
+    { id: 3, name: "Google Gemini Pro", type: "google", apiUrl: "https://generativelanguage.googleapis.com", isActive: true, config: { model: "gemini-pro" } },
     { id: 4, name: "Moralis Blockchain API", type: "moralis", apiUrl: "https://deep-index.moralis.io/api/v2", isActive: true, config: { chain: "besu" } }
   ];
   
@@ -848,7 +849,26 @@ const AIAgentsPage = () => {
     setShowTaskDialog(true);
   };
   
+  // Проверка, является ли агент блокчейн-агентом (неудаляемым)
+  const isBlockchainAgent = (agent: Agent): boolean => {
+    return agent.type === "blockchain";
+  };
+  
   const handleDeleteAgent = (id: number) => {
+    // Получаем агента по ID
+    const agentToDelete = agents.find(agent => agent.id === id);
+    
+    // Если агент не найден или это блокчейн-агент, показываем уведомление и прерываем удаление
+    if (!agentToDelete || isBlockchainAgent(agentToDelete)) {
+      toast({
+        title: "Операция запрещена",
+        description: "Этот агент является системным и не может быть удален.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Для остальных агентов запрашиваем подтверждение и удаляем
     if (window.confirm("Вы уверены, что хотите удалить этого агента?")) {
       deleteAgentMutation.mutate(id);
     }
