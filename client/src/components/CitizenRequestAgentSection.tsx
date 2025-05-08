@@ -225,10 +225,54 @@ const CitizenRequestAgentSection: React.FC<CitizenRequestAgentSectionProps> = ({
             )}
           </Button>
 
-          {request.aiProcessed && (
-            <div className="text-xs text-green-600 flex items-center">
-              <Bot className="h-3 w-3 mr-1" />
-              Это обращение уже было обработано с помощью ИИ. Повторная обработка перезапишет результаты.
+          {/* Результаты ИИ обработки */}
+          {(request.aiProcessed || request.aiClassification || request.aiSuggestion || request.summary) && (
+            <div className="mt-4 border border-amber-200 bg-amber-50 rounded-md p-3">
+              <div className="font-medium mb-2 text-amber-800 flex items-center">
+                <Bot className="h-4 w-4 mr-2" />
+                Результаты обработки ИИ:
+              </div>
+              
+              {/* Классификация */}
+              {request.aiClassification && (
+                <div className="mb-2">
+                  <div className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                    <Tag className="h-3 w-3 mr-1" /> Классификация:
+                  </div>
+                  <div className="text-sm bg-white p-2 rounded border border-gray-200">
+                    {request.aiClassification}
+                  </div>
+                </div>
+              )}
+              
+              {/* Резюме */}
+              {request.summary && (
+                <div className="mb-2">
+                  <div className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                    <FileText className="h-3 w-3 mr-1" /> Резюме:
+                  </div>
+                  <div className="text-sm bg-white p-2 rounded border border-gray-200">
+                    {request.summary}
+                  </div>
+                </div>
+              )}
+              
+              {/* Рекомендации */}
+              {request.aiSuggestion && (
+                <div className="mb-2">
+                  <div className="text-xs font-medium text-gray-700 mb-1 flex items-center">
+                    <Lightbulb className="h-3 w-3 mr-1" /> Рекомендация:
+                  </div>
+                  <div className="text-sm bg-white p-2 rounded border border-gray-200">
+                    {request.aiSuggestion}
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-xs text-amber-600 flex items-center mt-2">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Повторная обработка перезапишет текущие результаты.
+              </div>
             </div>
           )}
         </div>

@@ -235,15 +235,33 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Отображение результатов AI обработки */}
-        {request.aiSuggestion && (
+        {(request.aiProcessed || request.aiClassification || request.aiSuggestion) && (
           <div className="bg-amber-50 p-1.5 rounded text-[10px] text-amber-800 mb-2 border border-amber-200">
             <div className="font-medium mb-0.5 flex items-center">
               <Bot className="h-2.5 w-2.5 mr-1" /> 
               Результат обработки:
             </div>
-            <div className="line-clamp-2">
-              {request.aiSuggestion}
-            </div>
+            
+            {/* Отображаем классификацию */}
+            {request.aiClassification && (
+              <div className="mb-1">
+                <span className="font-semibold">Категория:</span> {request.aiClassification}
+              </div>
+            )}
+            
+            {/* Отображаем рекомендации */}
+            {request.aiSuggestion && (
+              <div className="line-clamp-2">
+                <span className="font-semibold">Рекомендация:</span> {request.aiSuggestion}
+              </div>
+            )}
+            
+            {/* Если есть только aiProcessed но нет результатов */}
+            {request.aiProcessed && !request.aiClassification && !request.aiSuggestion && (
+              <div className="text-gray-600 italic">
+                Обработано ИИ, ожидание результатов...
+              </div>
+            )}
           </div>
         )}
         
