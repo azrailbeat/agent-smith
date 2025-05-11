@@ -873,7 +873,6 @@ const Settings = () => {
       <Tabs defaultValue="integrations" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="integrations">Внешние интеграции</TabsTrigger>
-          <TabsTrigger value="agents">AI Агенты</TabsTrigger>
           <TabsTrigger value="api">API для обращений</TabsTrigger>
           <TabsTrigger value="widget">Виджет для сайта</TabsTrigger>
           <TabsTrigger value="bolt">Bolt.new</TabsTrigger>
@@ -1627,103 +1626,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="agents">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">AI Агенты</h2>
-            <Button onClick={handleAddAgent}>
-              <Plus className="mr-2 h-4 w-4" /> Добавить агента
-            </Button>
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {isLoadingAgents ? (
-                <div className="text-center py-4">Загрузка агентов...</div>
-              ) : agents.length === 0 ? (
-                <div className="text-center py-4">
-                  <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p>Агенты не настроены</p>
-                  <Button onClick={handleAddAgent} variant="outline" className="mt-2">
-                    <Plus className="mr-2 h-4 w-4" /> Добавить агента
-                  </Button>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Название</TableHead>
-                      <TableHead>Тип</TableHead>
-                      <TableHead>Описание</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead className="w-24 text-right">Действия</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agents.map((agent) => (
-                      <TableRow key={agent.id}>
-                        <TableCell className="font-medium">{agent.name}</TableCell>
-                        <TableCell>{getAgentType(agent.type)}</TableCell>
-                        <TableCell className="max-w-xs truncate">{agent.description}</TableCell>
-                        <TableCell>
-                          {agent.isActive ? (
-                            <div className="flex items-center">
-                              <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                              Активен
-                            </div>
-                          ) : (
-                            <div className="flex items-center">
-                              <span className="h-2 w-2 rounded-full bg-gray-500 mr-2"></span>
-                              Отключен
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditAgent(agent)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteAgent(agent.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Agent Dialog */}
-          <Dialog open={isAgentDialogOpen} onOpenChange={setIsAgentDialogOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {currentAgent ? "Редактировать агента" : "Добавить агента"}
-                </DialogTitle>
-                <DialogDescription>
-                  {currentAgent 
-                    ? "Обновите настройки AI агента" 
-                    : "Настройте нового AI агента для обработки данных"}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <AgentForm
-                agent={currentAgent}
-                integrations={integrations}
-                onSubmit={handleAgentSubmit}
-                onCancel={() => setIsAgentDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
+
         
         {/* API Tab */}
         <TabsContent value="api">
