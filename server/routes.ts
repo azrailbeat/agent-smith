@@ -29,6 +29,7 @@ import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
 import { registerLLMMonitoringRoutes } from "./monitoring/llm-monitoring";
 import { registerMeetingRoutes } from "./meeting-api";
+import { registerAudioRoutes } from "./audio-api";
 import {
   getTaskRules,
   getTaskRuleById,
@@ -96,8 +97,15 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Регистрируем дополнительные маршруты
+  registerSystemRoutes(app);
+  registerDatabaseRoutes(app);
+  registerPlankaRoutes(app);
+  registerLLMMonitoringRoutes(app);
+  registerMeetingRoutes(app);
+  registerAudioRoutes(app);
   // CORS middleware для API маршрутов, используемых внешними виджетами и bolt.new
-  app.use(['/widget.js', '/api/citizen-requests', '/api/bolt-templates', '/api/widget-integration', '/api/bolt'], (req, res, next) => {
+  app.use(['/widget.js', '/api/citizen-requests', '/api/bolt-templates', '/api/widget-integration', '/api/bolt', '/api/transcribe', '/api/process-text', '/api/process-audio'], (req, res, next) => {
     // Разрешить запросы с bolt.new и всех его поддоменов
     const origin = req.headers.origin;
     if (origin && (origin.includes('bolt.new') || origin.includes('localhost'))) {

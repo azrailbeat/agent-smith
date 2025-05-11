@@ -31,9 +31,14 @@ import {
   Database,
   MessageSquare,
   SendHorizontal,
-  Plus
+  Plus,
+  FileAudio,
+  Filter,
+  Search,
+  Headphones
 } from "lucide-react";
 import MeetingProtocolAgentSection from "@/components/MeetingProtocolAgentSection";
+import { AudioTranscribeDialog } from "@/components/AudioTranscribeDialog";
 import { 
   Dialog, 
   DialogContent, 
