@@ -1,399 +1,299 @@
 /**
  * API маршруты для обработки аудиофайлов и транскрибации
  */
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import multer from 'multer';
+import fs from 'fs';
 import path from 'path';
 import { 
   transcribeAudio, 
   processTextWithAI, 
-  TranscriptionProvider, 
-  TextProcessingModel 
+  processAudioFile,
+  TranscriptionProvider,
+  TextProcessingModel
 } from './audio-service';
 import { logActivity } from './activity-logger';
 import { recordToBlockchain, BlockchainRecordType } from './blockchain';
 
-// Настройка multer для обработки загрузки файлов
-const storage = multer.memoryStorage();
+// Настройка multer для сохранения аудиофайлов во временную директорию
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tempDir = path.join(process.cwd(), 'temp');
+    // Проверяем наличие директории, если нет - создаем
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+// Создаем middleware для загрузки файлов
 const upload = multer({ 
-  storage,
-  limits: { fileSize: 25 * 1024 * 1024 } // Лимит 25 МБ
+  storage: storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25 МБ максимальный размер файла
+  },
+  fileFilter: (req, file, cb) => {
+    // Проверяем, что загружаемый файл - аудио
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Неподдерживаемый тип файла. Разрешены только аудиофайлы.'), false);
+    }
+  }
 });
 
 export function registerAudioRoutes(app: express.Express): void {
-  
-  // Маршрут для транскрибации аудиофайла
+  /**
+   * Маршрут для транскрибации аудиофайла
+   */
   app.post('/api/transcribe', upload.single('audioFile'), async (req: Request, res: Response) => {
     try {
+      // Проверяем, был ли загружен файл
       if (!req.file) {
-        return res.status(400).json({ error: 'Аудиофайл не был загружен' });
+        return res.status(400).json({ 
+          error: 'No file uploaded',
+          message: 'Пожалуйста, загрузите аудиофайл'
+        });
       }
-      
-      const { provider, language, meetingId } = req.body;
-      
-      // Проверяем наличие требуемых полей
-      if (!provider) {
-        return res.status(400).json({ error: 'Не указан провайдер транскрибации' });
-      }
-      
-      // Определяем провайдера транскрибации
-      let transcriptionProvider;
-      switch (provider) {
-        case 'whisper':
-          transcriptionProvider = TranscriptionProvider.OPENAI_WHISPER;
-          break;
-        case 'speechkit':
-          transcriptionProvider = TranscriptionProvider.YANDEX_SPEECHKIT;
-          break;
-        default:
-          return res.status(400).json({ error: 'Неизвестный провайдер транскрибации' });
-      }
-      
-      // Выполняем транскрибацию
+
+      // Получаем параметры из запроса
+      const transcriptionProvider = (req.body.transcriptionProvider as TranscriptionProvider) || TranscriptionProvider.OPENAI_WHISPER;
+      const language = req.body.language || 'ru';
+      const meetingId = req.body.meetingId ? parseInt(req.body.meetingId) : undefined;
+
+      // Считываем файл в буфер
+      const fileBuffer = fs.readFileSync(req.file.path);
+
+      // Транскрибируем аудио
       const transcript = await transcribeAudio(
-        req.file.buffer, 
-        req.file.originalname,
-        transcriptionProvider,
-        language
+        fileBuffer, 
+        { language }, 
+        transcriptionProvider
       );
-      
-      // Логируем активность
+
+      // Записываем активность
       await logActivity({
         action: 'audio_transcription',
         entityType: 'meeting',
-        entityId: parseInt(meetingId) || 0,
-        details: `Аудиофайл транскрибирован: ${req.file.originalname}`,
-        metadata: { 
-          provider, 
-          fileSize: req.file.size, 
-          language 
+        entityId: meetingId,
+        details: `Транскрибация аудиофайла: ${req.file.originalname}`,
+        metadata: {
+          fileName: req.file.originalname,
+          fileSize: req.file.size,
+          provider: transcriptionProvider
         }
       });
-      
-      // Если указан идентификатор встречи, записываем в блокчейн
+
+      // Если указан ID встречи, записываем в блокчейн
       if (meetingId) {
         try {
-          const transactionHash = await recordToBlockchain({
-            entityId: parseInt(meetingId),
+          const blockchainHash = await recordToBlockchain({
+            entityId: meetingId,
             entityType: 'meeting',
             action: 'audio_transcription',
             metadata: {
-              fileSize: req.file.size,
+              transcriptionTime: new Date().toISOString(),
               fileName: req.file.originalname,
-              provider,
-              language,
-              transcriptLength: transcript.length
+              fileSize: req.file.size,
+              provider: transcriptionProvider
             }
           });
-          
-          // Возвращаем результат с хешем транзакции
-          return res.json({ 
+
+          // Отвечаем с данными транскрипции
+          res.json({
             success: true,
             transcript,
-            transactionHash,
-            provider,
-            fileInfo: {
-              name: req.file.originalname,
-              size: req.file.size,
-              mimeType: req.file.mimetype
-            }
+            blockchainHash
           });
         } catch (blockchainError) {
-          // Если не удалось записать в блокчейн, все равно возвращаем транскрипт
           console.error('Ошибка при записи в блокчейн:', blockchainError);
-          return res.json({ 
+          
+          // Даже если запись в блокчейн не удалась, возвращаем транскрипцию
+          res.json({
             success: true,
             transcript,
-            blockchainError: 'Не удалось записать данные в блокчейн',
-            provider,
-            fileInfo: {
-              name: req.file.originalname,
-              size: req.file.size,
-              mimeType: req.file.mimetype
-            }
+            blockchainError: 'Не удалось записать в блокчейн'
           });
         }
+      } else {
+        // Если ID встречи не указан, просто возвращаем результат
+        res.json({
+          success: true,
+          transcript
+        });
       }
-      
-      // Возвращаем результат без записи в блокчейн
-      return res.json({ 
-        success: true,
-        transcript,
-        provider,
-        fileInfo: {
-          name: req.file.originalname,
-          size: req.file.size,
-          mimeType: req.file.mimetype
-        }
-      });
+
+      // Удаляем временный файл после обработки
+      fs.unlinkSync(req.file.path);
       
     } catch (error) {
       console.error('Ошибка при транскрибации аудио:', error);
-      return res.status(500).json({ 
-        error: 'Ошибка при транскрибации аудио',
-        message: error.message 
+      
+      // Удаляем временный файл в случае ошибки
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      
+      res.status(500).json({
+        error: 'Failed to transcribe audio',
+        message: error.message || 'Произошла ошибка при обработке аудио'
       });
     }
   });
 
-  // Маршрут для обработки текста с использованием ИИ
+  /**
+   * Маршрут для обработки текста с использованием LLM моделей
+   */
   app.post('/api/process-text', async (req: Request, res: Response) => {
     try {
-      const { text, model, prompt, meetingId } = req.body;
+      const { text, model, meetingId } = req.body;
       
-      // Проверяем наличие требуемых полей
       if (!text) {
-        return res.status(400).json({ error: 'Не указан текст для обработки' });
-      }
-      if (!model) {
-        return res.status(400).json({ error: 'Не указана модель для обработки текста' });
-      }
-      
-      // Определяем модель для обработки текста
-      let textProcessingModel;
-      switch (model) {
-        case 'openai':
-          textProcessingModel = TextProcessingModel.OPENAI;
-          break;
-        case 'anthropic':
-          textProcessingModel = TextProcessingModel.ANTHROPIC;
-          break;
-        case 'vllm':
-          textProcessingModel = TextProcessingModel.VLLM;
-          break;
-        case 'google':
-          textProcessingModel = TextProcessingModel.GOOGLE;
-          break;
-        case 'huggingface':
-          textProcessingModel = TextProcessingModel.HUGGINGFACE;
-          break;
-        default:
-          return res.status(400).json({ error: 'Неизвестная модель для обработки текста' });
+        return res.status(400).json({
+          error: 'No text provided',
+          message: 'Текст для обработки не предоставлен'
+        });
       }
       
-      // Выполняем обработку текста
-      const processedText = await processTextWithAI(
-        text,
-        textProcessingModel,
-        prompt
-      );
+      const textProcessingModel = (model as TextProcessingModel) || TextProcessingModel.OPENAI;
       
-      // Логируем активность
-      await logActivity({
-        action: 'text_processing',
-        entityType: 'meeting',
-        entityId: parseInt(meetingId) || 0,
-        details: `Текст обработан с использованием ${model}`,
-        metadata: { 
-          model,
-          textLength: text.length,
-          promptLength: prompt?.length || 0
-        }
-      });
+      // Обрабатываем текст с использованием выбранной модели
+      const processedText = await processTextWithAI(text, textProcessingModel);
       
-      // Если указан идентификатор встречи, записываем в блокчейн
+      // Если указан ID встречи, логируем активность
       if (meetingId) {
-        try {
-          const transactionHash = await recordToBlockchain({
-            entityId: parseInt(meetingId),
-            entityType: 'meeting',
-            action: 'text_processing',
-            metadata: {
-              model,
-              textLength: text.length,
-              processedTextLength: processedText.length,
-              prompt: prompt
-            }
-          });
-          
-          // Возвращаем результат с хешем транзакции
-          return res.json({ 
-            success: true,
-            processedText,
-            transactionHash,
-            model
-          });
-        } catch (blockchainError) {
-          // Если не удалось записать в блокчейн, все равно возвращаем результат
-          console.error('Ошибка при записи в блокчейн:', blockchainError);
-          return res.json({ 
-            success: true,
-            processedText,
-            blockchainError: 'Не удалось записать данные в блокчейн',
-            model
-          });
-        }
+        await logActivity({
+          action: 'text_processing',
+          entityType: 'meeting',
+          entityId: parseInt(meetingId),
+          details: `Обработка текста протокола с использованием ${textProcessingModel}`,
+          metadata: {
+            textLength: text.length,
+            model: textProcessingModel
+          }
+        });
       }
       
-      // Возвращаем результат без записи в блокчейн
-      return res.json({ 
+      res.json({
         success: true,
-        processedText,
-        model
+        processedText
       });
       
     } catch (error) {
       console.error('Ошибка при обработке текста:', error);
-      return res.status(500).json({ 
-        error: 'Ошибка при обработке текста', 
-        message: error.message 
+      res.status(500).json({
+        error: 'Failed to process text',
+        message: error.message || 'Произошла ошибка при обработке текста'
       });
     }
   });
-  
-  // Маршрут для полной обработки аудиофайла (транскрибация + обработка текста)
+
+  /**
+   * Маршрут для комплексной обработки аудиофайла (транскрибация + обработка текста)
+   */
   app.post('/api/process-audio', upload.single('audioFile'), async (req: Request, res: Response) => {
     try {
+      // Проверяем, был ли загружен файл
       if (!req.file) {
-        return res.status(400).json({ error: 'Аудиофайл не был загружен' });
+        return res.status(400).json({ 
+          error: 'No file uploaded',
+          message: 'Пожалуйста, загрузите аудиофайл'
+        });
       }
-      
-      const { 
-        transcriptionProvider, 
-        textProcessingModel, 
-        language, 
-        prompt,
-        meetingId 
-      } = req.body;
-      
-      // Проверяем наличие требуемых полей
-      if (!transcriptionProvider) {
-        return res.status(400).json({ error: 'Не указан провайдер транскрибации' });
-      }
-      if (!textProcessingModel) {
-        return res.status(400).json({ error: 'Не указана модель для обработки текста' });
-      }
-      
-      // Определяем провайдера транскрибации
-      let transcriptionProviderEnum;
-      switch (transcriptionProvider) {
-        case 'whisper':
-          transcriptionProviderEnum = TranscriptionProvider.OPENAI_WHISPER;
-          break;
-        case 'speechkit':
-          transcriptionProviderEnum = TranscriptionProvider.YANDEX_SPEECHKIT;
-          break;
-        default:
-          return res.status(400).json({ error: 'Неизвестный провайдер транскрибации' });
-      }
-      
-      // Определяем модель для обработки текста
-      let textProcessingModelEnum;
-      switch (textProcessingModel) {
-        case 'openai':
-          textProcessingModelEnum = TextProcessingModel.OPENAI;
-          break;
-        case 'anthropic':
-          textProcessingModelEnum = TextProcessingModel.ANTHROPIC;
-          break;
-        case 'vllm':
-          textProcessingModelEnum = TextProcessingModel.VLLM;
-          break;
-        case 'google':
-          textProcessingModelEnum = TextProcessingModel.GOOGLE;
-          break;
-        case 'huggingface':
-          textProcessingModelEnum = TextProcessingModel.HUGGINGFACE;
-          break;
-        default:
-          return res.status(400).json({ error: 'Неизвестная модель для обработки текста' });
-      }
-      
-      // Этап 1: транскрибация аудио
-      const transcript = await transcribeAudio(
-        req.file.buffer, 
-        req.file.originalname,
-        transcriptionProviderEnum,
-        language
+
+      // Получаем параметры из запроса
+      const transcriptionProvider = (req.body.transcriptionProvider as TranscriptionProvider) || TranscriptionProvider.OPENAI_WHISPER;
+      const textProcessingModel = (req.body.textProcessingModel as TextProcessingModel) || TextProcessingModel.OPENAI;
+      const language = req.body.language || 'ru';
+      const meetingId = req.body.meetingId ? parseInt(req.body.meetingId) : undefined;
+
+      // Считываем файл в буфер
+      const fileBuffer = fs.readFileSync(req.file.path);
+
+      // Обрабатываем аудиофайл полностью
+      const { transcript, processedText } = await processAudioFile(
+        fileBuffer,
+        { language },
+        transcriptionProvider,
+        textProcessingModel
       );
-      
-      // Этап 2: обработка полученного текста
-      const processedText = await processTextWithAI(
-        transcript,
-        textProcessingModelEnum,
-        prompt || "Проанализируй и структурируй текст следующего транскрипта:"
-      );
-      
-      // Логируем активность
+
+      // Записываем активность
       await logActivity({
         action: 'audio_processing',
         entityType: 'meeting',
-        entityId: parseInt(meetingId) || 0,
-        details: `Аудиофайл обработан: ${req.file.originalname}`,
-        metadata: { 
-          transcriptionProvider, 
-          textProcessingModel, 
-          fileSize: req.file.size, 
-          language,
-          transcriptLength: transcript.length,
-          processedTextLength: processedText.length
+        entityId: meetingId,
+        details: `Обработка аудиофайла: ${req.file.originalname}`,
+        metadata: {
+          fileName: req.file.originalname,
+          fileSize: req.file.size,
+          transcriptionProvider,
+          textProcessingModel
         }
       });
-      
-      // Если указан идентификатор встречи, записываем в блокчейн
+
+      // Если указан ID встречи, записываем в блокчейн
       if (meetingId) {
         try {
-          const transactionHash = await recordToBlockchain({
-            entityId: parseInt(meetingId),
+          const blockchainHash = await recordToBlockchain({
+            entityId: meetingId,
             entityType: 'meeting',
             action: 'audio_processing',
             metadata: {
+              processingTime: new Date().toISOString(),
               fileName: req.file.originalname,
               fileSize: req.file.size,
               transcriptionProvider,
-              textProcessingModel,
-              language,
-              transcriptLength: transcript.length,
-              processedTextLength: processedText.length
+              textProcessingModel
             }
           });
-          
-          // Возвращаем результат с хешем транзакции
-          return res.json({ 
+
+          // Отвечаем с данными обработки
+          res.json({
             success: true,
             transcript,
             processedText,
-            transactionHash,
-            fileInfo: {
-              name: req.file.originalname,
-              size: req.file.size,
-              mimeType: req.file.mimetype
-            }
+            blockchainHash
           });
         } catch (blockchainError) {
-          // Если не удалось записать в блокчейн, все равно возвращаем результат
           console.error('Ошибка при записи в блокчейн:', blockchainError);
-          return res.json({ 
+          
+          // Даже если запись в блокчейн не удалась, возвращаем результаты
+          res.json({
             success: true,
             transcript,
             processedText,
-            blockchainError: 'Не удалось записать данные в блокчейн',
-            fileInfo: {
-              name: req.file.originalname,
-              size: req.file.size,
-              mimeType: req.file.mimetype
-            }
+            blockchainError: 'Не удалось записать в блокчейн'
           });
         }
+      } else {
+        // Если ID встречи не указан, просто возвращаем результат
+        res.json({
+          success: true,
+          transcript,
+          processedText
+        });
       }
-      
-      // Возвращаем результат без записи в блокчейн
-      return res.json({ 
-        success: true,
-        transcript,
-        processedText,
-        fileInfo: {
-          name: req.file.originalname,
-          size: req.file.size,
-          mimeType: req.file.mimetype
-        }
-      });
+
+      // Удаляем временный файл после обработки
+      fs.unlinkSync(req.file.path);
       
     } catch (error) {
-      console.error('Ошибка при обработке аудиофайла:', error);
-      return res.status(500).json({ 
-        error: 'Ошибка при обработке аудиофайла', 
-        message: error.message 
+      console.error('Ошибка при обработке аудио:', error);
+      
+      // Удаляем временный файл в случае ошибки
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      
+      res.status(500).json({
+        error: 'Failed to process audio',
+        message: error.message || 'Произошла ошибка при обработке аудио'
       });
     }
   });

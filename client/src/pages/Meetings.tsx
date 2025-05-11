@@ -627,6 +627,91 @@ const Meetings = () => {
       meetingId: selectedMeeting.id
     });
   };
+  
+  // Открывает диалог транскрибации аудио
+  const openAudioTranscribeDialog = (meeting: Meeting) => {
+    setSelectedMeeting(meeting);
+    setIsAudioTranscribeOpen(true);
+  };
+  
+  // Обработчик результатов транскрибации
+  const handleTranscribe = (transcript: string, processedText?: string) => {
+    if (!selectedMeeting) return;
+    
+    // Создаем протокол, если его еще нет
+    const protocol = selectedMeeting.protocol || {
+      summary: '',
+      decisions: [],
+      tasks: []
+    };
+    
+    // Если есть обработанный текст, используем его для создания протокола
+    if (processedText) {
+      // Парсим обработанный текст для извлечения резюме, решений и задач
+      const summaryMatch = processedText.match(/(?:Краткое резюме|Резюме)([\s\S]*?)(?:Ключевые решения|Решения|$)/i);
+      const decisionsMatch = processedText.match(/(?:Ключевые решения|Решения)([\s\S]*?)(?:Задачи|Задания|$)/i);
+      
+      let summary = '';
+      let decisions: string[] = [];
+      
+      if (summaryMatch && summaryMatch[1]) {
+        summary = summaryMatch[1].trim();
+      }
+      
+      if (decisionsMatch && decisionsMatch[1]) {
+        decisions = decisionsMatch[1]
+          .split(/Решение:/)
+          .filter(item => item.trim())
+          .map(item => item.trim());
+      }
+      
+      // Обновляем протокол
+      const updatedProtocol = {
+        ...protocol,
+        summary: summary || protocol.summary,
+        decisions: decisions.length > 0 ? decisions : protocol.decisions
+      };
+      
+      // Обновляем встречу в локальном кэше
+      queryClient.setQueryData(['/api/meetings'], (oldData: Meeting[]) => {
+        return oldData.map(m => {
+          if (m.id === selectedMeeting.id) {
+            return { 
+              ...m, 
+              protocol: updatedProtocol,
+              recordedAudio: true 
+            };
+          }
+          return m;
+        });
+      });
+      
+      toast({
+        title: "Транскрибация завершена",
+        description: "Протокол встречи был обновлен на основе аудиозаписи",
+        variant: "default"
+      });
+    } else {
+      // Если нет обработанного текста, просто сохраняем транскрипцию
+      queryClient.setQueryData(['/api/meetings'], (oldData: Meeting[]) => {
+        return oldData.map(m => {
+          if (m.id === selectedMeeting.id) {
+            return { 
+              ...m, 
+              recordedAudio: true 
+            };
+          }
+          return m;
+        });
+      });
+      
+      toast({
+        title: "Транскрибация завершена",
+        description: "Аудиозапись была успешно транскрибирована",
+        variant: "default"
+      });
+    }
+  };
 
   // Открытие диалога для добавления задачи
   const openAddTaskDialog = (meeting: Meeting) => {
@@ -1752,6 +1837,14 @@ const Meetings = () => {
                     <Check className="h-3 w-3 mr-1" /> GovChain
                   </Badge>
                 )}
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => openAudioTranscribeDialog(selectedMeeting!)}
+                >
+                  <FileAudio className="h-4 w-4 mr-2" />
+                  Транскрибировать аудио
+                </Button>
               </div>
             </div>
           </DialogHeader>
@@ -1991,6 +2084,14 @@ const Meetings = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Диалог для транскрибации аудио */}
+      <AudioTranscribeDialog
+        open={isAudioTranscribeOpen}
+        onOpenChange={setIsAudioTranscribeOpen}
+        onTranscribe={handleTranscribe}
+        meetingId={selectedMeeting?.id}
+      />
     </>
   );
 };
