@@ -83,11 +83,6 @@ const Sidebar = ({
           icon: <MessageSquare size={20} />
         },
         {
-          name: "Переводчик",
-          path: "/translate",
-          icon: <Mic size={20} />
-        },
-        {
           name: "Протоколы собраний",
           path: "/meetings",
           icon: <Calendar size={20} />
@@ -118,11 +113,6 @@ const Sidebar = ({
           icon: <FileCheck size={20} />
         },
         {
-          name: "Помощники",
-          path: "/help-bubble",
-          icon: <HelpCircle size={20} />
-        },
-        {
           name: "DAO Голосования",
           path: "/dao-voting",
           icon: <Vote size={20} />
@@ -141,6 +131,11 @@ const Sidebar = ({
           name: "Аналитика",
           path: "/analytics",
           icon: <BarChart2 size={20} />
+        },
+        {
+          name: "Переводчик",
+          path: "/translate",
+          icon: <Mic size={20} />
         },
         {
           name: "Настройки",

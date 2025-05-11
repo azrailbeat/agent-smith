@@ -876,6 +876,7 @@ const Settings = () => {
           <TabsTrigger value="api">API для обращений</TabsTrigger>
           <TabsTrigger value="widget">Виджет для сайта</TabsTrigger>
           <TabsTrigger value="bolt">Bolt.new</TabsTrigger>
+          <TabsTrigger value="helpers">Помощники</TabsTrigger>
           <TabsTrigger value="monitoring">Мониторинг LLM</TabsTrigger>
         </TabsList>
         
