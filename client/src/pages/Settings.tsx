@@ -1625,8 +1625,6 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-
         
         {/* API Tab */}
         <TabsContent value="api">
