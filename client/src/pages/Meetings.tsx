@@ -124,6 +124,13 @@ interface KanbanBoard {
 }
 
 const Meetings = () => {
+  // Состояния для основного интерфейса
+  const [activeView, setActiveView] = useState<string>("list");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isAudioTranscribeOpen, setIsAudioTranscribeOpen] = useState(false);
+  
+  // Существующие состояния
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [currentMeeting, setCurrentMeeting] = useState<Partial<Meeting>>({
