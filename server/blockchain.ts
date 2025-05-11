@@ -4,13 +4,19 @@
  */
 
 import { storage } from './storage';
+import axios from 'axios';
+import { logActivity, ActivityType } from './activity-logger';
 
 export enum BlockchainRecordType {
   CITIZEN_REQUEST = 'citizen_request',
   TASK = 'task',
   DOCUMENT = 'document',
   SYSTEM_EVENT = 'system_event',
-  USER_ACTION = 'user_action'
+  USER_ACTION = 'user_action',
+  MEETING = 'meeting',
+  MEETING_PROTOCOL = 'meeting_protocol',
+  MEETING_TASK = 'meeting_task',
+  AUDIO_TRANSCRIPTION = 'audio_transcription'
 }
 
 export interface BlockchainData {
@@ -118,22 +124,75 @@ export async function recordToBlockchain(data: BlockchainData): Promise<string> 
 }
 
 /**
- * Симулирует вызов Moralis API для блокчейн транзакций
- * В реальной имплементации будет заменено на настоящий вызов API
+ * Вызов Moralis API для записи данных в блокчейн
+ * В демо режиме возвращает симулированный хеш транзакции
+ * @param data Данные для отправки в блокчейн
+ * @param apiKey API-ключ Moralis
  */
 async function simulateMoralisApiCall(data: any, apiKey: string): Promise<string> {
-  // Для тестирования просто возвращаем случайный хеш транзакции
-  // В реальном коде здесь будет вызов API Moralis или другого блокчейн-сервиса
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Генерируем случайный хеш транзакции
-      const hash = '0x' + Array.from({ length: 64 }, () => 
+  try {
+    // Проверяем, работаем ли мы в демо-режиме
+    const isDemo = process.env.DEMO_MODE === 'true';
+    
+    if (isDemo) {
+      // Для демо просто возвращаем случайный хеш транзакции
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          // Генерируем случайный хеш транзакции
+          const hash = '0x' + Array.from({ length: 64 }, () => 
+            Math.floor(Math.random() * 16).toString(16)
+          ).join('');
+          
+          resolve(hash);
+        }, 1000); // Имитируем задержку сети
+      });
+    }
+    
+    // Для реального вызова Moralis API
+    const endpoint = 'https://deep-index.moralis.io/api/v2/ipfs/uploadFolder';
+    
+    // Подготавливаем данные для записи в IPFS
+    const ipfsData = [{
+      path: `govchain/${data.entityType}_${data.entityId}_${Date.now()}.json`,
+      content: Buffer.from(JSON.stringify(data)).toString('base64')
+    }];
+    
+    // Отправляем данные в IPFS через Moralis API
+    const response = await axios.post(endpoint, ipfsData, {
+      headers: {
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    // Записываем активность
+    await logActivity({
+      action: 'blockchain_record',
+      entityType: data.entityType,
+      entityId: data.entityId,
+      details: `Данные записаны в блокчейн: ${data.entityType} #${data.entityId}`,
+      metadata: { transactionType: data.action }
+    });
+    
+    // Возвращаем хеш IPFS или транзакции
+    if (response.data && response.data.length > 0 && response.data[0].path) {
+      return response.data[0].path; // Используем путь к IPFS как хеш транзакции
+    } else {
+      throw new Error('Moralis API не вернул действительный хеш IPFS');
+    }
+  } catch (error) {
+    console.error('Ошибка при вызове Moralis API:', error);
+    
+    // Если произошла ошибка, в демо-режиме возвращаем симулированный хеш
+    if (process.env.DEMO_MODE === 'true') {
+      return '0x' + Array.from({ length: 64 }, () => 
         Math.floor(Math.random() * 16).toString(16)
       ).join('');
-      
-      resolve(hash);
-    }, 1000); // Имитируем задержку сети
-  });
+    }
+    
+    throw error;
+  }
 }
 
 /**
