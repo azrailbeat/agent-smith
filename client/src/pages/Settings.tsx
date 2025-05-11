@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Integration, Agent } from "@shared/schema";
 import { SecretField } from "@/components/ui/secret-field";
+import { HelpBubble } from "@/components/ui/help-bubble";
 import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
 import FormFieldEditor, { FormField } from "@/components/widget/FormFieldEditor";
 import WidgetPreview from "@/components/widget/WidgetPreview";
@@ -1431,7 +1432,183 @@ const Settings = () => {
           </Dialog>
         </TabsContent>
         
-        {/* Agents Tab */}
+        {/* Helpers Tab */}
+        <TabsContent value="helpers">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Контекстные помощники</h2>
+              <HelpBubble 
+                title="О помощниках"
+                content={
+                  <div>
+                    <p>Контекстные помощники предоставляют интерактивные подсказки по всему интерфейсу.</p>
+                    <p className="mt-1">Каждый тип помощника имеет свой характер и предназначен для разных функций системы.</p>
+                  </div>
+                }
+                character="default"
+                position="left"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Настройка помощников</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="default-character">Персонаж по умолчанию</Label>
+                      <Select defaultValue="agent-smith">
+                        <SelectTrigger id="default-character">
+                          <SelectValue placeholder="Выберите персонажа" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="agent-smith">Агент Смит</SelectItem>
+                          <SelectItem value="blockchain-buddy">Блокчейн Помощник</SelectItem>
+                          <SelectItem value="document-helper">Документальный Помощник</SelectItem>
+                          <SelectItem value="meeting-assistant">Ассистент по встречам</SelectItem>
+                          <SelectItem value="default">Стандартный помощник</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="bubble-size">Размер подсказок</Label>
+                      <Select defaultValue="md">
+                        <SelectTrigger id="bubble-size">
+                          <SelectValue placeholder="Выберите размер" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sm">Маленький</SelectItem>
+                          <SelectItem value="md">Средний</SelectItem>
+                          <SelectItem value="lg">Большой</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch id="help-enabled" defaultChecked />
+                      <Label htmlFor="help-enabled">Включить контекстные подсказки</Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch id="always-show" />
+                      <Label htmlFor="always-show">Показывать подсказки автоматически</Label>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Персонажи помощников</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="border rounded-md p-4 flex flex-col items-center">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <span className="text-2xl">👨‍💼</span>
+                      </div>
+                      <h3 className="text-sm font-medium">Агент Смит</h3>
+                      <p className="text-xs text-muted-foreground text-center mt-1">Основной помощник системы</p>
+                    </div>
+                    
+                    <div className="border rounded-md p-4 flex flex-col items-center">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <span className="text-2xl">🔗</span>
+                      </div>
+                      <h3 className="text-sm font-medium">Блокчейн Помощник</h3>
+                      <p className="text-xs text-muted-foreground text-center mt-1">Помощь с блокчейн функциями</p>
+                    </div>
+                    
+                    <div className="border rounded-md p-4 flex flex-col items-center">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <span className="text-2xl">📄</span>
+                      </div>
+                      <h3 className="text-sm font-medium">Документальный Помощник</h3>
+                      <p className="text-xs text-muted-foreground text-center mt-1">Помощь с документами</p>
+                    </div>
+                    
+                    <div className="border rounded-md p-4 flex flex-col items-center">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <span className="text-2xl">📅</span>
+                      </div>
+                      <h3 className="text-sm font-medium">Ассистент по встречам</h3>
+                      <p className="text-xs text-muted-foreground text-center mt-1">Помощь с протоколами и встречами</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Демонстрация помощников</CardTitle>
+                <CardDescription>Примеры контекстных подсказок для разных разделов системы</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Обработка запросов</CardTitle>
+                        <HelpBubble 
+                          title="Автоматическая обработка"
+                          content={
+                            <div>
+                              Здесь вы можете запустить автоматическую обработку всех запросов с помощью AI-агента. 
+                              Процесс включает в себя классификацию, обобщение и генерацию ответов.
+                            </div>
+                          }
+                          character="agent-smith"
+                          size="md"
+                          position="top"
+                        />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Управление процессом AI-обработки обращений граждан
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Анализ документов</CardTitle>
+                        <HelpBubble 
+                          title="Работа с документами"
+                          content={
+                            <div>
+                              Функция анализа документов позволяет автоматически извлекать ключевую информацию из загруженных файлов.
+                              Поддерживаются форматы PDF, DOCX, и текстовые документы.
+                            </div>
+                          }
+                          character="document-helper"
+                          size="md"
+                          position="bottom"
+                        />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Автоматизация обработки и анализа документов
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        {/* Monitoring Tab */}
         <TabsContent value="monitoring">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Мониторинг LLM и аналитика</h2>

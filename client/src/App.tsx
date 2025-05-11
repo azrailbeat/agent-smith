@@ -21,7 +21,6 @@ import Documents from "@/pages/Documents";
 import AIAgents from "@/pages/AIAgents";
 import DAOVoting from "@/pages/DAOVoting";
 import UserProfile from "@/pages/UserProfile";
-import HelpBubblePage from "@/pages/HelpBubblePage";
 import EmbedForm from "@/pages/EmbedForm";
 import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
@@ -43,7 +42,6 @@ function Router() {
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />
       <Route path="/dao-voting" component={DAOVoting} />
-      <Route path="/help-bubble" component={HelpBubblePage} />
       <Route path="/about" component={AboutSystem} />
       <Route path="/embed" component={EmbedForm} />
       <Route component={NotFound} />
