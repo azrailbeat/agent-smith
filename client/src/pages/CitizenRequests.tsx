@@ -328,6 +328,20 @@ const CitizenRequests = () => {
     } catch (error) {
       console.error("Ошибка при получении результатов агента:", error);
     }
+    
+    // Также получаем записи блокчейна для этого запроса
+    fetchBlockchainRecords(requestId);
+  }
+  
+  // Функция для получения записей блокчейна для обращения
+  const fetchBlockchainRecords = async (requestId: number) => {
+    try {
+      const response = await apiRequest("GET", `/api/blockchain/records/entity/citizen_request/${requestId}`);
+      const records = await response.json();
+      setBlockchainRecords(prev => ({ ...prev, [requestId]: records }));
+    } catch (error) {
+      console.error("Ошибка при получении записей блокчейна:", error);
+    }
   };
 
   // Функция для сохранения записи в блокчейне
@@ -858,6 +872,8 @@ const CitizenRequests = () => {
                                   onClick={() => {
                                     setSelectedRequest(request);
                                     setIsViewDetailsOpen(true);
+                                    fetchAgentResults(request.id);
+                                    fetchBlockchainRecords(request.id);
                                   }}
                                 >
                                   <div className="flex justify-between items-start mb-2">
@@ -1521,7 +1537,7 @@ const CitizenRequests = () => {
                         </div>
                       )}
                       
-                      {/* Запись в блокчейн, если была */}
+                      {/* Записи в блокчейн */}
                       {selectedRequest?.blockchainHash && (
                         <div className="relative">
                           <div className="absolute w-6 h-6 bg-green-600 rounded-full flex items-center justify-center -left-[26px] mt-0 text-white">
@@ -1529,7 +1545,7 @@ const CitizenRequests = () => {
                           </div>
                           <div>
                             <div className="flex items-center">
-                              <span className="font-medium">Запись в блокчейн</span>
+                              <span className="font-medium">Первичная запись в блокчейн</span>
                               <span className="text-xs text-gray-500 ml-auto">
                                 {selectedRequest && new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}
                               </span>
@@ -1549,6 +1565,39 @@ const CitizenRequests = () => {
                           </div>
                         </div>
                       )}
+                      
+                      {/* Дополнительные записи блокчейна */}
+                      {selectedRequest && blockchainRecords[selectedRequest.id]?.length > 0 && 
+                        blockchainRecords[selectedRequest.id].map((record, index) => (
+                          <div className="relative" key={`blockchain-record-${index}`}>
+                            <div className="absolute w-6 h-6 bg-green-600 rounded-full flex items-center justify-center -left-[26px] mt-0 text-white">
+                              <Database className="h-3 w-3" />
+                            </div>
+                            <div>
+                              <div className="flex items-center">
+                                <span className="font-medium">{record.action || 'Запись в блокчейн'}</span>
+                                <span className="text-xs text-gray-500 ml-auto">
+                                  {new Date(record.timestamp || record.createdAt).toLocaleString('ru-RU')}
+                                </span>
+                              </div>
+                              <div className="text-sm mt-1 text-gray-600">
+                                {record.details || 'Данные обновлены в блокчейне'}
+                              </div>
+                              <div className="mt-2 p-2 bg-green-50 rounded text-xs font-mono text-green-800">
+                                <div className="flex items-center">
+                                  <Database className="h-3 w-3 inline mr-1" />
+                                  Hash: {record.blockchainHash?.substring(0, 20) || record.transactionHash?.substring(0, 20)}...
+                                </div>
+                                {record.metadata && (
+                                  <div className="mt-1 pt-1 border-t border-green-200">
+                                    Метаданные: {JSON.stringify(record.metadata).substring(0, 100)}...
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      }
                       
                       {/* Завершение обращения, если было */}
                       {selectedRequest?.status === 'completed' && (
