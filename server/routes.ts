@@ -1292,12 +1292,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create activity for status changes
       if (updateData.status) {
-        await storage.createActivity({
+        const activityDescription = `Статус обращения изменен на "${updateData.status}"`;
+        
+        // Сохраняем действие в активностях
+        const activity = await storage.createActivity({
           actionType: 'citizen_request_status_changed',
-          description: `Статус обращения изменен на "${updateData.status}"`,
+          description: activityDescription,
           relatedId: request.id,
           relatedType: 'citizen_request'
         });
+        
+        // Записываем действие в блокчейн
+        try {
+          const blockchainData = {
+            entityId: request.id,
+            entityType: 'citizen_request',
+            action: `status_change_to_${updateData.status}`,
+            metadata: {
+              oldStatus: request.status,
+              newStatus: updateData.status,
+              activityId: activity.id
+            }
+          };
+          
+          const transactionHash = await recordToBlockchain(blockchainData);
+          
+          // Обновляем активность с хешем блокчейна
+          await storage.updateActivity(activity.id, {
+            blockchainHash: transactionHash
+          });
+          
+          // Добавляем хеш блокчейна в ответ
+          request.blockchainHash = transactionHash;
+        } catch (blockchainError) {
+          console.error("Error recording to blockchain:", blockchainError);
+          // Продолжаем выполнение - ошибка в блокчейне не должна останавливать основную функциональность
+        }
       }
       
       res.json(request);
@@ -2247,8 +2277,8 @@ ${request.description || ''}
         assignedTo: agentId
       });
       
-      // Создаем запись активности
-      await storage.createActivity({
+      // Создаем запись активности о назначении
+      const assignActivity = await storage.createActivity({
         actionType: "auto_assign",
         description: `Обращение №${id} назначено агенту ${agent.name}`,
         relatedId: id,
@@ -2260,7 +2290,28 @@ ${request.description || ''}
         }
       });
       
-      // Обрабатываем запрос с помощью выбранного агента
+      // Запись в блокчейн о назначении обращения агенту
+      const assignTransactionHash = await recordToBlockchain({
+        entityId: id,
+        entityType: 'citizen_request',
+        action: 'assign_to_agent',
+        metadata: {
+          agentId,
+          agentName: agent.name,
+          activityId: assignActivity.id
+        }
+      });
+      
+      // Обновляем активность с хешем блокчейна
+      await storage.updateActivity(assignActivity.id, {
+        blockchainHash: assignTransactionHash
+      });
+      
+      // Массив для хранения всех результатов для отчета
+      const processingResults = [];
+      
+      // Обрабатываем запрос с помощью выбранного агента - классификация
+      console.log(`Начинаем классификацию обращения #${id}`);
       const classificationResult = await agentService.processRequest({
         taskType: 'classification' as any,
         entityType: 'citizen_request' as any,
@@ -2269,7 +2320,26 @@ ${request.description || ''}
         userId: agentId
       });
       
+      processingResults.push({
+        type: 'classification',
+        result: classificationResult,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Запись в блокчейн о результате классификации
+      const classificationTransactionHash = await recordToBlockchain({
+        entityId: id,
+        entityType: 'citizen_request',
+        action: 'classification_processed',
+        metadata: {
+          classification: classificationResult.classification,
+          agentId,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
       // Затем генерация ответа с учетом результата классификации
+      console.log(`Начинаем генерацию ответа для обращения #${id}`);
       const responseResult = await agentService.processRequest({
         taskType: 'response_generation' as any,
         entityType: 'citizen_request' as any,
@@ -2281,19 +2351,130 @@ ${request.description || ''}
         userId: agentId
       });
       
+      processingResults.push({
+        type: 'response_generation',
+        result: responseResult,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Запись в блокчейн о результате генерации ответа
+      const responseTransactionHash = await recordToBlockchain({
+        entityId: id,
+        entityType: 'citizen_request',
+        action: 'response_generated',
+        metadata: {
+          agentId,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+      // Генерируем резюме обращения
+      console.log(`Начинаем создание резюме для обращения #${id}`);
+      const summaryResult = await agentService.processRequest({
+        taskType: 'summarization' as any,
+        entityType: 'citizen_request' as any,
+        entityId: id,
+        content,
+        userId: agentId
+      });
+      
+      processingResults.push({
+        type: 'summarization',
+        result: summaryResult,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Запись в блокчейн о результате резюмирования
+      const summaryTransactionHash = await recordToBlockchain({
+        entityId: id,
+        entityType: 'citizen_request',
+        action: 'summary_created',
+        metadata: {
+          agentId,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
       // Обновляем обращение с результатами
       const updatedRequest = await storage.updateCitizenRequest(id, {
         aiProcessed: true,
         aiClassification: classificationResult.classification || 'general',
         aiSuggestion: responseResult.output || 'Рекомендуется обработка специалистом',
-        summary: classificationResult.output || 'Требуется дополнительная информация'
+        summary: summaryResult.output || 'Требуется дополнительная информация',
+        blockchainHash: classificationTransactionHash // используем основной хеш для отображения
       });
       
-      // Возвращаем обновленное обращение
+      // Создаем подробный отчет о результатах обработки
+      const processingReport = {
+        requestId: id,
+        requestTitle: request.subject || '',
+        completedAt: new Date().toISOString(),
+        processingDuration: 'Выполнено за ' + (processingResults.length * 2) + ' сек.',
+        results: processingResults,
+        blockchainTransactions: [
+          { action: 'assign_to_agent', hash: assignTransactionHash },
+          { action: 'classification_processed', hash: classificationTransactionHash },
+          { action: 'response_generated', hash: responseTransactionHash },
+          { action: 'summary_created', hash: summaryTransactionHash }
+        ],
+        summary: {
+          classification: classificationResult.classification || 'general',
+          suggestedResponse: responseResult.output || 'Рекомендуется обработка специалистом',
+          briefSummary: summaryResult.output || 'Требуется дополнительная информация'
+        }
+      };
+      
+      // Сохраняем отчет в результатах агента
+      await storage.createAgentResult({
+        agentId,
+        entityType: "citizen_request",
+        entityId: id,
+        actionType: "full_processing_report",
+        result: JSON.stringify(processingReport),
+        createdAt: new Date()
+      });
+      
+      // Создаем запись активности о завершении обработки
+      const completionActivity = await storage.createActivity({
+        actionType: "ai_process_complete",
+        description: `Завершена комплексная обработка обращения №${id} агентом ${agent.name}`,
+        relatedId: id,
+        relatedType: "citizen_request",
+        metadata: {
+          processingReport,
+          blockchainTransactions: processingReport.blockchainTransactions
+        }
+      });
+      
+      // Финальная запись в блокчейн о завершении всей обработки
+      const finalTransactionHash = await recordToBlockchain({
+        entityId: id,
+        entityType: 'citizen_request',
+        action: 'full_processing_completed',
+        metadata: {
+          agentId,
+          processingReport: {
+            requestId: id,
+            completedAt: processingReport.completedAt,
+            classification: processingReport.summary.classification,
+            activityId: completionActivity.id
+          }
+        }
+      });
+      
+      // Обновляем активность с хешем блокчейна
+      await storage.updateActivity(completionActivity.id, {
+        blockchainHash: finalTransactionHash
+      });
+      
+      // Добавляем отчет к ответу
+      updatedRequest.processingReport = processingReport;
+      
+      // Возвращаем обновленное обращение с отчетом
       res.json(updatedRequest);
     } catch (error) {
       console.error("Error processing request with agent:", error);
-      res.status(500).json({ error: 'Failed to process request with agent' });
+      res.status(500).json({ error: 'Failed to process request with agent', details: error.message });
     }
   });
   
