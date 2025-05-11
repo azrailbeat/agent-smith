@@ -211,6 +211,7 @@ const CitizenRequests = () => {
 
   // Состояние для хранения результатов агентов по ID запроса
   const [agentResults, setAgentResults] = useState<{[key: number]: AgentResult[]}>({});
+  const [blockchainRecords, setBlockchainRecords] = useState<{[key: number]: any[]}>({});
   
   // Запрос доступных агентов
   const { data: availableAgents = [] } = useQuery<Agent[]>({
