@@ -22,6 +22,7 @@ import AIAgents from "@/pages/AIAgents";
 import DAOVoting from "@/pages/DAOVoting";
 import UserProfile from "@/pages/UserProfile";
 import HelpBubblePage from "@/pages/HelpBubblePage";
+import EmbedForm from "@/pages/EmbedForm";
 import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
 
@@ -44,12 +45,16 @@ function Router() {
       <Route path="/dao-voting" component={DAOVoting} />
       <Route path="/help-bubble" component={HelpBubblePage} />
       <Route path="/about" component={AboutSystem} />
+      <Route path="/embed" component={EmbedForm} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
+  // Проверка, если страница встроена как iframe или это страница embed
+  const isEmbedded = window.location.pathname.startsWith('/embed') || window.self !== window.top;
+  
   // In a real app, we would get this from an auth system
   const [currentUser, setCurrentUser] = useState<User>({
     id: 1,
@@ -110,49 +115,59 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-white text-slate-800">
-        <div className="flex flex-1">
-          {/* Настольная версия сайдбара */}
-          <Sidebar 
-            collapsed={sidebarCollapsed} 
-            onToggle={toggleSidebar} 
-            currentUser={currentUser} 
-            isMobile={isMobile}
-            visible={sidebarVisible}
-          />
-          
-          {/* Затемняющий оверлей при открытом сайдбаре на мобильных */}
-          {isMobile && sidebarVisible && (
-            <div 
-              className="fixed inset-0 bg-black/30 z-20 backdrop-blur-sm"
-              onClick={() => setSidebarVisible(false)}
-              style={{ animation: 'fadeIn 0.2s ease-in-out' }}
-            ></div>
-          )}
-          
-          {/* Кнопка открытия меню на мобильных */}
-          {isMobile && !sidebarVisible && (
-            <button 
-              className="fixed left-4 top-4 z-20 p-2 bg-white rounded-full shadow-md text-slate-700 hover:text-emerald-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-              onClick={() => setSidebarVisible(true)}
-              aria-label="Открыть меню"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          )}
-          
-          <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${
-            isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
-          }`}>
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-              <Router />
-            </div>
+      {isEmbedded ? (
+        // Встроенный режим без хедера, футера и сайдбара
+        <div className="min-h-screen flex flex-col bg-white text-slate-800">
+          <main className="flex-1">
+            <Router />
           </main>
         </div>
-        <Footer />
-      </div>
+      ) : (
+        // Обычный режим с полным интерфейсом
+        <div className="min-h-screen flex flex-col bg-white text-slate-800">
+          <div className="flex flex-1">
+            {/* Настольная версия сайдбара */}
+            <Sidebar 
+              collapsed={sidebarCollapsed} 
+              onToggle={toggleSidebar} 
+              currentUser={currentUser} 
+              isMobile={isMobile}
+              visible={sidebarVisible}
+            />
+            
+            {/* Затемняющий оверлей при открытом сайдбаре на мобильных */}
+            {isMobile && sidebarVisible && (
+              <div 
+                className="fixed inset-0 bg-black/30 z-20 backdrop-blur-sm"
+                onClick={() => setSidebarVisible(false)}
+                style={{ animation: 'fadeIn 0.2s ease-in-out' }}
+              ></div>
+            )}
+            
+            {/* Кнопка открытия меню на мобильных */}
+            {isMobile && !sidebarVisible && (
+              <button 
+                className="fixed left-4 top-4 z-20 p-2 bg-white rounded-full shadow-md text-slate-700 hover:text-emerald-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                onClick={() => setSidebarVisible(true)}
+                aria-label="Открыть меню"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
+            
+            <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${
+              isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
+            }`}>
+              <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <Router />
+              </div>
+            </main>
+          </div>
+          <Footer />
+        </div>
+      )}
       <Toaster />
     </QueryClientProvider>
   );

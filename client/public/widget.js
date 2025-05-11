@@ -1,22 +1,45 @@
 /**
  * Agent Smith Виджет для обращений граждан
  * Виджет для встраивания формы обращений на внешние сайты
+ * Поддерживает интеграцию с bolt.new и другими платформами
  */
 
 (function() {
   // Основной объект виджета
   window.AgentSmithWidget = {
+    // Версия виджета
+    version: '1.2.0',
+    
+    // Определение окружения
+    environment: {
+      isBolt: function() {
+        return typeof window !== 'undefined' && 
+               (window.location.hostname.includes('bolt.new') || 
+                window.location.hostname.includes('stackblitz.com'));
+      },
+      isLocalhost: function() {
+        return typeof window !== 'undefined' && 
+               (window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1');
+      }
+    },
+    
     /**
      * Инициализация виджета
      * @param {string} containerId - ID контейнера для виджета или сам элемент
      * @param {string} configBase64 - Конфигурация виджета в формате base64
+     * @param {Object} options - Дополнительные опции (apiUrl, mode)
      */
-    init: function(containerId, configBase64) {
+    init: function(containerId, configBase64, options = {}) {
       try {
         // Получаем настройки из base64 с поддержкой Unicode
         const decodedConfig = atob(configBase64);
         // Используем decodeURIComponent напрямую для декодирования
         const config = JSON.parse(decodeURIComponent(decodedConfig));
+        
+        // Добавляем дополнительные опции
+        config.apiUrl = options.apiUrl || "https://agent-smith.replit.app/api/citizen-requests";
+        config.mode = options.mode || "widget"; // widget, iframe, api
         
         // Находим контейнер
         const container = typeof containerId === 'string' 
@@ -28,11 +51,40 @@
           return;
         }
         
+        // Если мы на bolt.new, добавляем спец. стили для улучшенной интеграции
+        if (this.environment.isBolt()) {
+          this.injectBoltStyles();
+        }
+        
         // Рендерим виджет
         this.renderWidget(container, config);
       } catch (err) {
         console.error('AgentSmithWidget: Ошибка инициализации', err);
       }
+    },
+    
+    /**
+     * Добавляет специальные стили для bolt.new
+     */
+    injectBoltStyles: function() {
+      const style = document.createElement('style');
+      style.textContent = `
+        /* Стили для улучшенной интеграции с bolt.new */
+        .asw-container {
+          font-family: -apple-system, system-ui, sans-serif !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1) !important;
+          border-radius: 8px !important;
+          margin: 10px 0 !important;
+        }
+        
+        /* Скорректированные отступы для bolt.new */
+        .bolt-theme .asw-container,
+        [data-theme="bolt"] .asw-container {
+          margin: 1rem auto !important;
+          max-width: 95% !important;
+        }
+      `;
+      document.head.appendChild(style);
     },
     
     /**

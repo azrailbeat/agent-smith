@@ -96,11 +96,19 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // CORS middleware для API маршрутов, используемых внешними виджетами
-  app.use(['/widget.js', '/api/citizen-requests'], (req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  // CORS middleware для API маршрутов, используемых внешними виджетами и bolt.new
+  app.use(['/widget.js', '/api/citizen-requests', '/api/bolt-templates', '/api/widget-integration', '/api/bolt'], (req, res, next) => {
+    // Разрешить запросы с bolt.new и всех его поддоменов
+    const origin = req.headers.origin;
+    if (origin && (origin.includes('bolt.new') || origin.includes('localhost'))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-API-Key');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     
     // Предварительные запросы OPTIONS
     if (req.method === 'OPTIONS') {
@@ -3568,6 +3576,825 @@ ${request.description || ''}
     }
   });
   
+  // API для шаблонов bolt.new
+  app.get('/api/bolt-templates', async (req, res) => {
+    try {
+      // Получаем список доступных шаблонов для bolt.new
+      const templates = [
+        {
+          id: 'landing-page',
+          name: 'Лендинг с формой обращения',
+          description: 'Одностраничный сайт с встроенной формой обращения граждан Agent Smith',
+          tech: 'html-css-js',
+          difficulty: 'easy',
+          thumbnail: '/assets/templates/landing-template.png',
+          category: 'government'
+        },
+        {
+          id: 'react-spa',
+          name: 'React SPA с виджетом',
+          description: 'React одностраничное приложение с встроенным виджетом Agent Smith',
+          tech: 'react',
+          difficulty: 'medium',
+          thumbnail: '/assets/templates/react-template.png',
+          category: 'business'
+        },
+        {
+          id: 'vue-business',
+          name: 'Vue бизнес-сайт',
+          description: 'Многостраничный сайт на Vue с интегрированной формой обращений',
+          tech: 'vue',
+          difficulty: 'medium',
+          thumbnail: '/assets/templates/vue-template.png',
+          category: 'business'
+        },
+        {
+          id: 'next-public-portal',
+          name: 'Next.js портал',
+          description: 'Next.js портал государственного учреждения с формой обращений',
+          tech: 'next',
+          difficulty: 'advanced',
+          thumbnail: '/assets/templates/next-template.png',
+          category: 'government'
+        }
+      ];
+      
+      return res.json({
+        success: true,
+        templates
+      });
+    } catch (error) {
+      console.error('Ошибка при получении шаблонов bolt.new:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Ошибка при получении шаблонов'
+      });
+    }
+  });
+  
+  // Получение конкретного шаблона по ID
+  app.get('/api/bolt-templates/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // В реальном приложении здесь был бы запрос к базе данных
+      // Для демонстрации возвращаем тестовые данные
+      
+      const templateData = {
+        id,
+        name: id === 'landing-page' ? 'Лендинг с формой обращения' : 'Шаблон',
+        files: {
+          'index.html': getTemplateContent(id, 'index.html'),
+          'style.css': getTemplateContent(id, 'style.css'),
+          'script.js': getTemplateContent(id, 'script.js')
+        },
+        widgetConfig: {
+          containerId: 'agent-smith-form',
+          title: 'Обращение граждан',
+          subtitle: 'Отправьте ваше обращение через форму',
+          primaryColor: '#1e40af',
+          theme: 'light',
+          fields: [
+            {
+              id: 'name',
+              type: 'text',
+              label: 'ФИО',
+              placeholder: 'Введите ваше полное имя',
+              required: true
+            },
+            {
+              id: 'email',
+              type: 'email',
+              label: 'Email',
+              placeholder: 'Введите ваш email',
+              required: true
+            },
+            {
+              id: 'subject',
+              type: 'text',
+              label: 'Тема обращения',
+              placeholder: 'Введите тему обращения',
+              required: true
+            },
+            {
+              id: 'message',
+              type: 'textarea',
+              label: 'Текст обращения',
+              placeholder: 'Подробно опишите ваше обращение',
+              required: true
+            }
+          ]
+        }
+      };
+      
+      return res.json({
+        success: true,
+        template: templateData
+      });
+    } catch (error) {
+      console.error('Ошибка при получении шаблона bolt.new:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Ошибка при получении шаблона'
+      });
+    }
+  });
+  
+  // API для интеграции виджета
+  app.post('/api/widget-integration', async (req, res) => {
+    try {
+      const { integrationMethod, websiteUrl, widgetConfig } = req.body;
+      
+      if (!integrationMethod || !widgetConfig) {
+        return res.status(400).json({
+          success: false,
+          message: 'Отсутствуют обязательные параметры'
+        });
+      }
+      
+      // Генерируем код для выбранного метода интеграции
+      let integrationCode = '';
+      const encodedConfig = Buffer.from(encodeURIComponent(JSON.stringify(widgetConfig))).toString('base64');
+      const widgetId = 'agent-smith-widget-' + Date.now();
+      
+      switch (integrationMethod) {
+        case 'js':
+          // JavaScript виджет
+          integrationCode = `
+<!-- Agent Smith Widget -->
+<div id="${widgetId}"></div>
+<script src="https://agent-smith.replit.app/widget.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    AgentSmithWidget.init('${widgetId}', '${encodedConfig}');
+  });
+</script>`;
+          break;
+          
+        case 'iframe':
+          // iFrame интеграция
+          const iframeUrl = `https://agent-smith.replit.app/embed/form?config=${encodedConfig}`;
+          integrationCode = `
+<!-- Agent Smith Widget (iframe) -->
+<iframe 
+  src="${iframeUrl}" 
+  width="100%" 
+  height="600px" 
+  style="border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);" 
+  title="Agent Smith Form">
+</iframe>`;
+          break;
+          
+        case 'api':
+          // API интеграция
+          integrationCode = `
+// Agent Smith API Integration
+// Отправка обращения через API
+
+const submitForm = async (formData) => {
+  try {
+    const response = await fetch('https://agent-smith.replit.app/api/citizen-requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fullName: formData.fullName,
+        contactInfo: formData.contactInfo,
+        subject: formData.subject,
+        description: formData.description,
+        requestType: formData.requestType || 'Обращение через API'
+      })
+    });
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    throw error;
+  }
+};
+
+// Пример использования:
+// submitForm({
+//   fullName: 'Иванов Иван Иванович',
+//   contactInfo: 'ivanov@example.com',
+//   subject: 'Тема обращения',
+//   description: 'Текст обращения...'
+// }).then(result => console.log(result));`;
+          break;
+          
+        case 'bolt':
+          // Специальный код для bolt.new
+          integrationCode = `
+<!-- Agent Smith Widget для bolt.new -->
+<div id="${widgetId}" class="bolt-theme"></div>
+<script src="https://agent-smith.replit.app/widget.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    AgentSmithWidget.init('${widgetId}', '${encodedConfig}', {
+      mode: 'widget'
+    });
+  });
+</script>`;
+          break;
+          
+        default:
+          return res.status(400).json({
+            success: false,
+            message: 'Неизвестный метод интеграции'
+          });
+      }
+      
+      return res.json({
+        success: true,
+        integrationCode,
+        widgetId,
+        encodedConfig
+      });
+    } catch (error) {
+      console.error('Ошибка при генерации кода интеграции:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Ошибка при генерации кода интеграции'
+      });
+    }
+  });
+  
+  /**
+   * Получает содержимое файла шаблона для bolt.new
+   */
+  function getTemplateContent(templateId, filename) {
+    // В реальном приложении здесь был бы запрос к файловой системе или базе данных
+    
+    if (templateId === 'landing-page') {
+      if (filename === 'index.html') {
+        return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Государственный портал</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <img src="https://agent-smith.replit.app/assets/logo.png" alt="Логотип">
+        <h1>Гос<span>Портал</span></h1>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#services">Услуги</a></li>
+          <li><a href="#about">О нас</a></li>
+          <li><a href="#contact">Контакты</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+  
+  <section class="hero">
+    <div class="container">
+      <h2>Быстрое и удобное взаимодействие с государственными органами</h2>
+      <p>Отправьте ваше обращение онлайн и получите ответ в кратчайшие сроки</p>
+      <a href="#form" class="btn primary">Отправить обращение</a>
+    </div>
+  </section>
+  
+  <section id="services" class="services">
+    <div class="container">
+      <h2>Наши услуги</h2>
+      <div class="services-grid">
+        <div class="service-card">
+          <div class="icon">📄</div>
+          <h3>Обращения граждан</h3>
+          <p>Быстрая обработка обращений с использованием ИИ</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">📋</div>
+          <h3>Справки и документы</h3>
+          <p>Получение справок и выписок в электронном виде</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">📊</div>
+          <h3>Отчетность</h3>
+          <p>Сдача отчетности в электронном виде</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <section id="form" class="form-section">
+    <div class="container">
+      <h2>Форма обращения</h2>
+      <div id="agent-smith-form"></div>
+    </div>
+  </section>
+  
+  <section id="about" class="about">
+    <div class="container">
+      <h2>О нас</h2>
+      <p>Мы работаем для того, чтобы сделать взаимодействие с государственными органами простым и удобным. Наша цель - обеспечить качественное обслуживание граждан с использованием современных технологий.</p>
+    </div>
+  </section>
+  
+  <section id="contact" class="contact">
+    <div class="container">
+      <h2>Контакты</h2>
+      <div class="contact-info">
+        <div>
+          <h3>Адрес</h3>
+          <p>г. Москва, ул. Примерная, д. 123</p>
+        </div>
+        <div>
+          <h3>Телефон</h3>
+          <p>+7 (123) 456-78-90</p>
+        </div>
+        <div>
+          <h3>Email</h3>
+          <p>info@gosportal.example</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 ГосПортал. Все права защищены.</p>
+    </div>
+  </footer>
+
+  <script src="https://agent-smith.replit.app/widget.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>`;
+      } else if (filename === 'style.css') {
+        return `* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+header {
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo img {
+  width: 40px;
+  margin-right: 10px;
+}
+
+.logo h1 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.logo span {
+  color: #1e40af;
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+}
+
+nav ul li {
+  margin-left: 20px;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+nav ul li a:hover {
+  color: #1e40af;
+}
+
+.hero {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  padding: 80px 0;
+  text-align: center;
+}
+
+.hero h2 {
+  font-size: 36px;
+  margin-bottom: 20px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero p {
+  font-size: 18px;
+  margin-bottom: 30px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.btn {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn.primary {
+  background-color: white;
+  color: #1e40af;
+}
+
+.btn.primary:hover {
+  background-color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+section {
+  padding: 80px 0;
+}
+
+section h2 {
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 32px;
+  color: #1e40af;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.service-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.service-card .icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.service-card h3 {
+  margin-bottom: 15px;
+  color: #1e40af;
+}
+
+.form-section {
+  background-color: #f8fafc;
+}
+
+.contact-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.contact-info h3 {
+  color: #1e40af;
+  margin-bottom: 10px;
+}
+
+footer {
+  background-color: #1e40af;
+  color: white;
+  padding: 20px 0;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  header .container {
+    flex-direction: column;
+  }
+  
+  nav ul {
+    margin-top: 15px;
+  }
+  
+  .hero h2 {
+    font-size: 28px;
+  }
+  
+  section {
+    padding: 60px 0;
+  }
+}`;
+      } else if (filename === 'script.js') {
+        return `// Скрипт для демо-сайта с виджетом Agent Smith
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Инициализация виджета Agent Smith
+  const widgetConfig = {
+    title: "Отправить обращение",
+    subtitle: "Заполните форму и получите ответ в кратчайшие сроки",
+    theme: "light",
+    primaryColor: "#1e40af",
+    buttonText: "Отправить",
+    successMessage: "Ваше обращение отправлено!",
+    fields: [
+      {
+        id: "name",
+        type: "text",
+        label: "ФИО",
+        placeholder: "Введите ваше полное имя",
+        required: true
+      },
+      {
+        id: "email",
+        type: "email",
+        label: "Email",
+        placeholder: "Введите ваш email для связи",
+        required: true
+      },
+      {
+        id: "tel",
+        type: "tel",
+        label: "Телефон",
+        placeholder: "Введите ваш телефон",
+        required: false
+      },
+      {
+        id: "requestType",
+        type: "select",
+        label: "Тип обращения",
+        placeholder: "Выберите тип обращения",
+        required: true,
+        options: [
+          "Жалоба",
+          "Предложение",
+          "Запрос информации",
+          "Благодарность",
+          "Иное"
+        ]
+      },
+      {
+        id: "subject",
+        type: "text",
+        label: "Тема обращения",
+        placeholder: "Кратко опишите тему обращения",
+        required: true
+      },
+      {
+        id: "message",
+        type: "textarea",
+        label: "Текст обращения",
+        placeholder: "Подробно опишите ваше обращение",
+        required: true
+      },
+      {
+        id: "agreement",
+        type: "checkbox",
+        label: "Согласие на обработку персональных данных",
+        placeholder: "Я согласен на обработку моих персональных данных",
+        required: true
+      }
+    ]
+  };
+  
+  // Кодируем настройки в base64
+  const encodedConfig = btoa(encodeURIComponent(JSON.stringify(widgetConfig)));
+  
+  // Инициализируем виджет
+  if (typeof AgentSmithWidget !== 'undefined') {
+    AgentSmithWidget.init('agent-smith-form', encodedConfig);
+  }
+  
+  // Плавная прокрутка для навигации
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      const targetId = this.getAttribute('href');
+      const targetElement = document.querySelector(targetId);
+      
+      if (targetElement) {
+        window.scrollTo({
+          top: targetElement.offsetTop - 80,
+          behavior: 'smooth'
+        });
+      }
+    });
+  });
+});`;
+      }
+    }
+    
+    // Для других шаблонов можно добавить похожую логику
+    
+    return `// Шаблон для ${templateId} - ${filename} будет доступен позже`;
+  }
+  
+  // API маршруты для интеграции с bolt.new
+  
+  // Получение доступных шаблонов для bolt.new
+  app.get('/api/bolt/templates', (req, res) => {
+    try {
+      const templates = [
+        {
+          id: 'landing',
+          name: 'Лендинг страница',
+          description: 'Простая целевая страница с формой обращения',
+          imageUrl: '/templates/landing-preview.png',
+          category: 'business'
+        },
+        {
+          id: 'business',
+          name: 'Бизнес сайт',
+          description: 'Многостраничный бизнес сайт с формой контакта',
+          imageUrl: '/templates/business-preview.png',
+          category: 'business'
+        },
+        {
+          id: 'government',
+          name: 'Гос. учреждение',
+          description: 'Шаблон сайта для государственных учреждений',
+          imageUrl: '/templates/gov-preview.png',
+          category: 'government'
+        },
+        {
+          id: 'portfolio',
+          name: 'Портфолио',
+          description: 'Персональный сайт-портфолио с контактной формой',
+          imageUrl: '/templates/portfolio-preview.png',
+          category: 'personal'
+        },
+        {
+          id: 'ecommerce',
+          name: 'Интернет-магазин',
+          description: 'Шаблон интернет-магазина с формой обратной связи',
+          imageUrl: '/templates/ecommerce-preview.png',
+          category: 'business'
+        }
+      ];
+      
+      res.json({ success: true, templates });
+    } catch (error) {
+      console.error('Ошибка при получении шаблонов bolt.new:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при получении шаблонов' });
+    }
+  });
+  
+  // Получение конкретного шаблона по ID для bolt.new
+  app.get('/api/bolt/templates/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Найдем шаблон по ID
+      const template = {
+        id,
+        name: id === 'landing' ? 'Лендинг страница' :
+              id === 'business' ? 'Бизнес сайт' :
+              id === 'government' ? 'Гос. учреждение' :
+              id === 'portfolio' ? 'Портфолио' :
+              id === 'ecommerce' ? 'Интернет-магазин' : 'Неизвестный шаблон',
+        description: 'Шаблон сайта с интегрированной формой обращений Agent Smith',
+        files: {
+          'index.html': getTemplateContent(id, 'index.html'),
+          'style.css': getTemplateContent(id, 'style.css'),
+          'script.js': getTemplateContent(id, 'script.js')
+        },
+        integrationOptions: {
+          widget: {
+            code: `<!-- Agent Smith Widget -->
+<div id="agent-smith-widget"></div>
+<script src="https://agent-smith.replit.app/widget.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.AgentSmithWidget) {
+      AgentSmithWidget.init('agent-smith-widget', 'BASE64_CONFIG_HERE');
+    }
+  });
+</script>`
+          },
+          iframe: {
+            code: `<!-- Agent Smith Embedded Form -->
+<iframe 
+  src="https://agent-smith.replit.app/embed?config=BASE64_CONFIG_HERE" 
+  style="width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);"
+  title="Agent Smith Form"
+  loading="lazy"
+></iframe>`
+          },
+          api: {
+            code: `// Agent Smith API Integration
+// Замените YOUR_API_KEY на ваш API ключ
+
+// Отправка обращения через API
+async function submitRequestToAgentSmith(requestData) {
+  try {
+    const response = await fetch('https://agent-smith.replit.app/api/citizen-requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': 'YOUR_API_KEY',
+        'Origin': window.location.origin
+      },
+      body: JSON.stringify(requestData)
+    });
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Ошибка при отправке обращения:', error);
+    throw error;
+  }
+}`
+          }
+        }
+      };
+      
+      res.json({ success: true, template });
+    } catch (error) {
+      console.error('Ошибка при получении шаблона bolt.new:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при получении шаблона' });
+    }
+  });
+  
+  // Генерация конфигурации для bolt.new
+  app.post('/api/bolt/generate-config', (req, res) => {
+    try {
+      const { templateId, integrationMethod, widgetConfig } = req.body;
+      
+      if (!templateId || !integrationMethod || !widgetConfig) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Не указаны обязательные параметры' 
+        });
+      }
+      
+      // Создаем конфигурацию для bolt.new
+      const boltConfig = {
+        name: `Agent Smith - ${templateId}`,
+        description: `Шаблон сайта с интеграцией формы обращений Agent Smith. Метод интеграции: ${
+          integrationMethod === 'widget' ? 'JavaScript виджет' : 
+          integrationMethod === 'iframe' ? 'Встроенный iframe' : 'API'
+        }`,
+        template: templateId,
+        integrationMethod,
+        agentSmithConfig: widgetConfig,
+        // Добавить ключи для bolt.new
+        boltVersion: "1.0.0",
+        stack: templateId === 'landing' ? 'html' : 'react',
+        dependencies: templateId === 'landing' ? [] : ['react', 'react-dom']
+      };
+      
+      res.json({ 
+        success: true, 
+        config: boltConfig,
+        base64Config: Buffer.from(JSON.stringify(boltConfig)).toString('base64')
+      });
+    } catch (error) {
+      console.error('Ошибка при генерации конфигурации bolt.new:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при генерации конфигурации' });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 

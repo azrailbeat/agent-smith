@@ -21,6 +21,7 @@ import { SecretField } from "@/components/ui/secret-field";
 import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
 import FormFieldEditor, { FormField } from "@/components/widget/FormFieldEditor";
 import WidgetPreview from "@/components/widget/WidgetPreview";
+import BoltTemplateGenerator from "@/components/bolt/BoltTemplateGenerator";
 
 // Integration form for add/edit
 interface IntegrationFormProps {
@@ -874,6 +875,7 @@ const Settings = () => {
           <TabsTrigger value="agents">AI Агенты</TabsTrigger>
           <TabsTrigger value="api">API для обращений</TabsTrigger>
           <TabsTrigger value="widget">Виджет для сайта</TabsTrigger>
+          <TabsTrigger value="bolt">Bolt.new</TabsTrigger>
           <TabsTrigger value="monitoring">Мониторинг LLM</TabsTrigger>
         </TabsList>
         
@@ -1656,6 +1658,26 @@ const Settings = () => {
               <Button>Сохранить изменения</Button>
             </CardFooter>
           </Card>
+        </TabsContent>
+        
+        {/* Bolt.new Tab */}
+        <TabsContent value="bolt">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Интеграция с bolt.new</h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.open("https://bolt.new", "_blank")}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" /> Перейти на bolt.new
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-6">
+              <BoltTemplateGenerator widgetConfig={widgetSettings} />
+            </div>
+          </div>
         </TabsContent>
         
         {/* Widget Tab */}
