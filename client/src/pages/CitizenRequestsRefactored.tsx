@@ -30,6 +30,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection';
@@ -582,10 +589,28 @@ const CitizenRequests: React.FC = () => {
             <Bot className="h-3 w-3 mr-1" />
             Авто-обработка
           </Button>
-          <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center text-xs gap-1 h-8">
-            <span>Все статусы</span>
-            <ChevronDown className="h-3 w-3" />
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center text-xs gap-1 h-8 cursor-pointer hover:bg-gray-200 transition-colors">
+                <span>{statusFilter === 'all' ? 'Все статусы' : 
+                        statusFilter === 'new' ? 'Новые' :
+                        statusFilter === 'inProgress' ? 'В работе' :
+                        statusFilter === 'waiting' ? 'Ожидание' :
+                        statusFilter === 'completed' ? 'Выполненные' : 'Все статусы'
+                      }</span>
+                <ChevronDown className="h-3 w-3" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
+                <DropdownMenuRadioItem value="all">Все статусы</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="new">Новые</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="inProgress">В работе</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="waiting">Ожидание</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="completed">Выполненные</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
             <RefreshCw className="h-3 w-3 mr-1" />
             Обновить
