@@ -167,6 +167,7 @@ const CitizenRequests: React.FC = () => {
   // Создаем реф для диалога автообработки для доступа к его методам
   const autoProcessDialogRef = useRef<AutoProcessDialogRef>(null);
   const [audioUrl, setAudioUrl] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [agentSettings, setAgentSettings] = useState<AgentSettings>({
     enabled: false,
     autoProcess: false,
@@ -297,7 +298,17 @@ const CitizenRequests: React.FC = () => {
       columnOrder: ["new", "inProgress", "waiting", "completed"],
     };
 
-    citizenRequests.forEach((request) => {
+    // Фильтруем запросы по статусу, если выбран не "all"
+    const filteredRequests = statusFilter === 'all' 
+      ? citizenRequests 
+      : citizenRequests.filter(request => {
+          if (statusFilter === 'inProgress') {
+            return request.status === 'inProgress' || request.status === 'in_progress';
+          }
+          return request.status === statusFilter;
+        });
+
+    filteredRequests.forEach((request) => {
       switch (request.status) {
         case "new":
           newBoard.columns.new.requestIds.push(request.id);
@@ -318,7 +329,7 @@ const CitizenRequests: React.FC = () => {
     });
 
     setBoard(newBoard);
-  }, [citizenRequests]);
+  }, [citizenRequests, statusFilter]);
 
   // Обработчик завершения перетаскивания
   const onDragEnd = (result: DropResult) => {
