@@ -53,7 +53,9 @@ function Router() {
 
 function App() {
   // Проверка, если страница встроена как iframe или это страница embed
-  const isEmbedded = window.location.pathname.startsWith('/embed') || window.self !== window.top;
+  // Используем только проверку по пути, так как проверка window.self !== window.top может
+  // некорректно работать в среде разработки
+  const isEmbedded = window.location.pathname.startsWith('/embed');
   
   // In a real app, we would get this from an auth system
   const [currentUser, setCurrentUser] = useState<User>({
