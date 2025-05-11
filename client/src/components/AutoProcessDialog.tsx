@@ -134,11 +134,18 @@ const AutoProcessDialog = forwardRef<AutoProcessDialogRef, AutoProcessDialogProp
   });
 
   /**
-   * Фильтруем агентов по типу (citizen_requests)
+   * Фильтруем агентов по типу (citizen_requests) и убираем дубликаты по имени
    */
-  const citizenRequestAgents = agents.filter(agent => 
-    agent.type === "citizen_requests"
-  );
+  const citizenRequestAgents = agents
+    .filter(agent => agent.type === "citizen_requests")
+    // Фильтр для удаления дубликатов - сохраняем только первого агента с уникальным именем
+    .reduce<Agent[]>((unique, agent) => {
+      const exists = unique.find(a => a.name === agent.name);
+      if (!exists) {
+        unique.push(agent);
+      }
+      return unique;
+    }, []);
   
   // Получаем список необработанных обращений
   const { data: requests = [] } = useQuery<CitizenRequest[]>({

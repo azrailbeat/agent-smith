@@ -225,6 +225,14 @@ const AgentSelectionDialog: React.FC<AgentSelectionDialogProps> = ({
               <div className="space-y-2">
                 {agents && agents
                   .filter((agent: Agent) => agent.isActive && ALLOWED_AGENT_TYPES.includes(agent.type))
+                  // Фильтр для удаления дубликатов - сохраняем только первого агента с уникальным именем+типом
+                  .reduce((unique: Agent[], agent: Agent) => {
+                    const exists = unique.find(a => a.name === agent.name && a.type === agent.type);
+                    if (!exists) {
+                      unique.push(agent);
+                    }
+                    return unique;
+                  }, [])
                   .map((agent: Agent) => (
                     <Card 
                       key={agent.id} 
