@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Integration, Agent } from "@shared/schema";
+import { Integration } from "@shared/schema";
 import { SecretField } from "@/components/ui/secret-field";
 import { HelpBubble } from "@/components/ui/help-bubble";
 import { LLMMonitoring } from "@/components/monitoring/LLMMonitoring";
