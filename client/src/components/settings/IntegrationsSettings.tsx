@@ -13,13 +13,26 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Mail, Users, Database, AlertTriangle } from 'lucide-react';
+import { 
+  AlertCircle, 
+  CheckCircle2, 
+  Mail, 
+  Users, 
+  Database, 
+  AlertTriangle, 
+  Globe, 
+  Code,
+  Webhook
+} from 'lucide-react';
+import { ApiSettings } from '@/components/settings/ApiSettings';
+import { WidgetSettings } from '@/components/settings/WidgetSettings';
 
 export function IntegrationsSettings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('email');
   const [testInProgress, setTestInProgress] = useState(false);
 
+  // Функция для обработки тестирования подключения Email
   const testEmailConnection = async () => {
     setTestInProgress(true);
     // Имитация API запроса
@@ -33,6 +46,7 @@ export function IntegrationsSettings() {
     }, 1500);
   };
 
+  // Функция для обработки тестирования подключения Active Directory
   const testADConnection = async () => {
     setTestInProgress(true);
     // Имитация API запроса
@@ -46,6 +60,7 @@ export function IntegrationsSettings() {
     }, 1500);
   };
 
+  // Функции для сохранения различных настроек
   const saveSendGridSettings = () => {
     toast({
       title: "Настройки сохранены",
@@ -71,22 +86,32 @@ export function IntegrationsSettings() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <h2 className="text-3xl font-bold mb-6">Настройки интеграций</h2>
+    <div className="container py-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Настройки интеграций</h2>
+      </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 mb-6">
-          <TabsTrigger value="email" className="flex items-center gap-2">
+        <TabsList className="grid grid-cols-4 mb-6 rounded-full bg-muted/50">
+          <TabsTrigger value="email" className="flex items-center gap-2 rounded-full">
             <Mail className="h-4 w-4" />
             <span>Настройки Email</span>
           </TabsTrigger>
-          <TabsTrigger value="activedirectory" className="flex items-center gap-2">
+          <TabsTrigger value="activedirectory" className="flex items-center gap-2 rounded-full">
             <Users className="h-4 w-4" />
             <span>Active Directory</span>
           </TabsTrigger>
+          <TabsTrigger value="api" className="flex items-center gap-2 rounded-full">
+            <Webhook className="h-4 w-4" />
+            <span>API для обращений</span>
+          </TabsTrigger>
+          <TabsTrigger value="widget" className="flex items-center gap-2 rounded-full">
+            <Code className="h-4 w-4" />
+            <span>Виджет для сайта</span>
+          </TabsTrigger>
         </TabsList>
 
-        {/* Содержимое табов */}
+        {/* Содержимое таба Email */}
         <TabsContent value="email" className="space-y-6">
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -184,6 +209,7 @@ export function IntegrationsSettings() {
           </Card>
         </TabsContent>
 
+        {/* Содержимое таба Active Directory */}
         <TabsContent value="activedirectory" className="space-y-6">
           <Alert>
             <AlertTriangle className="h-4 w-4" />
@@ -294,6 +320,16 @@ export function IntegrationsSettings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        {/* Содержимое таба API для обращений */}
+        <TabsContent value="api">
+          <ApiSettings refreshTab={() => setActiveTab('api')} />
+        </TabsContent>
+        
+        {/* Содержимое таба Виджет для сайта */}
+        <TabsContent value="widget">
+          <WidgetSettings refreshTab={() => setActiveTab('widget')} />
         </TabsContent>
       </Tabs>
     </div>

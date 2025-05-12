@@ -44,7 +44,13 @@ function Router() {
       <Route path="/knowledge" component={KnowledgeManagement} />
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />
-      <Route path="/integration-settings" component={IntegrationSettings} />
+      <Route path="/integration-settings">
+        {() => {
+          // Перенаправление на страницу настроек с вкладкой интеграций
+          window.location.href = '/settings';
+          return null;
+        }}
+      </Route>
       <Route path="/dao-voting" component={DAOVoting} />
       <Route path="/about" component={AboutSystem} />
       <Route path="/embed" component={EmbedForm} />

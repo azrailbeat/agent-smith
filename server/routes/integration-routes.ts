@@ -233,10 +233,11 @@ router.get('/citizen-requests/:id', validateApiKey, async (req: Request, res: Re
       subject: request.subject,
       status: request.status,
       priority: request.priority,
-      externalId: request.externalId,
+      // Добавляем externalId, если он есть
+      ...(request as any).externalId && { externalId: (request as any).externalId },
       createdAt: request.createdAt,
       updatedAt: request.updatedAt,
-      blockchainHash: request.blockchainHash
+      ...(request as any).blockchainHash && { blockchainHash: (request as any).blockchainHash }
     });
     
   } catch (error) {
@@ -262,26 +263,26 @@ router.get('/citizen-requests', validateApiKey, async (req: Request, res: Respon
     // TODO: В будущем фильтровать обращения по API ключу
     
     // Получаем список обращений
-    const requests = await storage.getAllCitizenRequests();
+    const requests = await storage.getCitizenRequests();
     
     // Фильтруем по статусу, если указан
     let filteredRequests = requests;
     if (status) {
-      filteredRequests = requests.filter(req => req.status === status);
+      filteredRequests = requests.filter((req: any) => req.status === status);
     }
     
     // Применяем пагинацию
     const paginatedRequests = filteredRequests.slice(offset, offset + limit);
     
     // Преобразуем в формат для ответа
-    const requestsData = paginatedRequests.map(request => ({
+    const requestsData = paginatedRequests.map((request: any) => ({
       id: request.id,
       fullName: request.fullName,
       requestType: request.requestType,
       subject: request.subject,
       status: request.status,
       priority: request.priority,
-      externalId: request.externalId,
+      ...(request.externalId && { externalId: request.externalId }),
       createdAt: request.createdAt
     }));
     

@@ -33,11 +33,11 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="general">Общие</TabsTrigger>
-          <TabsTrigger value="integrations">Интеграции</TabsTrigger>
-          <TabsTrigger value="monitoring">Мониторинг</TabsTrigger>
-          <TabsTrigger value="security">Безопасность</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mb-8 rounded-full bg-muted/50">
+          <TabsTrigger value="general" className="rounded-full">Общие</TabsTrigger>
+          <TabsTrigger value="integrations" className="rounded-full">Интеграции</TabsTrigger>
+          <TabsTrigger value="monitoring" className="rounded-full">Мониторинг</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-full">Безопасность</TabsTrigger>
         </TabsList>
 
         {/* Вкладка общих настроек */}
