@@ -339,6 +339,22 @@ const CitizenRequests = () => {
     const requestId = parseInt(draggableId);
     const newStatus = destination.droppableId;
     updateRequestMutation.mutate({ id: requestId, status: newStatus });
+    
+    // Если включена ИИ обработка и есть выбранный агент, автоматически обрабатываем обращение при перемещении в колонку "inProgress"
+    if (agentSettings.enabled && agentSettings.defaultAgent && destination.droppableId === 'inProgress') {
+      // Находим обращение по ID
+      const request = citizenRequests.find(r => r.id === requestId);
+      if (request) {
+        // Автоматически запускаем обработку перемещенного обращения выбранным агентом
+        if (agentSettings.requestProcessingMode === 'auto' || agentSettings.requestProcessingMode === 'smart') {
+          processRequestWithAgent(request, agentSettings.defaultAgent, "full");
+          toast({
+            title: "Автоматическая обработка",
+            description: `Обращение автоматически отправлено на обработку ИИ`,
+          });
+        }
+      }
+    }
   };
 
   // Обработчик изменения в форме нового обращения
@@ -519,15 +535,57 @@ const CitizenRequests = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="ai-processing" className="text-sm">
-              ИИ обработка:
-            </Label>
-            <Switch
-              id="ai-processing"
-              checked={aiProcessingEnabled}
-              onCheckedChange={setAiProcessingEnabled}
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="ai-processing" className="text-sm">
+                ИИ обработка:
+              </Label>
+              <Switch
+                id="ai-processing"
+                checked={agentSettings.enabled}
+                onCheckedChange={(enabled) => setAgentSettings(prev => ({ ...prev, enabled }))}
+              />
+            </div>
+            
+            {agentSettings.enabled && (
+              <>
+                <Label htmlFor="agent-select" className="text-sm ml-4">
+                  Агент:
+                </Label>
+                <Select 
+                  value={agentSettings.defaultAgent?.toString() || ""} 
+                  onValueChange={(value) => setAgentSettings(prev => ({ ...prev, defaultAgent: parseInt(value) }))}
+                >
+                  <SelectTrigger id="agent-select" className="w-[180px]">
+                    <SelectValue placeholder="Выберите агента" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableAgents.map(agent => (
+                      <SelectItem key={agent.id} value={agent.id.toString()}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Label htmlFor="processing-mode" className="text-sm ml-4">
+                  Режим:
+                </Label>
+                <Select 
+                  value={agentSettings.requestProcessingMode} 
+                  onValueChange={(value: 'manual' | 'auto' | 'smart') => setAgentSettings(prev => ({ ...prev, requestProcessingMode: value }))}
+                >
+                  <SelectTrigger id="processing-mode" className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Ручной</SelectItem>
+                    <SelectItem value="auto">Автоматический</SelectItem>
+                    <SelectItem value="smart">Умный</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
