@@ -94,7 +94,10 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  // Инициализируем activities из request.activities, если они доступны
+  const [activities, setActivities] = useState<Activity[]>(
+    Array.isArray(request.activities) ? request.activities : []
+  );
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -147,7 +150,13 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       setActivitiesLoading(true);
       apiRequest('GET', `/api/citizen-requests/${request.id}/activities`)
         .then((data) => {
-          setActivities(data);
+          // Убедимся, что полученные данные - массив
+          if (Array.isArray(data)) {
+            setActivities(data);
+          } else {
+            console.error('Activities data is not an array:', data);
+            setActivities([]);
+          }
         })
         .catch((error) => {
           console.error('Error loading activities:', error);
@@ -452,7 +461,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <div className="text-[10px] text-gray-500 italic pl-1">Загрузка истории...</div>
             ) : (
               <>
-                {activities.slice(0, 5).map((activity, index) => (
+                {Array.isArray(activities) && activities.slice(0, 5).map((activity, index) => (
                   <div key={activity.id || index} className="flex items-center gap-1.5">
                     <div className="bg-gray-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
                       {getActionIcon(activity.actionType || activity.action || '')}
@@ -466,7 +475,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                   </div>
                 ))}
                 
-                {activities.length > 5 && (
+                {Array.isArray(activities) && activities.length > 5 && (
                   <div className="text-[10px] text-blue-500 hover:underline cursor-pointer text-center mt-1" onClick={(e) => {
                     e.stopPropagation();
                     toast({
