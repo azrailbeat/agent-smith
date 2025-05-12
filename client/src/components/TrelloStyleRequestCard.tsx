@@ -263,9 +263,9 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       style={{ maxHeight: '350px' }}
     >
       <div className="p-3">
-        {/* Заголовок и меню */}
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-2 mb-2">
+        {/* Заголовок и метки */}
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-1">
             <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4 mr-0.5`} variant="outline">
               {request.priority || 'medium'}
             </Badge>
@@ -345,13 +345,20 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Имя заявителя */}
-        <div className="flex items-start mb-3">
+        <div className="mb-2">
           <span className="text-[12px] text-gray-700 truncate max-w-[95%] line-clamp-1">
             {request.fullName}
           </span>
         </div>
         
-        {/* Индикаторы статуса в одну строку */}
+        {/* Краткое описание */}
+        <div className="mb-3">
+          <p className="text-xs text-gray-600 line-clamp-2">
+            {request.description || request.content || "Без описания"}
+          </p>
+        </div>
+        
+        {/* Индикаторы статуса */}
         <div className="flex flex-wrap gap-1.5 mb-2">
           {request.aiProcessed && (
             <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] flex items-center px-1 h-4 border-purple-200">
@@ -374,181 +381,107 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               {request.aiClassification}
             </Badge>
           )}
-          {request.aiSuggestion && (
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 text-[10px] flex items-center px-1 h-4 border-amber-200">
-              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Результат
-            </Badge>
-          )}
         </div>
         
-        {/* Отображение результатов AI обработки - в стиле Trello */}
-        {(request.aiProcessed || request.aiClassification || request.aiSuggestion) && (
-          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400 max-h-28 overflow-hidden">
-            <div className="font-semibold mb-1 flex items-center gap-1">
-              <Bot className="h-3 w-3" /> 
-              Результат обработки:
+        {/* Результаты ИИ обработки */}
+        {request.aiProcessed && request.aiSuggestion && (
+          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400">
+            <div className="font-medium mb-1 flex items-center">
+              <Bot className="h-3 w-3 mr-1" /> 
+              Рекомендация:
             </div>
-            
-            {/* Отображаем классификацию */}
-            {request.aiClassification && (
-              <div className="mb-1">
-                <span className="font-semibold">Категория:</span> <span className="line-clamp-1">{request.aiClassification}</span>
-              </div>
-            )}
-            
-            {/* Отображаем рекомендации */}
-            {request.aiSuggestion && (
-              <div>
-                <span className="font-semibold">Рекомендация:</span> <span className="line-clamp-2">{request.aiSuggestion}</span>
-              </div>
-            )}
-            
-            {/* Если есть только aiProcessed но нет результатов */}
-            {request.aiProcessed && !request.aiClassification && !request.aiSuggestion && (
-              <div className="text-gray-600 italic">
-                Обработано ИИ, ожидание результатов...
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* История действий с заявкой - как в Trello */}
-        <div className="flex items-center gap-1.5 mb-2">
-          <div className="bg-gray-100 rounded-full h-5 w-5 flex items-center justify-center">
-            <User className="h-2.5 w-2.5 text-gray-600" />
-          </div>
-          <div className="text-[10px] text-gray-600">
-            <span className="font-medium">Создано:</span> {new Date(request.createdAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
-          </div>
-        </div>
-        
-        {request.updatedAt && new Date(request.updatedAt).getTime() !== new Date(request.createdAt).getTime() && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="bg-blue-100 rounded-full h-5 w-5 flex items-center justify-center">
-              <RefreshCw className="h-2.5 w-2.5 text-blue-600" />
-            </div>
-            <div className="text-[10px] text-gray-600">
-              <span className="font-medium">Обновлено:</span> {new Date(request.updatedAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+            <div className="line-clamp-2">
+              {request.aiSuggestion}
             </div>
           </div>
         )}
         
-        {request.aiProcessed && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="bg-purple-100 rounded-full h-5 w-5 flex items-center justify-center">
-              <Bot className="h-2.5 w-2.5 text-purple-600" />
+        {/* История действий - раскрывающаяся */}
+        <Collapsible className="mt-2" onOpenChange={setActivitiesOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full text-[10px] text-gray-500 hover:bg-gray-50 rounded px-1 py-0.5">
+            <div className="flex items-center">
+              <Clock className="h-3 w-3 mr-1" /> История действий
             </div>
-            <div className="text-[10px] text-gray-600">
-              <span className="font-medium">Обработано ИИ</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Кнопки для обработки ИИ внизу карточки */}
-        {!request.aiProcessed && citizenRequestAgents.length > 0 && (
-          <div className="flex justify-between gap-2 mt-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-[10px] h-6 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (citizenRequestAgents.length > 0) {
-                  handleProcessWithAgent(citizenRequestAgents[0].id, e);
-                }
-              }}
-              disabled={isProcessing}
-            >
-              <Bot className="h-2.5 w-2.5 mr-1.5" />
-              {isProcessing ? "Обработка..." : "Обработать ИИ"}
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-[10px] h-6 border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (citizenRequestAgents.length > 0) {
-                  setIsProcessing(true);
-                  autoProcessMutation.mutate(citizenRequestAgents[0].id);
-                }
-              }}
-              disabled={isProcessing}
-            >
-              <RefreshCw className="h-2.5 w-2.5 mr-1.5" />
-              {isProcessing ? "Обработка..." : "Авто-обработка"}
-            </Button>
-          </div>
-        )}
-        
-        {/* Секция активностей - в стиле Trello */}
-        <Collapsible
-          open={activitiesOpen}
-          onOpenChange={setActivitiesOpen}
-          className="mt-2 pt-2 border-t border-gray-100"
-        >
-          <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between text-xs text-gray-500 cursor-pointer hover:bg-gray-50 rounded px-1">
-              <span>Действия</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${activitiesOpen ? 'transform rotate-180' : ''}`} />
-            </div>
+            <ChevronDown className="h-3 w-3" />
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 text-xs text-gray-700">
-            {activitiesLoading ? (
-              <div className="text-center py-2">
-                <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
+          
+          <CollapsibleContent className="space-y-2 mt-2">
+            {/* Действие создания */}
+            <div className="flex items-center gap-1.5">
+              <div className="bg-gray-100 rounded-full h-5 w-5 flex items-center justify-center">
+                <User className="h-2.5 w-2.5 text-gray-600" />
               </div>
-            ) : activities && activities.length > 0 ? (
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {activities.slice(0, 5).map((activity: Activity) => (
-                  <div key={activity.id} className="flex items-start">
-                    <Avatar className="h-5 w-5 mr-2 flex-shrink-0">
-                      <AvatarFallback className="text-[8px] bg-gray-100">
-                        {activity.userName?.substring(0, 2).toUpperCase() || 'СИ'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center">
-                        <strong className="font-medium truncate max-w-[70px]">{activity.userName || 'Система'}</strong>
-                        <span className="ml-1 text-gray-400 text-[9px]">{formatActivityDate(activity.createdAt)}</span>
+              <div className="text-[10px] text-gray-600">
+                <span className="font-medium">Создано:</span> {new Date(request.createdAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+              </div>
+            </div>
+            
+            {/* Обновление */}
+            {request.updatedAt && new Date(request.updatedAt).getTime() !== new Date(request.createdAt).getTime() && (
+              <div className="flex items-center gap-1.5">
+                <div className="bg-blue-100 rounded-full h-5 w-5 flex items-center justify-center">
+                  <RefreshCw className="h-2.5 w-2.5 text-blue-600" />
+                </div>
+                <div className="text-[10px] text-gray-600">
+                  <span className="font-medium">Обновлено:</span> {new Date(request.updatedAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                </div>
+              </div>
+            )}
+            
+            {/* ИИ обработка */}
+            {request.aiProcessed && (
+              <div className="flex items-center gap-1.5">
+                <div className="bg-purple-100 rounded-full h-5 w-5 flex items-center justify-center">
+                  <Bot className="h-2.5 w-2.5 text-purple-600" />
+                </div>
+                <div className="text-[10px] text-gray-600">
+                  <span className="font-medium">ИИ анализ:</span> завершен
+                </div>
+              </div>
+            )}
+            
+            {/* Динамические активности */}
+            {activitiesLoading ? (
+              <div className="text-[10px] text-gray-500 italic pl-1">Загрузка истории...</div>
+            ) : (
+              <>
+                {activities.slice(0, 5).map((activity, index) => (
+                  <div key={activity.id || index} className="flex items-center gap-1.5">
+                    <div className="bg-gray-100 rounded-full h-5 w-5 flex items-center justify-center">
+                      {getActionIcon(activity.actionType || activity.action || '')}
+                    </div>
+                    <div className="text-[10px] text-gray-600 flex-1">
+                      <div className="flex justify-between items-start">
+                        <span className="line-clamp-1">{activity.description}</span>
+                        <span className="text-gray-400 ml-1 whitespace-nowrap">{formatActivityDate(activity.createdAt || activity.timestamp)}</span>
                       </div>
-                      <div className="flex items-start mt-1">
-                        <div className="flex-shrink-0 mt-0.5">{getActionIcon(activity.actionType)}</div>
-                        <span className="line-clamp-2 text-[10px]">{activity.description}</span>
-                      </div>
-                      {activity.blockchainHash && (
-                        <div className="mt-1 flex items-center text-[9px] text-purple-600">
-                          <Database className="h-2.5 w-2.5 mr-1 flex-shrink-0" />
-                          <span className="truncate">
-                            Блокчейн: {activity.blockchainHash.substring(0, 8)}...
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
+                
                 {activities.length > 5 && (
-                  <div className="text-center text-[10px] text-blue-500 italic">
-                    + еще {activities.length - 5} действий
+                  <div className="text-[10px] text-blue-500 hover:underline cursor-pointer pl-6 mt-1" onClick={(e) => {
+                    e.stopPropagation();
+                    toast({
+                      title: "История действий",
+                      description: "Полная история доступна в детальной карточке",
+                    });
+                  }}>
+                    Показать все ({activities.length})
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="text-center py-2 text-gray-400 text-[10px]">
-                Нет записей активности
-              </div>
+              </>
             )}
           </CollapsibleContent>
         </Collapsible>
         
-        {/* Футер карточки */}
+        {/* Футер карточки с датой и ID */}
         <div className="flex justify-between items-center text-[10px] text-gray-500 mt-3 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-1">
-            <span className="text-gray-400">ID: {request.id}</span>
+            <span className="text-gray-400">#{request.id}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Calendar className="h-2.5 w-2.5" />
+            <Calendar className="h-2.5 w-2.5 mr-0.5" />
             {new Date(request.createdAt).toLocaleDateString("ru-RU")}
           </div>
         </div>
