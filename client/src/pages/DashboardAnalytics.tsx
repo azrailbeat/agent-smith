@@ -693,6 +693,21 @@ const DashboardAnalytics = () => {
       {/* Вкладка LLM Мониторинга */}
       {activeTab === "llm-monitoring" && (
         <>
+          {/* ИИ-Анализ LLM моделей */}
+          <div className="mb-6">
+            {/* Импорт компонента динамически */}
+            {(() => {
+              const AIModelAnalysis = require('@/components/analytics/AIModelAnalysis').default;
+              return (
+                <AIModelAnalysis
+                  llmUsage={llmUsage}
+                  llmStatus={llmStatus}
+                  isLoading={isLoadingLlmStatus || isLoadingLlmUsage}
+                />
+              );
+            })()}
+          </div>
+
           {/* LLM Services Status Section */}
           <div className="mb-6">
             <Card>
