@@ -361,8 +361,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Краткое описание */}
-        <div className="mb-3 overflow-hidden">
-          <p className="text-xs text-gray-600 line-clamp-2 min-h-[2.4rem] max-h-[2.4rem]">
+        <div className="mb-3 overflow-hidden" style={{ maxHeight: '4em' }}>
+          <p className="text-xs text-gray-600 overflow-hidden text-ellipsis line-clamp-2 h-auto" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {request.description || request.content || "Без описания"}
           </p>
         </div>
@@ -399,7 +399,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="line-clamp-2 overflow-hidden">
+            <div className="overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', maxHeight: '2.6em' }}>
               {request.aiSuggestion}
             </div>
           </div>
@@ -466,10 +466,10 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                     <div className="bg-gray-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
                       {getActionIcon(activity.actionType || activity.action || '')}
                     </div>
-                    <div className="text-[10px] text-gray-600 flex-1">
-                      <div className="flex justify-between items-start">
-                        <span className="line-clamp-1 font-medium">{activity.description}</span>
-                        <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px]">{formatActivityDate(activity.createdAt || activity.timestamp)}</span>
+                    <div className="text-[10px] text-gray-600 flex-1 overflow-hidden">
+                      <div className="flex justify-between items-start w-full">
+                        <span className="font-medium truncate max-w-[75%] overflow-hidden text-ellipsis">{activity.description}</span>
+                        <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px] flex-shrink-0">{formatActivityDate(activity.createdAt || activity.timestamp)}</span>
                       </div>
                     </div>
                   </div>
