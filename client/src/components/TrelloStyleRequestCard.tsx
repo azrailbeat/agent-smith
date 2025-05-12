@@ -121,23 +121,23 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   const getActionIcon = (actionType: string) => {
     switch (actionType) {
       case 'status_change':
-        return <RefreshCw className="h-3 w-3 mr-1" />;
+        return <RefreshCw className="h-2 w-2 text-blue-500" />;
       case 'comment_add':
-        return <MessageSquare className="h-3 w-3 mr-1" />;
+        return <MessageSquare className="h-2 w-2 text-green-500" />;
       case 'request_create':
-        return <Plus className="h-3 w-3 mr-1" />;
+        return <Plus className="h-2 w-2 text-purple-500" />;
       case 'ai_processing':
-        return <Bot className="h-3 w-3 mr-1" />;
+        return <Bot className="h-2 w-2 text-amber-500" />;
       case 'blockchain_record':
-        return <Database className="h-3 w-3 mr-1" />;
+        return <Database className="h-2 w-2 text-cyan-500" />;
       case 'priority_change':
-        return <Flag className="h-3 w-3 mr-1" />;
+        return <Flag className="h-2 w-2 text-red-500" />;
       case 'assign':
-        return <UserCheck className="h-3 w-3 mr-1" />;
+        return <UserCheck className="h-2 w-2 text-orange-500" />;
       case 'tag_add':
-        return <Tag className="h-3 w-3 mr-1" />;
+        return <Tag className="h-2 w-2 text-indigo-500" />;
       default:
-        return <Info className="h-3 w-3 mr-1" />;
+        return <Info className="h-2 w-2 text-gray-500" />;
     }
   };
   
@@ -266,10 +266,10 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         {/* Заголовок и метки */}
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-1">
-            <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4 mr-0.5`} variant="outline">
+            <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4 mr-0.5 flex-shrink-0`} variant="outline">
               {request.priority || 'medium'}
             </Badge>
-            <h4 className="font-medium text-sm line-clamp-1 max-w-[75%]">
+            <h4 className="font-medium text-sm line-clamp-1 w-full overflow-hidden text-ellipsis">
               {request.subject || request.title || "Без темы"}
             </h4>
           </div>
@@ -346,14 +346,14 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Имя заявителя */}
         <div className="mb-2">
-          <span className="text-[12px] text-gray-700 truncate max-w-[95%] line-clamp-1">
+          <span className="text-[12px] text-gray-700 block w-full overflow-hidden text-ellipsis whitespace-nowrap">
             {request.fullName}
           </span>
         </div>
         
         {/* Краткое описание */}
         <div className="mb-3">
-          <p className="text-xs text-gray-600 line-clamp-2">
+          <p className="text-xs text-gray-600 line-clamp-2 min-h-[2.4rem]">
             {request.description || request.content || "Без описания"}
           </p>
         </div>
@@ -387,10 +387,10 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         {request.aiProcessed && request.aiSuggestion && (
           <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400">
             <div className="font-medium mb-1 flex items-center">
-              <Bot className="h-3 w-3 mr-1" /> 
-              Рекомендация:
+              <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
+              <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="line-clamp-2">
+            <div className="line-clamp-2 max-h-[2.6rem] overflow-hidden">
               {request.aiSuggestion}
             </div>
           </div>
@@ -398,32 +398,39 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* История действий - раскрывающаяся */}
         <Collapsible className="mt-2" onOpenChange={setActivitiesOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full text-[10px] text-gray-500 hover:bg-gray-50 rounded px-1 py-0.5">
+          <CollapsibleTrigger className="flex items-center justify-between w-full text-[10px] text-gray-500 hover:bg-gray-50 rounded px-1.5 py-0.5 border border-gray-100 transition-colors">
             <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1" /> История действий
+              <Clock className="h-2.5 w-2.5 mr-1 text-gray-400" /> 
+              <span className="font-medium">История действий</span>
             </div>
-            <ChevronDown className="h-3 w-3" />
+            <ChevronDown className="h-2.5 w-2.5 text-gray-400" />
           </CollapsibleTrigger>
           
-          <CollapsibleContent className="space-y-2 mt-2">
+          <CollapsibleContent className="space-y-1.5 mt-2 border-t border-gray-100 pt-1.5">
             {/* Действие создания */}
             <div className="flex items-center gap-1.5">
-              <div className="bg-gray-100 rounded-full h-5 w-5 flex items-center justify-center">
-                <User className="h-2.5 w-2.5 text-gray-600" />
+              <div className="bg-gray-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
+                <User className="h-2 w-2 text-gray-600" />
               </div>
-              <div className="text-[10px] text-gray-600">
-                <span className="font-medium">Создано:</span> {new Date(request.createdAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+              <div className="text-[10px] text-gray-600 flex-1">
+                <div className="flex justify-between">
+                  <span className="font-medium">Создано</span>
+                  <span className="text-gray-400">{new Date(request.createdAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit'})}</span>
+                </div>
               </div>
             </div>
             
             {/* Обновление */}
             {request.updatedAt && new Date(request.updatedAt).getTime() !== new Date(request.createdAt).getTime() && (
               <div className="flex items-center gap-1.5">
-                <div className="bg-blue-100 rounded-full h-5 w-5 flex items-center justify-center">
-                  <RefreshCw className="h-2.5 w-2.5 text-blue-600" />
+                <div className="bg-blue-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
+                  <RefreshCw className="h-2 w-2 text-blue-600" />
                 </div>
-                <div className="text-[10px] text-gray-600">
-                  <span className="font-medium">Обновлено:</span> {new Date(request.updatedAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                <div className="text-[10px] text-gray-600 flex-1">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Обновлено</span>
+                    <span className="text-gray-400">{new Date(request.updatedAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit'})}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -447,20 +454,20 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <>
                 {activities.slice(0, 5).map((activity, index) => (
                   <div key={activity.id || index} className="flex items-center gap-1.5">
-                    <div className="bg-gray-100 rounded-full h-5 w-5 flex items-center justify-center">
+                    <div className="bg-gray-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
                       {getActionIcon(activity.actionType || activity.action || '')}
                     </div>
                     <div className="text-[10px] text-gray-600 flex-1">
                       <div className="flex justify-between items-start">
-                        <span className="line-clamp-1">{activity.description}</span>
-                        <span className="text-gray-400 ml-1 whitespace-nowrap">{formatActivityDate(activity.createdAt || activity.timestamp)}</span>
+                        <span className="line-clamp-1 font-medium">{activity.description}</span>
+                        <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px]">{formatActivityDate(activity.createdAt || activity.timestamp)}</span>
                       </div>
                     </div>
                   </div>
                 ))}
                 
                 {activities.length > 5 && (
-                  <div className="text-[10px] text-blue-500 hover:underline cursor-pointer pl-6 mt-1" onClick={(e) => {
+                  <div className="text-[10px] text-blue-500 hover:underline cursor-pointer text-center mt-1" onClick={(e) => {
                     e.stopPropagation();
                     toast({
                       title: "История действий",

@@ -625,52 +625,85 @@ const CitizenRequests = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 bg-white rounded-md border border-gray-100 shadow-sm p-2">
         <div className="relative w-64">
           <Input
             placeholder="Поиск обращений..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-9"
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
             <Search className="h-4 w-4" />
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="ai-processing" className="text-sm">
-                ИИ обработка:
-              </Label>
-              <Switch
-                id="ai-processing"
-                checked={agentSettings.enabled}
-                onCheckedChange={(enabled) => setAgentSettings(prev => ({ ...prev, enabled }))}
-              />
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="ml-4 bg-gray-50 text-xs h-8"
-                onClick={() => setIsAutoProcessDialogOpen(true)}
-              >
-                <Bot className="mr-1.5 h-3.5 w-3.5" />
-                Авто-обработка
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="ai-processing" className="text-sm whitespace-nowrap">
+              ИИ обработка:
+            </Label>
+            <Switch
+              id="ai-processing"
+              checked={agentSettings.enabled}
+              onCheckedChange={(enabled) => setAgentSettings(prev => ({ ...prev, enabled }))}
+            />
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-gray-50 text-xs h-9"
+            onClick={() => setIsAutoProcessDialogOpen(true)}
+          >
+            <Bot className="mr-1.5 h-3.5 w-3.5" />
+            Авто-обработка
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="bg-gray-50 text-xs h-9">
+                <Filter className="mr-1.5 h-3.5 w-3.5" />
+                Все статусы
+                <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
               </Button>
-            </div>
-            
-            {agentSettings.enabled && (
-              <>
-                <Label htmlFor="agent-select" className="text-sm ml-4">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-blue-400 mr-2"></div>
+                Все статусы
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
+                Новые
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-yellow-400 mr-2"></div>
+                В работе
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-purple-400 mr-2"></div>
+                Ожидание
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-blue-400 mr-2"></div>
+                Выполнено
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {agentSettings.enabled && (
+            <>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="agent-select" className="text-sm whitespace-nowrap">
                   Агент:
                 </Label>
                 <Select 
                   value={agentSettings.defaultAgent?.toString() || ""} 
                   onValueChange={(value) => setAgentSettings(prev => ({ ...prev, defaultAgent: parseInt(value) }))}
                 >
-                  <SelectTrigger id="agent-select" className="w-[180px]">
+                  <SelectTrigger id="agent-select" className="w-[180px] h-9">
                     <SelectValue placeholder="Выберите агента" />
                   </SelectTrigger>
                   <SelectContent>
@@ -681,8 +714,10 @@ const CitizenRequests = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                
-                <Label htmlFor="processing-mode" className="text-sm ml-4">
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Label htmlFor="processing-mode" className="text-sm whitespace-nowrap">
                   Режим:
                 </Label>
                 <Select 
@@ -698,33 +733,17 @@ const CitizenRequests = () => {
                     <SelectItem value="simple">Базовый</SelectItem>
                   </SelectContent>
                 </Select>
-              </>
-            )}
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Все статусы
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Статус обращения</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Все статусы</DropdownMenuItem>
-              <DropdownMenuItem>Новые</DropdownMenuItem>
-              <DropdownMenuItem>В работе</DropdownMenuItem>
-              <DropdownMenuItem>Ожидание</DropdownMenuItem>
-              <DropdownMenuItem>Выполненные</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </div>
+            </>
+          )}
+          
           <Button
             variant="outline"
             size="sm"
+            className="bg-gray-50 text-xs h-9 ml-auto"
             onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
             Обновить
           </Button>
         </div>
