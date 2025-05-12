@@ -2308,13 +2308,14 @@ ${request.description || ''}
       // Создаем запись активности о назначении
       const assignActivity = await storage.createActivity({
         actionType: "auto_assign",
-        description: `Обращение №${id} назначено агенту ${agent.name}`,
+        description: `Обращение №${id} назначено агенту ${agent.name} для ${action === 'auto' ? 'автоматической' : 'полной'} обработки`,
         relatedId: id,
         relatedType: "citizen_request",
         metadata: {
           agentId,
           agentName: agent.name,
-          agentType: agent.type
+          agentType: agent.type,
+          actionType: action
         }
       });
       
@@ -2326,7 +2327,8 @@ ${request.description || ''}
         metadata: {
           agentId,
           agentName: agent.name,
-          activityId: assignActivity.id
+          activityId: assignActivity.id,
+          actionType: action
         }
       });
       
@@ -2423,13 +2425,23 @@ ${request.description || ''}
         }
       });
       
-      // Обновляем обращение с результатами
+      // Обновляем обращение с результатами и перемещаем карточку в соответствующую колонку
+      let newStatus = request.status;
+      
+      // Если это автоматическая обработка, перемещаем карточку в соответствующую колонку
+      if (action === 'auto') {
+        newStatus = 'waiting'; // Перемещаем в колонку "Ожидание"
+      } else if (action === 'full') {
+        newStatus = 'in_progress'; // Оставляем в колонке "В работе"
+      }
+      
       const updatedRequest = await storage.updateCitizenRequest(id, {
         aiProcessed: true,
         aiClassification: classificationResult.classification || 'general',
         aiSuggestion: responseResult.output || 'Рекомендуется обработка специалистом',
         summary: summaryResult.output || 'Требуется дополнительная информация',
-        blockchainHash: classificationTransactionHash // используем основной хеш для отображения
+        blockchainHash: classificationTransactionHash, // используем основной хеш для отображения
+        status: newStatus // Обновляем статус для перемещения карточки
       });
       
       // Создаем подробный отчет о результатах обработки

@@ -55,6 +55,14 @@ export interface IStorage {
   getActivities(): Promise<Activity[]>;
   getRecentActivities(limit: number): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
+  updateActivity(id: number, activity: Partial<InsertActivity>): Promise<Activity | undefined>;
+  
+  // Comment operations
+  getComments(entityId: number, entityType?: string): Promise<Comment[]>;
+  getComment(id: number): Promise<Comment | undefined>;
+  createComment(comment: InsertComment): Promise<Comment>;
+  updateComment(id: number, comment: Partial<InsertComment>): Promise<Comment | undefined>;
+  deleteComment(id: number): Promise<boolean>;
   
   // System status operations
   getSystemStatuses(): Promise<SystemStatusItem[]>;
@@ -166,6 +174,7 @@ export class MemStorage implements IStorage {
   private blockchainRecords: Map<number, BlockchainRecord>;
   private messages: Map<number, Message>;
   private activities: Map<number, Activity>;
+  private comments: Map<number, Comment>;
   private systemStatuses: Map<string, SystemStatusItem>;
   private integrations: Map<number, Integration>;
   private agents: Map<number, Agent>;

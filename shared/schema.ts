@@ -162,6 +162,33 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   taskId: true,
 });
 
+// Comments schema (для комментариев операторов к обращениям)
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  entityId: integer("entity_id").notNull(),
+  entityType: text("entity_type").notNull().default("citizen_request"),
+  authorId: integer("author_id"),
+  authorName: text("author_name"),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  isInternal: boolean("is_internal").default(false), // Внутренний комментарий или видимый заявителю
+  attachments: text("attachments").array(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).pick({
+  entityId: true,
+  entityType: true,
+  authorId: true,
+  authorName: true,
+  content: true,
+  isInternal: true,
+  attachments: true,
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+
 // Activities schema
 export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
