@@ -71,7 +71,7 @@ export class AgentService {
   // Кэш агентов для быстрого доступа
   private agentCache: Map<string, Agent> = new Map();
   private integrationCache: Map<string, Integration> = new Map();
-  
+
   /**
    * Инициализация сервиса агентов
    */
@@ -79,11 +79,11 @@ export class AgentService {
     try {
       // Проверяем существуют ли интеграции
       const integrations = await storage.getIntegrations();
-      
+
       // Если интеграций нет, создаем их
       if (!integrations || integrations.length === 0) {
         console.log("No integrations found, creating default integrations...");
-        
+
         // Создаем интеграцию с OpenAI
         await storage.createIntegration({
           name: "OpenAI GPT-4o",
@@ -97,7 +97,7 @@ export class AgentService {
             defaultTemp: 0.7
           }
         });
-        
+
         // Создаем интеграцию с Moralis
         await storage.createIntegration({
           name: "Moralis API",
@@ -111,28 +111,28 @@ export class AgentService {
           }
         });
       }
-      
+
       // Получаем обновленный список интеграций
       const updatedIntegrations = await storage.getIntegrations();
-      
+
       // Находим ID интеграций для использования в агентах
       const openaiIntegration = updatedIntegrations.find(i => i.type === 'openai');
       if (!openaiIntegration) {
         throw new Error('OpenAI integration not found!');
       }
-      
+
       const moralisIntegration = updatedIntegrations.find(i => i.type === 'moralis');
       if (!moralisIntegration) {
         throw new Error('Moralis integration not found!');
       }
-      
+
       // Получаем существующих агентов и результаты их работы
       const existingAgents = await storage.getAgents();
-      
+
       // Получаем ID агентов, которые используются в результатах (имеют foreign key constraints)
       const agentResults = await storage.getAllAgentResults();
       const referencedAgentIds = new Set(agentResults.map(result => result.agentId));
-      
+
       // Проверяем, есть ли уже агенты и нужно ли их обновлять
       if (existingAgents && existingAgents.length > 0) {
         // Обновляем имена существующих агентов для более понятного использования
@@ -143,7 +143,7 @@ export class AgentService {
           842: { name: "Анализ и проверка документов" }, // Агент анализа документов
           843: { name: "Автопротокол совещаний" }, // Агент для протоколов заседаний
         };
-        
+
         // Сначала удаляем всех агентов, которые не используются в результатах и не являются ключевыми
         for (const agent of existingAgents) {
           try {
@@ -153,7 +153,7 @@ export class AgentService {
             const isNonDeletable = isBlockchainAgent || 
               (agent.config && agent.config.moralisApiSettings && agent.config.moralisApiSettings.nonDeletable);
             const isKeyAgent = [202, 640, 642, 842, 843].includes(agent.id);
-            
+
             if (isReferenced || isNonDeletable || isKeyAgent) {
               console.log(`Skipping agent deletion for ID ${agent.id} (${isNonDeletable ? 'non-deletable agent' : 'referenced in agent_results'})`);
               continue;
@@ -163,7 +163,7 @@ export class AgentService {
             console.warn(`Не удалось удалить агента ${agent.id}:`, error);
           }
         }
-        
+
         // Обновляем существующих агентов вместо создания новых
         for (const agent of existingAgents) {
           if (referencedAgentIds.has(agent.id) || [202, 640, 642, 842, 843].includes(agent.id)) {
@@ -171,7 +171,7 @@ export class AgentService {
             try {
               // Определяем правильное имя агента из карты имен или оставляем текущее
               const newName = agentNameMap[agent.id]?.name || agent.name;
-              
+
               // Обновляем метаданные, имя, системный промпт и описание
               await storage.updateAgent(agent.id, {
                 name: newName,
@@ -189,7 +189,7 @@ export class AgentService {
 
       console.log("No agents found, creating default agents...");
       // Создаем только 4 ключевых агентов
-      
+
       // 1. Агент для обработки обращений граждан (ID 640)
       await storage.createAgent({
         name: "Обработка обращений граждан",
@@ -208,7 +208,7 @@ export class AgentService {
           contextWindow: "enhanced"
         }
       });
-      
+
       // 2. Блокчейн агент для записи транзакций (ID 642)
       await storage.createAgent({
         name: "Запись в блокчейн Hyperledger",
@@ -272,10 +272,10 @@ export class AgentService {
           governmentProtocolFormat: true
         }
       });
-      
+
       // Получаем созданных агентов
       const agents = await storage.getAgents();
-      
+
       // Кэшируем агентов по типу для быстрого доступа
       const agentList = await storage.getAgents(); // Получаем агентов непосредственно из хранилища
       agentList.forEach(agent => {
@@ -283,14 +283,14 @@ export class AgentService {
           this.agentCache.set(agent.type, agent);
         }
       });
-      
+
       // Кэшируем активные интеграции
       updatedIntegrations.forEach(integration => {
         if (integration.isActive) {
           this.integrationCache.set(integration.type, integration);
         }
       });
-      
+
       console.log(`Agent Service initialized with ${this.agentCache.size} agents and ${this.integrationCache.size} integrations`);
       return true;
     } catch (error) {
@@ -298,7 +298,7 @@ export class AgentService {
       return false;
     }
   }
-  
+
   /**
    * Обновление кэша агентов и интеграций
    */
@@ -307,38 +307,49 @@ export class AgentService {
     this.integrationCache.clear();
     return this.initialize();
   }
-  
+
   /**
    * Обработка запроса агентом
    */
-  async processRequest(input: AgentInput): Promise<AgentResult> {
+  private async processRequest(input: AgentInput): Promise<AgentResult> {
     try {
-      // Логируем начало обработки
+      // Добавляем поддержку eОтиниш 
+      const source = input.metadata?.source || 'internal';
+      const isEotinish = source === 'eotinish';
+
+      // Логируем начало обработки с учетом источника
       await logActivity({
         action: 'ai_process_start',
         entityType: input.entityType,
         entityId: input.entityId,
         userId: input.userId,
-        details: `Начало обработки ${this.getEntityTypeName(input.entityType)} AI-агентом`,
+        details: `Начало обработки ${this.getEntityTypeName(input.entityType)} AI-агентом${isEotinish ? ' из eОтиниш' : ''}`,
         metadata: {
           taskType: input.taskType,
-          urgent: input.urgent || false
+          urgent: input.urgent || false,
+          source,
+          isEotinish
         }
       });
-      
+
+      // Проверяем приоритет для eОтиниш запросов
+      if (isEotinish && !input.urgent) {
+        input.urgent = true; // Повышаем приоритет для eОтиниш
+      }
+
       // Определяем подходящего агента для задачи
       const agent = this.findAgentForTask(input.taskType, input.entityType);
-      
+
       if (!agent) {
         throw new Error(`Не найден подходящий агент для задачи ${input.taskType} и типа ${input.entityType}`);
       }
-      
+
       // Определяем язык контента, если не указан
       const language = input.language || await this.detectContentLanguage(input.content);
-      
+
       // Обрабатываем запрос в зависимости от типа задачи
       let result: AgentResult;
-      
+
       switch (input.taskType) {
         case AgentTaskType.CLASSIFICATION:
           result = await this.performClassification(agent, input, language);
@@ -361,13 +372,13 @@ export class AgentService {
             error: `Неподдерживаемый тип задачи: ${input.taskType}`
           };
       }
-      
+
       // Запись результата в блокчейн, если обработка успешна
       if (result.success) {
         const blockchainResult = await this.recordResultToBlockchain(input, result, agent.id);
         result.transactionHash = blockchainResult.transactionHash;
       }
-      
+
       // Логируем завершение обработки
       await logActivity({
         action: 'ai_process_complete',
@@ -381,12 +392,12 @@ export class AgentService {
           transactionHash: result.transactionHash
         }
       });
-      
+
       return result;
-      
+
     } catch (error) {
       console.error("Error in agent processing:", error);
-      
+
       // Логируем ошибку
       await logActivity({
         action: 'ai_process_error',
@@ -399,14 +410,14 @@ export class AgentService {
           error: error.message
         }
       });
-      
+
       return {
         success: false,
         error: error.message
       };
     }
   }
-  
+
   /**
    * Поиск подходящего агента для задачи
    */
@@ -420,7 +431,7 @@ export class AgentService {
       [AgentTaskType.DOCUMENT_ANALYSIS]: ['summarizer', 'document_analyzer', 'general'],
       [AgentTaskType.VALIDATION]: ['blockchain_validator', 'general']
     };
-    
+
     // Маппинг типов сущностей к типам агентов
     const entityTypeMap: Record<string, string[]> = {
       [AgentEntityType.CITIZEN_REQUEST]: ['citizen_requests', 'general'],
@@ -429,29 +440,29 @@ export class AgentService {
       [AgentEntityType.DAO_PROPOSAL]: ['dao_agent', 'general'],
       [AgentEntityType.BLOCKCHAIN_RECORD]: ['blockchain_validator', 'general']
     };
-    
+
     // Получаем списки подходящих типов агентов
     const taskAgentTypes = agentTypeMap[taskType] || ['general'];
     const entityAgentTypes = entityTypeMap[entityType] || ['general'];
-    
+
     // Ищем агента, который подходит и для задачи, и для типа сущности
     for (const agentType of taskAgentTypes) {
       if (entityAgentTypes.includes(agentType) && this.agentCache.has(agentType)) {
         return this.agentCache.get(agentType);
       }
     }
-    
+
     // Если не нашли точное совпадение, возвращаем первого подходящего агента для задачи
     for (const agentType of taskAgentTypes) {
       if (this.agentCache.has(agentType)) {
         return this.agentCache.get(agentType);
       }
     }
-    
+
     // Если совсем не нашли, возвращаем общего агента
     return this.agentCache.get('general');
   }
-  
+
   /**
    * Определение языка контента
    */
@@ -464,7 +475,7 @@ export class AgentService {
       return 'ru'; // По умолчанию русский
     }
   }
-  
+
   /**
    * Классификация контента
    */
@@ -475,11 +486,11 @@ export class AgentService {
         `Вы эксперт по классификации ${this.getEntityTypeName(input.entityType)} на русском и казахском языках. 
          Пожалуйста, проанализируйте содержимое и определите наиболее подходящую категорию.
          Возвращайте только название категории без дополнительных объяснений.`;
-      
+
       const userPrompt = `Пожалуйста, классифицируйте следующее содержимое:
-      
+
       ${input.content}
-      
+
       Возможные категории:
       - Запрос информации
       - Жалоба на госорган
@@ -488,11 +499,11 @@ export class AgentService {
       - Запрос на получение услуги
       - Консультация
       - Иное
-      
+
       Пожалуйста, укажите только одну наиболее подходящую категорию.`;
-      
+
       const classification = await processUserMessage(systemPrompt, userPrompt);
-      
+
       return {
         success: true,
         classification,
@@ -511,7 +522,7 @@ export class AgentService {
       };
     }
   }
-  
+
   /**
    * Генерация ответа
    */
@@ -520,31 +531,31 @@ export class AgentService {
       // Проверяем, есть ли у агента базы знаний
       let contextFromKB = '';
       let usedKnowledgeBase = false;
-      
+
       if (agent.id) {
         try {
           // Получаем базы знаний для агента
           const knowledgeBases = await storage.getAgentKnowledgeBases(agent.id);
-          
+
           if (knowledgeBases && knowledgeBases.length > 0) {
             // Выбираем первую базу знаний (в будущем можно улучшить логику выбора)
             const kb = knowledgeBases[0];
             console.log(`Using knowledge base ${kb.name} for agent ${agent.name}`);
-            
+
             // Используем KnowledgeService для получения релевантного контекста
             const knowledgeService = new KnowledgeService({
               type: 'openai',
               modelName: 'text-embedding-ada-002',
               apiKey: process.env.OPENAI_API_KEY
             });
-            
+
             const ragResults = await knowledgeService.searchDocuments(kb.id, input.content, 3);
             if (ragResults && ragResults.passages && ragResults.passages.length > 0) {
               // Формируем контекст из найденных документов
               contextFromKB = "КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:\n\n" + 
                 ragResults.passages.map(doc => doc.content).join("\n\n") + 
                 "\n\nИспользуй эту информацию при составлении ответа, но не указывай явно, что она из базы знаний.";
-              
+
               usedKnowledgeBase = true;
               console.log(`Retrieved ${ragResults.passages.length} relevant documents from knowledge base`);
             }
@@ -554,7 +565,7 @@ export class AgentService {
           // Продолжаем без базы знаний
         }
       }
-      
+
       // Используем системный промпт агента или формируем стандартный
       const systemPrompt = agent.systemPrompt || 
         `Вы государственный служащий, эксперт по обработке обращений граждан.
@@ -565,28 +576,28 @@ export class AgentService {
          ВАЖНО: Ответ должен напрямую относиться к сути обращения. Не давайте информацию, не связанную с темой обращения.
          Например, если гражданин спрашивает о проблеме с ЭЦП, не давайте информацию о справке о несудимости.
          Ваш ответ должен содержать конкретные шаги или рекомендации по решению проблемы, описанной в обращении.
-         
+
          ${contextFromKB}`;
-      
+
       const userPrompt = `Пожалуйста, сформируйте ответ на следующее обращение гражданина:
-      
+
       Обращение: "${input.content}"
-      
+
       ${input.metadata?.classification ? `Классификация обращения: ${input.metadata.classification}` : ''}
-      
+
       Ваш ответ должен быть:
       1. Непосредственно связан с темой обращения
       2. Содержать конкретные рекомендации по решению проблемы
       3. Содержать информацию о том, куда может обратиться гражданин за дополнительной помощью
-      
+
       Сейчас ваша роль – специалист по обработке обращений граждан, который должен дать полный и информативный ответ, решающий проблему гражданина.
 
       Сформулируйте ответ в формате официального ответа на обращение гражданина.`;
-      
+
       console.log("Generating response to citizen request with prompt:", userPrompt);
       const response = await processUserMessage(systemPrompt, userPrompt);
       console.log("Generated response:", response);
-      
+
       return {
         success: true,
         output: response,
@@ -606,14 +617,14 @@ export class AgentService {
       };
     }
   }
-  
+
   /**
    * Суммаризация контента
    */
   private async summarizeContent(agent: Agent, input: AgentInput, language: string): Promise<AgentResult> {
     try {
       const summary = await summarizeDocument(input.content);
-      
+
       return {
         success: true,
         output: summary,
@@ -634,7 +645,7 @@ export class AgentService {
       };
     }
   }
-  
+
   /**
    * Анализ документа
    */
@@ -645,23 +656,23 @@ export class AgentService {
         `Вы эксперт по анализу документов.
          Проанализируйте содержимое документа и выделите ключевые моменты, участников, сроки и обязательства.
          Структурируйте ответ по разделам.`;
-      
+
       const userPrompt = `Пожалуйста, проанализируйте следующий документ:
-      
+
       ${input.content}
-      
+
       Выделите:
       1. Ключевые факты и выводы
       2. Участники и их роли
       3. Сроки и важные даты
       4. Обязательства и ответственные
       5. Рекомендации`;
-      
+
       const analysis = await processUserMessage(systemPrompt, userPrompt);
-      
+
       // Примитивное извлечение структурированных данных из текста анализа
       const analysisData = this.extractStructuredDataFromText(analysis);
-      
+
       return {
         success: true,
         output: analysis,
@@ -680,7 +691,7 @@ export class AgentService {
       };
     }
   }
-  
+
   /**
    * Валидация записи в блокчейне
    */
@@ -705,7 +716,7 @@ export class AgentService {
       };
     }
   }
-  
+
   /**
    * Запись результата работы агента в блокчейн через Hyperledger Besu
    */
@@ -736,7 +747,7 @@ export class AgentService {
         default:
           action = 'processing';
       }
-      
+
       // Формируем данные для записи в блокчейн
       const blockchainData = {
         type: this.mapEntityTypeToBlockchainType(input.entityType),
@@ -754,16 +765,16 @@ export class AgentService {
           ...result.metadata
         }
       };
-      
+
       // Записываем в блокчейн через Hyperledger Besu (через Moralis API)
       console.log(`Recording agent result to Hyperledger Besu blockchain: ${action} of ${input.entityType}`);
       const blockchainResult = await recordToBlockchain(blockchainData);
-      
+
       // Сохраняем результат в агентских результатах
       if (input.entityId) {
         // Преобразуем taskType в actionType для совместимости с API и хранилищем
         let actionType = action; // Используем переменную action, определенную ранее
-        
+
         await storage.createAgentResult({
           agentId,
           entityType: input.entityType,
@@ -773,7 +784,7 @@ export class AgentService {
           feedback: null
         });
       }
-      
+
       return { 
         transactionHash: blockchainResult.transactionHash
       };
@@ -784,7 +795,7 @@ export class AgentService {
       };
     }
   }
-  
+
   /**
    * Преобразование типа сущности в тип блокчейн-записи
    */
@@ -797,10 +808,10 @@ export class AgentService {
       [AgentEntityType.DAO_PROPOSAL]: BlockchainRecordType.SYSTEM_EVENT,
       [AgentEntityType.BLOCKCHAIN_RECORD]: BlockchainRecordType.SYSTEM_EVENT,
     };
-    
+
     return mapping[entityType] || BlockchainRecordType.SYSTEM_EVENT;
   }
-  
+
   /**
    * Преобразование типа задачи (taskType) в тип действия (actionType)
    * для совместимости с базой данных и API
@@ -816,10 +827,10 @@ export class AgentService {
       [AgentTaskType.DATA_ANALYSIS]: 'analysis',
       [AgentTaskType.DOCUMENT_ANALYSIS]: 'document_analysis',
     };
-    
+
     return mapping[taskType] || 'processing';
   }
-  
+
   /**
    * Получение названия типа сущности на русском
    */
@@ -832,25 +843,25 @@ export class AgentService {
       [AgentEntityType.DAO_PROPOSAL]: 'предложения DAO',
       [AgentEntityType.BLOCKCHAIN_RECORD]: 'блокчейн-записи',
     };
-    
-    return names[entityType] || entityType;
+
+    return names[entityType]: entityType;
   }
-  
+
   /**
    * Извлечение структурированных данных из текста
    */
   private extractStructuredDataFromText(text: string): Record<string, any> {
     const sections: Record<string, string> = {};
-    
+
     // Простая эвристика для разбиения на разделы по цифрам с точкой в начале строки
     const sectionRegex = /^\s*(\d+)\.\s+(.*?)(?=\n\s*\d+\.|$)/gms;
     let match;
-    
+
     while ((match = sectionRegex.exec(text)) !== null) {
       const [, num, content] = match;
       sections[`section_${num}`] = content.trim();
     }
-    
+
     return sections;
   }
 }

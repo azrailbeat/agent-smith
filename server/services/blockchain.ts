@@ -48,7 +48,15 @@ export enum BlockchainRecordType {
   TASK = 'task',
   DOCUMENT = 'document',
   SYSTEM_EVENT = 'system_event',
-  USER_ACTION = 'user_action'
+  USER_ACTION = 'user_action',
+  EOTINISH_REQUEST = 'eotinish_request'
+}
+
+// Специальный тип для записей eОтиниш
+export interface EotinishBlockchainData extends BlockchainData {
+  eotinishId: string;
+  governmentBody?: string;
+  securityLevel?: string;
 }
 
 /**
