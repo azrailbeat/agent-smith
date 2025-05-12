@@ -79,6 +79,7 @@ interface TrelloStyleRequestCardProps {
   innerRef: React.Ref<HTMLDivElement>;
   isDragging: boolean;
   onAutoProcess?: (request: CitizenRequest) => void;
+  isJustMoved?: boolean; // Флаг для недавно перемещенной карточки
 }
 
 const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
@@ -90,7 +91,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   dragHandleProps,
   innerRef,
   isDragging,
-  onAutoProcess
+  onAutoProcess,
+  isJustMoved
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
@@ -301,7 +303,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       ref={innerRef}
       {...draggableProps}
       {...dragHandleProps}
-      className={`mb-2 bg-white rounded-md border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200 max-w-full overflow-hidden`}
+      className={`mb-2 bg-white rounded-md border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "kanban-card-moving shadow-lg" : isJustMoved ? "kanban-card-flash shadow-md" : "shadow-sm"} hover:shadow-md transition-all duration-200 max-w-full overflow-hidden`}
       onClick={onClick}
       style={{ maxHeight: '350px', minHeight: '100px' }}
     >

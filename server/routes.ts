@@ -27,7 +27,6 @@ import {
 import { registerSystemRoutes } from "./system-api";
 import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
-import { registerLLMMonitoringRoutes } from "./monitoring/llm-monitoring";
 import { registerKnowledgeRoutes } from "./vector-storage/knowledge-api";
 import { registerMeetingRoutes } from "./meeting-api";
 import { registerAudioRoutes } from "./audio-api";
@@ -53,7 +52,7 @@ import {
   KnowledgeDocument,
   InsertKnowledgeDocument 
 } from "@shared/schema";
-import { initializeSettings, getSystemSettings, updateSystemSettings } from "./services/system-settings";
+import { SystemSettings } from "./services/system-settings";
 import { agentService } from "./services/agent-service";
 import { databaseConnector, DatabaseProvider } from "./services/database-connector";
 import { z } from "zod";
@@ -110,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerSystemRoutes(app);
   registerDatabaseRoutes(app);
   registerPlankaRoutes(app);
-  registerLLMMonitoringRoutes(app);
+  // LLM мониторинг настраивается через llmAnalyticsRoutes
   registerMeetingRoutes(app);
   registerAudioRoutes(app);
   registerKnowledgeRoutes(app);
@@ -143,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Инициализация настроек системы
-  initializeSettings();
+  SystemSettings.initialize();
   
   // Регистрация API маршрутов должна происходить до обработки статических файлов
   
@@ -207,9 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Регистрация маршрутов мониторинга LLM
-  const llmMonitoringRouter = express.Router();
-  registerLLMMonitoringRoutes(llmMonitoringRouter);
-  app.use(llmMonitoringRouter);
+  // Маршруты LLM мониторинга настраиваются через llmAnalyticsRoutes
   
   // API routes
   app.get('/api/health', (req, res) => {

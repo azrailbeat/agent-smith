@@ -130,6 +130,8 @@ const CitizenRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState<boolean>(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState<boolean>(false);
+  // Состояние для отслеживания ID последней перемещенной карточки
+  const [lastMovedRequestId, setLastMovedRequestId] = useState<number | null>(null);
   // Состояние для настроек агентов
   const [agentSettings, setAgentSettings] = useState<{
     enabled: boolean;
@@ -395,6 +397,14 @@ const CitizenRequests = () => {
     const requestId = parseInt(draggableId);
     let newStatus = destination.droppableId;
     
+    // Устанавливаем ID последней перемещенной карточки для анимации
+    setLastMovedRequestId(requestId);
+    
+    // Сбрасываем ID через 2 секунды
+    setTimeout(() => {
+      setLastMovedRequestId(null);
+    }, 2000);
+    
     // Приводим статус к формату, который ожидает сервер
     if (newStatus === 'inProgress') {
       newStatus = 'in_progress';
@@ -448,6 +458,14 @@ const CitizenRequests = () => {
     
     // Обновляем статус обращения
     updateRequestMutation.mutate({ id: requestId, status: newStatus });
+    
+    // Устанавливаем ID последней перемещенной карточки для анимации
+    setLastMovedRequestId(requestId);
+    
+    // Сбрасываем ID после завершения анимации через 2 секунды
+    setTimeout(() => {
+      setLastMovedRequestId(null);
+    }, 2000);
     
     // Если включена ИИ обработка и есть выбранный агент, автоматически обрабатываем обращение при перемещении в колонку "inProgress"
     if (agentSettings.enabled && agentSettings.defaultAgent && destination.droppableId === 'inProgress') {
@@ -885,6 +903,7 @@ const CitizenRequests = () => {
                                       selectedAgent: agentSettings.defaultAgent
                                     }));
                                   }}
+                                  isJustMoved={lastMovedRequestId === request.id}
                                 />
                               )}
                             </Draggable>
