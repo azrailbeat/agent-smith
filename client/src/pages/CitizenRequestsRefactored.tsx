@@ -128,7 +128,16 @@ const CitizenRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState<boolean>(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState<boolean>(false);
-  const [aiProcessingEnabled, setAiProcessingEnabled] = useState<boolean>(false);
+  // Состояние для настроек агентов
+  const [agentSettings, setAgentSettings] = useState<{
+    enabled: boolean;
+    requestProcessingMode: 'manual' | 'auto' | 'smart';
+    defaultAgent: number | null;
+  }>({
+    enabled: false,
+    requestProcessingMode: 'manual',
+    defaultAgent: null
+  });
   const [selectedTab, setSelectedTab] = useState<string>('kanban');
   const [viewMode, setViewMode] = useState<'details' | 'ai' | 'history'>('details');
 
