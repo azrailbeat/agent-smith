@@ -424,14 +424,14 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       
       <div className="flex h-full">
         {/* Основная секция */}
-        <div className="flex-1 pl-6 pb-6 pr-10 pt-6 overflow-y-auto max-h-[85vh]">
+        <div className="flex-1 pl-5 pb-4 pr-6 pt-4 overflow-y-auto max-h-[85vh]">
           {/* Заголовок обращения */}
-          <div className="border-b pb-4 mb-6">
-            <h2 className="text-xl font-medium mb-2">Обращение через виджет</h2>
-            <div className="flex items-center text-sm text-gray-600">
+          <div className="border-b pb-3 mb-4">
+            <h2 className="text-lg font-medium mb-1">Обращение через виджет</h2>
+            <div className="flex items-center text-xs text-gray-600">
               <div className="flex items-center">
-                <span className="mr-2">в списке</span>
-                <Badge variant="outline" className="rounded-sm font-normal text-xs mr-6">
+                <span className="mr-1">в списке</span>
+                <Badge variant="outline" className="rounded-sm font-normal text-xs mr-4">
                   {request.status === 'new' ? 'Новые' : 
                   request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
                   request.status === 'waiting' ? 'Ожидание' : 
@@ -445,23 +445,23 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           </div>
 
           {/* Табы */}
-          <div className="border-b mb-8">
+          <div className="border-b mb-5">
             <div className="flex">
-              <div className={`py-2 px-5 border-b-2 ${activeTab === 'main' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
+              <div className={`py-2 px-4 border-b-2 ${activeTab === 'main' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
                 <button 
-                  className="text-sm" 
+                  className="text-xs" 
                   onClick={() => setActiveTab('main')}
                 >
                   Информация
                 </button>
               </div>
-              <div className={`py-2 px-5 border-b-2 ${activeTab === 'ai' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
+              <div className={`py-2 px-4 border-b-2 ${activeTab === 'ai' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
                 <button 
-                  className="text-sm flex items-center" 
+                  className="text-xs flex items-center" 
                   onClick={() => setActiveTab('ai')}
                 >
                   ИИ обработка
-                  {request.aiProcessed && <div className="ml-1.5 h-2 w-2 rounded-full bg-green-500"></div>}
+                  {request.aiProcessed && <div className="ml-1 h-1.5 w-1.5 rounded-full bg-green-500"></div>}
                 </button>
               </div>
             </div>
@@ -470,14 +470,14 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           {/* Контент в зависимости от активной вкладки */}
           {activeTab === 'main' && (
             <div>
-              <div className="grid grid-cols-2 gap-x-20 gap-y-8 mb-8">
+              <div className="grid grid-cols-2 gap-x-12 gap-y-5 mb-5">
                 <div>
-                  <div className="text-sm text-gray-500 mb-2">Тип обращения</div>
-                  <div className="font-medium text-base">{request.requestType || "Жалоба"}</div>
+                  <div className="text-xs text-gray-500 mb-1">Тип обращения</div>
+                  <div className="font-medium text-sm">{request.requestType || "Жалоба"}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-2">Приоритет</div>
-                  <Badge className={`text-sm py-1 px-3 ${
+                  <div className="text-xs text-gray-500 mb-1">Приоритет</div>
+                  <Badge className={`text-xs py-0.5 px-2 ${
                     request.priority === 'low' ? 'bg-blue-100 text-blue-800 border-0' : 
                     request.priority === 'medium' ? 'bg-amber-100 text-amber-800 border-0' : 
                     request.priority === 'high' ? 'bg-orange-100 text-orange-800 border-0' : 
@@ -490,9 +490,9 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-2">Статус</div>
-                  <div className="font-medium flex items-center">
-                    <div className={`h-2.5 w-2.5 rounded-full mr-2 ${
+                  <div className="text-xs text-gray-500 mb-1">Статус</div>
+                  <div className="font-medium text-sm flex items-center">
+                    <div className={`h-2 w-2 rounded-full mr-1.5 ${
                       request.status === 'new' ? 'bg-blue-500' : 
                       request.status === 'in_progress' || request.status === 'inProgress' ? 'bg-amber-500' : 
                       request.status === 'waiting' ? 'bg-purple-500' : 
@@ -507,30 +507,30 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-2">ID</div>
-                  <div className="font-medium text-base">#{request.id}</div>
+                  <div className="text-xs text-gray-500 mb-1">ID</div>
+                  <div className="font-medium text-sm">#{request.id}</div>
                 </div>
               </div>
               
-              <div className="mb-8">
-                <div className="text-sm text-gray-500 mb-2">Описание</div>
-                <div className="whitespace-pre-wrap bg-white p-4 border rounded-md">
+              <div className="mb-5">
+                <div className="text-xs text-gray-500 mb-1">Описание</div>
+                <div className="whitespace-pre-wrap bg-white p-3 border rounded-md text-sm">
                   {request.description || request.content || "Описание отсутствует"}
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-2 gap-5 mb-5">
                 <div>
-                  <div className="text-sm text-gray-500 mb-2">Создано</div>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                  <div className="text-xs text-gray-500 mb-1">Создано</div>
+                  <div className="flex items-center text-xs">
+                    <Calendar className="h-3 w-3 text-gray-500 mr-1.5" />
                     {new Date(request.createdAt).toLocaleDateString('ru-RU')} в {new Date(request.createdAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-2">Обновлено</div>
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-gray-500 mr-2" />
+                  <div className="text-xs text-gray-500 mb-1">Обновлено</div>
+                  <div className="flex items-center text-xs">
+                    <Clock className="h-3 w-3 text-gray-500 mr-1.5" />
                     {new Date(request.updatedAt).toLocaleDateString('ru-RU')} в {new Date(request.updatedAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
                   </div>
                 </div>
