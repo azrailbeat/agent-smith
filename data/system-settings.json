@@ -17,7 +17,7 @@
       "settings": {
         "title": "Форма обращения",
         "primaryColor": "#1c64f2",
-        "theme": "dark",
+        "theme": "light",
         "formFields": [
           {
             "id": 1,

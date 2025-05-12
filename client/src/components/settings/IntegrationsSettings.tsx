@@ -22,10 +22,12 @@ import {
   AlertTriangle, 
   Globe, 
   Code,
-  Webhook
+  Webhook,
+  FileCode
 } from 'lucide-react';
 import { ApiSettings } from '@/components/settings/ApiSettings';
 import { WidgetSettings } from '@/components/settings/WidgetSettings';
+import { HtmlFormSettings } from '@/components/settings/HtmlFormSettings';
 
 export function IntegrationsSettings() {
   const { toast } = useToast();
@@ -92,7 +94,7 @@ export function IntegrationsSettings() {
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-6 rounded-full bg-muted/50">
+        <TabsList className="grid grid-cols-5 mb-6 rounded-full bg-muted/50">
           <TabsTrigger value="email" className="flex items-center gap-2 rounded-full">
             <Mail className="h-4 w-4" />
             <span>Настройки Email</span>
@@ -108,6 +110,10 @@ export function IntegrationsSettings() {
           <TabsTrigger value="widget" className="flex items-center gap-2 rounded-full">
             <Code className="h-4 w-4" />
             <span>Виджет для сайта</span>
+          </TabsTrigger>
+          <TabsTrigger value="htmlform" className="flex items-center gap-2 rounded-full">
+            <FileCode className="h-4 w-4" />
+            <span>HTML форма</span>
           </TabsTrigger>
         </TabsList>
 
@@ -330,6 +336,11 @@ export function IntegrationsSettings() {
         {/* Содержимое таба Виджет для сайта */}
         <TabsContent value="widget">
           <WidgetSettings refreshTab={() => setActiveTab('widget')} />
+        </TabsContent>
+
+        {/* Содержимое таба HTML форма */}
+        <TabsContent value="htmlform">
+          <HtmlFormSettings refreshTab={() => setActiveTab('htmlform')} />
         </TabsContent>
       </Tabs>
     </div>
