@@ -2262,7 +2262,7 @@ ${request.description || ''}
   // Process citizen request with specific agent
   app.post('/api/citizen-requests/:id/process-with-agent', async (req, res) => {
     const id = parseInt(req.params.id);
-    const { agentId } = req.body;
+    const { agentId, action } = req.body;
     
     if (isNaN(id)) {
       return res.status(400).json({ error: 'Invalid request ID' });
@@ -2270,6 +2270,10 @@ ${request.description || ''}
     
     if (!agentId) {
       return res.status(400).json({ error: 'Agent ID is required' });
+    }
+    
+    if (!action) {
+      return res.status(400).json({ error: 'Action type is required' });
     }
     
     try {
