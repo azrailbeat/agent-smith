@@ -277,7 +277,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Имя заявителя */}
         <div className="flex items-start mb-3">
-          <span className="text-[12px] text-gray-700 truncate max-w-[95%]">
+          <span className="text-[12px] text-gray-700 truncate max-w-[95%] line-clamp-1">
             {request.fullName}
           </span>
         </div>
@@ -323,14 +323,14 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             {/* Отображаем классификацию */}
             {request.aiClassification && (
               <div className="mb-1">
-                <span className="font-semibold">Категория:</span> {request.aiClassification}
+                <span className="font-semibold">Категория:</span> <span className="line-clamp-1">{request.aiClassification}</span>
               </div>
             )}
             
             {/* Отображаем рекомендации */}
             {request.aiSuggestion && (
               <div>
-                <span className="font-semibold">Рекомендация:</span> {request.aiSuggestion}
+                <span className="font-semibold">Рекомендация:</span> <span className="line-clamp-2">{request.aiSuggestion}</span>
               </div>
             )}
             
