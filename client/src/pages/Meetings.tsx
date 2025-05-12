@@ -1404,7 +1404,7 @@ const Meetings = () => {
                             </div>
                             <div className="flex items-center gap-1">
                               {task.blockchainHash && (
-                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                                <span title="Сохранено в блокчейне"><Database className="h-3 w-3 text-emerald-500" /></span>
                               )}
                               <Badge variant="outline" className="text-xs">
                                 {task.assignee.split(' ')[0]}
@@ -1442,7 +1442,7 @@ const Meetings = () => {
                             </div>
                             <div className="flex items-center gap-1">
                               {task.blockchainHash && (
-                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                                <span title="Сохранено в блокчейне"><Database className="h-3 w-3 text-emerald-500" /></span>
                               )}
                               <Badge variant="outline" className="text-xs">
                                 {task.assignee.split(' ')[0]}
@@ -1480,7 +1480,7 @@ const Meetings = () => {
                             </div>
                             <div className="flex items-center gap-1">
                               {task.blockchainHash && (
-                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                                <span title="Сохранено в блокчейне"><Database className="h-3 w-3 text-emerald-500" /></span>
                               )}
                               <Badge variant="outline" className="text-xs">
                                 {task.assignee.split(' ')[0]}
@@ -1518,7 +1518,7 @@ const Meetings = () => {
                             </div>
                             <div className="flex items-center gap-1">
                               {task.blockchainHash && (
-                                <Database className="h-3 w-3 text-emerald-500" title="Сохранено в блокчейне" />
+                                <span title="Сохранено в блокчейне"><Database className="h-3 w-3 text-emerald-500" /></span>
                               )}
                               <Badge variant="outline" className="text-xs">
                                 {task.assignee.split(' ')[0]}
