@@ -21,6 +21,93 @@ import {
 
 export function registerSystemRoutes(app: express.Express): void {
   /**
+   * Настройки интеграций
+   */
+  
+  // Получение настроек интеграции по типу
+  app.get('/api/system/integration-settings', (req: Request, res: Response) => {
+    try {
+      const { type } = req.query;
+      
+      if (!type || typeof type !== 'string') {
+        return res.status(400).json({ error: 'Integration type is required' });
+      }
+      
+      const settings = getIntegrationSettings(type);
+      
+      if (!settings) {
+        return res.status(404).json({ error: 'Integration settings not found for the specified type' });
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      console.error('Error getting integration settings:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Сохранение настроек интеграции
+  app.post('/api/system/integration-settings', (req: Request, res: Response) => {
+    try {
+      const { type, enabled, settings } = req.body;
+      
+      if (!type || settings === undefined) {
+        return res.status(400).json({ error: 'Invalid settings format' });
+      }
+      
+      const integrationSettings: IntegrationSettings = {
+        type,
+        enabled: enabled || false,
+        settings
+      };
+      
+      updateIntegrationSettings(integrationSettings);
+      
+      res.json({ success: true, settings: integrationSettings });
+    } catch (error) {
+      console.error('Error saving integration settings:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Получение списка всех настроек интеграций
+  app.get('/api/system/integration-settings/all', (_req: Request, res: Response) => {
+    try {
+      // Получаем все настройки интеграций из системных настроек
+      const settings = SystemSettings.getSettings();
+      res.json(settings.integrationSettings || []);
+    } catch (error) {
+      console.error('Error getting all integration settings:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  // Генерировать новый API ключ
+  app.post('/api/system/generate-api-key', (_req: Request, res: Response) => {
+    try {
+      // Генерируем случайный API ключ
+      const apiKey = generateApiKey();
+      res.json({ apiKey });
+    } catch (error) {
+      console.error('Error generating API key:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  // Функция для генерации API ключа
+  function generateApiKey(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const keyLength = 32;
+    let key = '';
+    
+    for (let i = 0; i < keyLength; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    return key;
+  }
+  
+  /**
    * Настройки кнопок агентов
    */
   

@@ -23,6 +23,7 @@ import DAOVoting from "@/pages/DAOVoting";
 import UserProfile from "@/pages/UserProfile";
 import KnowledgeManagement from "@/pages/KnowledgeManagement";
 import EmbedForm from "@/pages/EmbedForm";
+import IntegrationSettings from "@/pages/IntegrationSettings";
 import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
 
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/knowledge" component={KnowledgeManagement} />
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />
+      <Route path="/integration-settings" component={IntegrationSettings} />
       <Route path="/dao-voting" component={DAOVoting} />
       <Route path="/about" component={AboutSystem} />
       <Route path="/embed" component={EmbedForm} />
