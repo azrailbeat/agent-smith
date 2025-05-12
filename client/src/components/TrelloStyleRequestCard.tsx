@@ -94,10 +94,13 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
-  // Инициализируем activities из request.activities, если они доступны
-  const [activities, setActivities] = useState<Activity[]>(
-    Array.isArray(request.activities) ? request.activities : []
-  );
+  // Инициализируем activities из request.activities, если они доступны и являются массивом
+  const [activities, setActivities] = useState<Activity[]>(() => {
+    if (request.activities && Array.isArray(request.activities)) {
+      return request.activities;
+    }
+    return [];
+  });
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -150,11 +153,19 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       setActivitiesLoading(true);
       apiRequest('GET', `/api/citizen-requests/${request.id}/activities`)
         .then((data) => {
-          // Убедимся, что полученные данные - массив
+          // Проверяем формат данных и обрабатываем разные возможные структуры
           if (Array.isArray(data)) {
+            // Данные уже в правильном формате массива
             setActivities(data);
+          } else if (data && typeof data === 'object' && 'activities' in data && Array.isArray(data.activities)) {
+            // Данные в формате { activities: [] }
+            setActivities(data.activities);
+          } else if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
+            // Данные в формате { data: [] }
+            setActivities(data.data);
           } else {
-            console.error('Activities data is not an array:', data);
+            // Никакой из известных форматов не подошел
+            console.error('Activities data is not in a recognized format:', data);
             setActivities([]);
           }
         })
@@ -165,6 +176,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             description: "Не удалось загрузить историю действий",
             variant: "destructive",
           });
+          setActivities([]); // Устанавливаем пустой массив при ошибке
         })
         .finally(() => {
           setActivitiesLoading(false);
@@ -461,30 +473,44 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <div className="text-[10px] text-gray-500 italic pl-1">Загрузка истории...</div>
             ) : (
               <>
-                {Array.isArray(activities) && activities.slice(0, 5).map((activity, index) => (
-                  <div key={activity.id || index} className="flex items-center gap-1.5">
-                    <div className="bg-gray-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
-                      {getActionIcon(activity.actionType || activity.action || '')}
-                    </div>
-                    <div className="text-[10px] text-gray-600 flex-1 overflow-hidden">
-                      <div className="flex justify-between items-start w-full">
-                        <span className="font-medium truncate max-w-[75%] overflow-hidden text-ellipsis">{activity.description}</span>
-                        <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px] flex-shrink-0">{formatActivityDate(activity.createdAt || activity.timestamp)}</span>
+                {Array.isArray(activities) && activities.length > 0 ? (
+                  // Если есть активности, отображаем их
+                  <>
+                    {activities.slice(0, 5).map((activity, index) => (
+                      <div key={index} className="flex items-center gap-1.5">
+                        <div className="bg-gray-100 rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0">
+                          {getActionIcon(activity?.actionType || activity?.action || '')}
+                        </div>
+                        <div className="text-[10px] text-gray-600 flex-1 overflow-hidden">
+                          <div className="flex justify-between items-start w-full">
+                            <span className="font-medium truncate max-w-[75%] overflow-hidden text-ellipsis">
+                              {activity?.description || 'Действие с запросом'}
+                            </span>
+                            <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px] flex-shrink-0">
+                              {activity?.createdAt || activity?.timestamp 
+                                ? formatActivityDate(activity.createdAt || activity.timestamp) 
+                                : 'н/д'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {Array.isArray(activities) && activities.length > 5 && (
-                  <div className="text-[10px] text-blue-500 hover:underline cursor-pointer text-center mt-1" onClick={(e) => {
-                    e.stopPropagation();
-                    toast({
-                      title: "История действий",
-                      description: "Полная история доступна в детальной карточке",
-                    });
-                  }}>
-                    Показать все ({activities.length})
-                  </div>
+                    ))}
+                    
+                    {activities.length > 5 && (
+                      <div className="text-[10px] text-blue-500 hover:underline cursor-pointer text-center mt-1" onClick={(e) => {
+                        e.stopPropagation();
+                        toast({
+                          title: "История действий",
+                          description: "Полная история доступна в детальной карточке",
+                        });
+                      }}>
+                        Показать все ({activities.length})
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Если активностей нет
+                  <div className="text-[10px] text-gray-500 italic pl-1">История действий пуста</div>
                 )}
               </>
             )}
