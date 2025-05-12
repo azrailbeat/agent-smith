@@ -48,6 +48,7 @@ import {
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
+import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog';
 import {
   ChevronDown,
   Plus,
@@ -654,6 +655,16 @@ const CitizenRequests = () => {
                 checked={agentSettings.enabled}
                 onCheckedChange={(enabled) => setAgentSettings(prev => ({ ...prev, enabled }))}
               />
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-4 bg-gray-50 text-xs h-8"
+                onClick={() => setIsAutoProcessDialogOpen(true)}
+              >
+                <Bot className="mr-1.5 h-3.5 w-3.5" />
+                Авто-обработка
+              </Button>
             </div>
             
             {agentSettings.enabled && (
@@ -1165,6 +1176,23 @@ const CitizenRequests = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Диалог автоматической обработки */}
+      <AutoProcessingDialog 
+        open={isAutoProcessDialogOpen}
+        onOpenChange={setIsAutoProcessDialogOpen}
+        agents={availableAgents}
+        onStartProcessing={(settings) => {
+          // Логика запуска автоматической обработки
+          toast({
+            title: "Автоматическая обработка",
+            description: `Запущена автоматическая обработка ${settings.autoClassification ? 'с классификацией' : 'без классификации'}`,
+          });
+          
+          // Здесь будет логика массовой обработки запросов
+          console.log('Auto processing settings:', settings);
+        }}
+      />
     </div>
   );
 };
