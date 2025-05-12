@@ -180,10 +180,15 @@ export class KnowledgeService {
     }
   }
 
+
   /**
-   * Выполнить семантический поиск по базе знаний
+   * Поиск документов в базе знаний по текстовому запросу
+   * @param knowledgeBaseId Идентификатор базы знаний
+   * @param query Текстовый запрос для поиска
+   * @param limit Максимальное количество результатов
+   * @returns Результаты поиска в формате RAG
    */
-  async search(knowledgeBaseId: number, query: string, limit: number = 5): Promise<RAGResult> {
+  async searchDocuments(knowledgeBaseId: number, query: string, limit: number = 5): Promise<RAGResult> {
     try {
       // Получаем базу знаний
       const knowledgeBase = await this.getKnowledgeBase(knowledgeBaseId);
