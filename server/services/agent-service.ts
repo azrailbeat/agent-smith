@@ -517,6 +517,44 @@ export class AgentService {
    */
   private async generateResponse(agent: Agent, input: AgentInput, language: string): Promise<AgentResult> {
     try {
+      // Проверяем, есть ли у агента базы знаний
+      let contextFromKB = '';
+      let usedKnowledgeBase = false;
+      
+      if (agent.id) {
+        try {
+          // Получаем базы знаний для агента
+          const knowledgeBases = await storage.getAgentKnowledgeBases(agent.id);
+          
+          if (knowledgeBases && knowledgeBases.length > 0) {
+            // Выбираем первую базу знаний (в будущем можно улучшить логику выбора)
+            const kb = knowledgeBases[0];
+            console.log(`Using knowledge base ${kb.name} for agent ${agent.name}`);
+            
+            // Используем KnowledgeService для получения релевантного контекста
+            const knowledgeService = new KnowledgeService({
+              type: 'openai',
+              modelName: 'text-embedding-ada-002',
+              apiKey: process.env.OPENAI_API_KEY
+            });
+            
+            const ragResults = await knowledgeService.searchDocuments(kb.id, input.content, 3);
+            if (ragResults && ragResults.passages && ragResults.passages.length > 0) {
+              // Формируем контекст из найденных документов
+              contextFromKB = "КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:\n\n" + 
+                ragResults.passages.map(doc => doc.content).join("\n\n") + 
+                "\n\nИспользуй эту информацию при составлении ответа, но не указывай явно, что она из базы знаний.";
+              
+              usedKnowledgeBase = true;
+              console.log(`Retrieved ${ragResults.passages.length} relevant documents from knowledge base`);
+            }
+          }
+        } catch (kbError) {
+          console.error('Error retrieving knowledge base information:', kbError);
+          // Продолжаем без базы знаний
+        }
+      }
+      
       // Используем системный промпт агента или формируем стандартный
       const systemPrompt = agent.systemPrompt || 
         `Вы государственный служащий, эксперт по обработке обращений граждан.
@@ -526,7 +564,9 @@ export class AgentService {
 
          ВАЖНО: Ответ должен напрямую относиться к сути обращения. Не давайте информацию, не связанную с темой обращения.
          Например, если гражданин спрашивает о проблеме с ЭЦП, не давайте информацию о справке о несудимости.
-         Ваш ответ должен содержать конкретные шаги или рекомендации по решению проблемы, описанной в обращении.`;
+         Ваш ответ должен содержать конкретные шаги или рекомендации по решению проблемы, описанной в обращении.
+         
+         ${contextFromKB}`;
       
       const userPrompt = `Пожалуйста, сформируйте ответ на следующее обращение гражданина:
       
@@ -553,7 +593,9 @@ export class AgentService {
         metadata: {
           agentId: agent.id,
           agentName: agent.name,
-          language
+          language,
+          usedKnowledgeBase,
+          ragEnabled: usedKnowledgeBase
         }
       };
     } catch (error) {

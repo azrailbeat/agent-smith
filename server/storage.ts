@@ -135,7 +135,7 @@ export interface IStorage {
   
   // Knowledge bases for agents
   getAgentKnowledgeBase(id: number): Promise<AgentKnowledgeBase | undefined>;
-  getAgentKnowledgeBases(agentId: number): Promise<AgentKnowledgeBase[]>;
+  getAgentKnowledgeBases(agentId?: number): Promise<AgentKnowledgeBase[]>;
   getAllAgentKnowledgeBases(): Promise<AgentKnowledgeBase[]>;
   createAgentKnowledgeBase(knowledgeBase: InsertAgentKnowledgeBase): Promise<AgentKnowledgeBase>;
   updateAgentKnowledgeBase(id: number, data: Partial<InsertAgentKnowledgeBase>): Promise<AgentKnowledgeBase | undefined>;
