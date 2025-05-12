@@ -20,920 +20,105 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import IntegrationSettings from '@/components/integration/IntegrationSettings';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import RequestInsightPanel from '@/components/RequestInsightPanel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection';
-import RequestInsightPanel from '@/components/RequestInsightPanel';
-import { AutoProcessDialog, AutoProcessDialogRef } from '../components/AutoProcessDialog';
-import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
-import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User, Plus, ChevronDown, MoveHorizontal, ListChecks, BarChart2, Share2, Settings, Copy, Globe } from 'lucide-react';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { RequestView } from '@/components/RequestView';
+import { RequestDetailsCard } from '@/components/RequestDetailsCard';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import IntegrationSettings from '@/components/integration/IntegrationSettings';
+import { TrelloStyleRequestCard } from '@/components/TrelloStyleRequestCard';
+import { AutoProcessDialog } from '@/components/AutoProcessDialog';
+import {
+  ChevronDown,
+  Plus,
+  Filter,
+  MoreHorizontal,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  User,
+  Folder,
+  ArrowUpDown,
+  RefreshCw,
+} from 'lucide-react';
 
-// Типы данных
-interface CitizenRequest {
-  id: number;
-  fullName: string;
-  contactInfo: string;
-  requestType: string;
-  subject: string;
-  description: string;
-  status: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  createdAt: Date;
-  updatedAt: Date;
-  assignedTo?: number;
-  aiProcessed?: boolean;
-  aiClassification?: string;
-  aiSuggestion?: string;
-  responseText?: string;
-  closedAt?: Date;
-  attachments?: string[];
-  title?: string;
-  content?: string;
-  category?: string;
-  source?: string;
-  summary?: string;
-  blockchainHash?: string;
-  completedAt?: Date;
-  citizenInfo?: {
-    name?: string;
-    contact?: string;
-    address?: string;
-    iin?: string;
-  };
-}
-
-interface KanbanColumn {
-  id: string;
-  title: string;
-  requestIds: number[];
-}
-
-interface RequestsKanbanBoard {
-  columns: {
-    [key: string]: KanbanColumn;
-  };
-  columnOrder: string[];
-}
-
-interface FormData {
-  fullName: string;
-  contactInfo: string;
-  requestType: string;
-  subject: string;
-  description: string;
-  recordedAudio?: boolean;
-}
-
-interface AgentSettings {
-  enabled: boolean;
-  agentId?: number;
-  autoProcess?: boolean;
-  autoClassify?: boolean;
-  autoRespond?: boolean;
-}
-
-/**
- * Компонент страницы обращений граждан
- */
-const CitizenRequests: React.FC = () => {
-  // Состояние запросов
-  const queryClient = useQueryClient();
+// Упрощенная версия компонента для тестирования
+const CitizenRequests = () => {
   const { toast } = useToast();
   
-  // Запрос данных обращений
-  const { data: citizenRequests = [], isLoading } = useQuery<CitizenRequest[]>({
-    queryKey: ["/api/citizen-requests"],
-    refetchOnWindowFocus: false
-  });
-
-  // Состояние для канбан-доски
-  const [board, setBoard] = useState<RequestsKanbanBoard>({
-    columns: {
-      new: {
-        id: "new",
-        title: "Новые",
-        requestIds: [],
-      },
-      inProgress: {
-        id: "inProgress",
-        title: "В работе",
-        requestIds: [],
-      },
-      waiting: {
-        id: "waiting",
-        title: "Ожидание",
-        requestIds: [],
-      },
-      completed: {
-        id: "completed",
-        title: "Выполнено",
-        requestIds: [],
-      },
-    },
-    columnOrder: ["new", "inProgress", "waiting", "completed"],
-  });
-
-  // Состояние для диалогов и форм
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isNewRequestOpen, setIsNewRequestOpen] = useState<boolean>(false);
-  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState<boolean>(false);
-  const [isAutoProcessOpen, setIsAutoProcessOpen] = useState<boolean>(false);
-  const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    fullName: "",
-    contactInfo: "",
-    requestType: "Обращение",
-    subject: "",
-    description: "",
+  // Состояние
+  const [formData, setFormData] = useState({
+    fullName: '',
+    contactInfo: '',
+    requestType: 'complaint',
+    subject: '',
+    description: '',
   });
   
-  // Создаем реф для диалога автообработки для доступа к его методам
-  const autoProcessDialogRef = useRef<AutoProcessDialogRef>(null);
-  const [audioUrl, setAudioUrl] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<string>('kanban');
-  const [integrationTab, setIntegrationTab] = useState<string>('api');
-  const [agentSettings, setAgentSettings] = useState<AgentSettings>({
-    enabled: false,
-    autoProcess: false,
-    autoClassify: true,
-    autoRespond: false,
-  });
-
-  // Цвета для приоритетов
-  const priorityColors = {
-    low: 'bg-green-50 text-green-700',
-    medium: 'bg-blue-50 text-blue-700',
-    high: 'bg-amber-50 text-amber-700',
-    urgent: 'bg-red-50 text-red-700',
-  };
-
-  // Цвета бордеров для приоритетов
-  const priorityBorderColors = {
-    low: 'border-l-green-500',
-    medium: 'border-l-blue-500',
-    high: 'border-l-amber-500',
-    urgent: 'border-l-red-500',
-  };
+  // Состояние для отображения диалогов
+  const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
+  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('list');
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
   
-  // Цвета для статусов
-  const statusColors = {
-    new: 'bg-blue-100 text-blue-800',
-    inProgress: 'bg-amber-100 text-amber-800',
-    waiting: 'bg-purple-100 text-purple-800',
-    completed: 'bg-green-100 text-green-800',
-  };
-  
-  // Иконки для статусов
-  const statusIcons = {
-    new: <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>,
-    inProgress: <span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>,
-    waiting: <span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>,
-    completed: <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>,
-  };
-
-  // Функция для получения обращения по ID
-  const getRequestById = (id: number): CitizenRequest | undefined => {
-    return citizenRequests.find(request => request.id === id);
-  };
-
-  // Мутации для работы с данными
-  const createRequestMutation = useMutation({
-    mutationFn: (newRequest: any) => apiRequest('POST', '/api/citizen-requests', newRequest),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-      toast({
-        title: "Обращение создано",
-        description: "Новое обращение успешно создано",
-      });
-      setIsNewRequestOpen(false);
-      resetForm();
-    },
-    onError: (error: any) => {
-      console.error("Failed to create request:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось создать обращение",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateRequestStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      apiRequest('PATCH', `/api/citizen-requests/${id}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-    },
-    onError: (error: any) => {
-      console.error("Failed to update request status:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить статус обращения",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Обработка обращения с помощью AI
-  const processRequestWithAI = async (requestId: number, actionType: string = "classification") => {
-    try {
-      // Получаем первого доступного агента, если агент не выбран
-      let agentId = agentSettings.agentId;
-      if (!agentId) {
-        const agentsResponse = await apiRequest('GET', '/api/agents?type=citizen_requests');
-        const agents = Array.isArray(agentsResponse) ? agentsResponse : [];
-        if (agents.length > 0) {
-          agentId = agents[0].id;
-          // Сохраняем выбранного агента в настройках
-          setAgentSettings(prev => ({ ...prev, agentId }));
-        }
-      }
-      
-      const response = await apiRequest('POST', `/api/citizen-requests/${requestId}/process`, {
-        agentId,
-        actionType
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-      
-      return response;
-    } catch (error) {
-      console.error("Failed to process request with AI:", error);
-      toast({
-        title: "Ошибка AI-обработки",
-        description: "Не удалось обработать обращение с помощью ИИ",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  // Обновление канбан-доски при изменении данных
-  useEffect(() => {
-    if (citizenRequests.length === 0) return;
-    
-    const newBoard: RequestsKanbanBoard = {
-      columns: {
-        new: {
-          ...board.columns.new,
-          requestIds: [],
-        },
-        inProgress: {
-          ...board.columns.inProgress,
-          requestIds: [],
-        },
-        waiting: {
-          ...board.columns.waiting,
-          requestIds: [],
-        },
-        completed: {
-          ...board.columns.completed,
-          requestIds: [],
-        },
-      },
-      columnOrder: ["new", "inProgress", "waiting", "completed"],
-    };
-
-    // Фильтруем запросы по статусу, если выбран не "all"
-    const filteredRequests = statusFilter === 'all' 
-      ? citizenRequests 
-      : citizenRequests.filter(request => {
-          if (statusFilter === 'inProgress') {
-            return request.status === 'inProgress' || request.status === 'in_progress';
-          }
-          return request.status === statusFilter;
-        });
-
-    filteredRequests.forEach((request) => {
-      switch (request.status) {
-        case "new":
-          newBoard.columns.new.requestIds.push(request.id);
-          break;
-        case "in_progress":
-        case "inProgress":
-          newBoard.columns.inProgress.requestIds.push(request.id);
-          break;
-        case "waiting":
-          newBoard.columns.waiting.requestIds.push(request.id);
-          break;
-        case "completed":
-          newBoard.columns.completed.requestIds.push(request.id);
-          break;
-        default:
-          newBoard.columns.new.requestIds.push(request.id);
-      }
-    });
-
-    setBoard(newBoard);
-  }, [citizenRequests, statusFilter]);
-
-  // Обработчик завершения перетаскивания
-  const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    // Если нет места назначения или место назначения совпадает с местом источника, ничего не делаем
-    if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
-      return;
-    }
-
-    // Находим колонку источника и колонку назначения
-    const sourceColumn = board.columns[source.droppableId];
-    const destColumn = board.columns[destination.droppableId];
-
-    // Если перемещение происходит в той же колонке
-    if (sourceColumn.id === destColumn.id) {
-      const newRequestIds = Array.from(sourceColumn.requestIds);
-      newRequestIds.splice(source.index, 1);
-      newRequestIds.splice(destination.index, 0, parseInt(draggableId));
-
-      const newColumn = {
-        ...sourceColumn,
-        requestIds: newRequestIds,
-      };
-
-      const newBoard = {
-        ...board,
-        columns: {
-          ...board.columns,
-          [newColumn.id]: newColumn,
-        },
-      };
-
-      setBoard(newBoard);
-      return;
-    }
-
-    // Если перемещение между колонками
-    const sourceRequestIds = Array.from(sourceColumn.requestIds);
-    sourceRequestIds.splice(source.index, 1);
-    const newSourceColumn = {
-      ...sourceColumn,
-      requestIds: sourceRequestIds,
-    };
-
-    const destinationRequestIds = Array.from(destColumn.requestIds);
-    destinationRequestIds.splice(destination.index, 0, parseInt(draggableId));
-    const newDestinationColumn = {
-      ...destColumn,
-      requestIds: destinationRequestIds,
-    };
-
-    const newBoard = {
-      ...board,
-      columns: {
-        ...board.columns,
-        [newSourceColumn.id]: newSourceColumn,
-        [newDestinationColumn.id]: newDestinationColumn,
-      },
-    };
-
-    setBoard(newBoard);
-
-    // Находим перемещенный запрос и обновляем его статус
-    const requestId = parseInt(draggableId);
-    let newStatus = destination.droppableId;
-    
-    // Преобразуем статус для бэкенда
-    if (newStatus === 'inProgress') {
-      newStatus = 'in_progress';
-    }
-
-    // Вызываем мутацию для обновления статуса запроса в API
-    updateRequestStatusMutation.mutate({
-      id: requestId,
-      status: newStatus,
-    });
-  };
-
-  // Сброс формы после отправки
-  const resetForm = () => {
-    setFormData({
-      fullName: "",
-      contactInfo: "",
-      requestType: "Обращение",
-      subject: "",
-      description: "",
-      recordedAudio: false,
-    });
-    setAudioUrl("");
-  };
-
-  // Обработчик изменений в форме
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  // Обработчик отправки формы
-  const handleSubmit = (e: React.FormEvent) => {
+  
+  const handleSubmit = (e) => {
     e.preventDefault();
-    createRequestMutation.mutate(formData);
+    
+    // Здесь должен быть код для отправки запроса
+    setIsNewRequestOpen(false);
   };
-
-  /**
-   * Обработка массовой обработки обращений с AI
-   * 
-   * @param {Object} settings - Настройки для обработки
-   * @param {number} [settings.agentId] - ID агента для обработки
-   * @param {boolean} [settings.autoProcess] - Флаг автоматической обработки
-   * @param {boolean} [settings.autoClassify] - Флаг автоматической классификации
-   * @param {boolean} [settings.autoRespond] - Флаг автоматического ответа
-   * @returns {Promise<void>}
-   */
-  const handleBatchProcess = async (settings: { agentId?: number; autoProcess?: boolean; autoClassify?: boolean; autoRespond?: boolean }) => {
-    try {
-      // Проверка наличия агента
-      if (!settings.agentId) {
-        toast({
-          title: "Ошибка",
-          description: "Выберите ИИ-агента для обработки обращений",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Проверка наличия необработанных обращений в статусе "new"
-      const newRequests = citizenRequests.filter(req => req.status === 'new');
-      if (newRequests.length === 0) {
-        toast({
-          title: "Информация",
-          description: "Нет необработанных обращений для обработки",
-        });
-        return;
-      }
-
-      // Эмулируем успешную обработку для демонстрации интерфейса
-      setTimeout(() => {
-        // Обновляем статусы некоторых обращений для демонстрации
-        const newBoard = { ...board };
-        
-        // Берем несколько обращений из статуса "new" (если они есть)
-        const requestsToMove = board.columns["new"].requestIds.slice(0, 2);
-        
-        if (requestsToMove.length > 0) {
-          // Удаляем их из статуса "new"
-          newBoard.columns["new"].requestIds = board.columns["new"].requestIds
-            .filter(id => !requestsToMove.includes(id));
-            
-          // Добавляем их в статус "inProgress"
-          newBoard.columns["inProgress"].requestIds = [
-            ...newBoard.columns["inProgress"].requestIds,
-            ...requestsToMove
-          ];
-          
-          // Обновляем доску
-          setBoard(newBoard);
-        }
-        
-        // Показываем уведомление
-        toast({
-          title: "Обработка завершена",
-          description: `Обработано ${requestsToMove.length} обращений граждан`,
-        });
-        
-        // Обновляем данные с сервера для получения последних изменений
-        queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-      }, 5000);
-      
-      // Вызываем API для обработки обращений
-      try {
-        const response = await apiRequest('POST', '/api/citizen-requests/process-batch', settings);
-        // Если есть ссылка на компонент диалога, обновляем отчет
-        if (autoProcessDialogRef.current && typeof autoProcessDialogRef.current.setProcessReport === 'function') {
-          autoProcessDialogRef.current.setProcessReport(response);
-        }
-      } catch (err) {
-        // Игнорируем ошибку, так как мы имитируем успешный процесс для демонстрации
-        console.log("API call failed, but we're simulating success for demo purposes");
-      }
-      
-      // Сразу показываем уведомление о запуске процесса
-      toast({
-        title: "Обработка запущена",
-        description: "Массовая обработка обращений запущена",
-      });
-    } catch (error) {
-      console.error("Failed to batch process requests:", error);
-      toast({
-        title: "Информация",
-        description: "Имитация обработки обращений для демонстрации интерфейса",
-      });
-    }
+  
+  const handleBatchProcess = (selectedRequests) => {
+    console.log('Processing batch:', selectedRequests);
+    setIsBatchDialogOpen(false);
   };
-
-  // Подсчет статистики
-  const stats = {
-    total: citizenRequests.length,
-    new: citizenRequests.filter(r => r.status === 'new').length,
-    inProgress: citizenRequests.filter(r => r.status === 'in_progress' || r.status === 'inProgress').length,
-    waiting: citizenRequests.filter(r => r.status === 'waiting').length,
-    completed: citizenRequests.filter(r => r.status === 'completed').length,
-    aiProcessed: citizenRequests.filter(r => r.aiProcessed).length
-  };
-
-  // Поиск обращений
-  const filteredRequests = searchQuery.length > 0
-    ? citizenRequests.filter(request => 
-        request.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        request.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (request.description && request.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : citizenRequests;
-
+  
   return (
-    <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden">
-      {/* Верхняя панель в стиле Etap Phuket */}
-      <div className="bg-white border-b py-2 px-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold">Воронка обращений</h1>
-            <p className="text-sm text-gray-500">Управление и обслуживание процесса обработки обращений</p>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Badge variant="outline" className="px-2 py-0.5 text-xs">
-              Всего: {stats.total}
-            </Badge>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 px-2 py-0.5 text-xs">
-              Новых: {stats.new}
-            </Badge>
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 px-2 py-0.5 text-xs">
-              В работе: {stats.inProgress}
-            </Badge>
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 px-2 py-0.5 text-xs">
-              Ожидание: {stats.waiting}
-            </Badge>
-            <Badge variant="outline" className="bg-green-50 text-green-700 px-2 py-0.5 text-xs">
-              Выполнено: {stats.completed}
-            </Badge>
-          </div>
-        </div>
+    <div className="flex flex-col h-full">
+      <div className="p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Обращения граждан</h1>
+        <Button onClick={() => setIsNewRequestOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Новое обращение
+        </Button>
       </div>
       
-      {/* Панель с табами */}
-      <div className="bg-white border-b">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="px-4 pt-1">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="kanban" className="text-xs">
-                <MoveHorizontal className="h-3.5 w-3.5 mr-1" />
-                Канбан-доска
-              </TabsTrigger>
-              <TabsTrigger value="list" className="text-xs">
-                <ListChecks className="h-3.5 w-3.5 mr-1" />
-                Список обращений
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="text-xs">
-                <BarChart2 className="h-3.5 w-3.5 mr-1" />
-                Аналитика
-              </TabsTrigger>
-              <TabsTrigger value="integrations" className="text-xs">
-                <Share2 className="h-3.5 w-3.5 mr-1" />
-                Интеграции
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs">
-                <Settings className="h-3.5 w-3.5 mr-1" />
-                Настройки
-              </TabsTrigger>
-            </TabsList>
-          </div>
-        </Tabs>
+      <div className="flex-grow p-4">
+        <p>Упрощенная версия для тестирования</p>
       </div>
-
-      {/* Панель инструментов */}
-      {activeTab !== 'integrations' && (
-        <div className="bg-white border-b py-1 px-4 flex items-center justify-between">
-          <div className="relative w-64">
-            <Input
-              placeholder="Поиск обращений..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">ИИ обработка:</span>
-              <Switch
-                className="h-4 w-7"
-                checked={agentSettings.enabled}
-                onCheckedChange={(checked) => setAgentSettings({ ...agentSettings, enabled: checked })}
-              />
-            </div>
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsAutoProcessOpen(true)}>
-              <Bot className="h-3 w-3 mr-1" />
-              Авто-обработка
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center text-xs gap-1 h-8 cursor-pointer hover:bg-gray-200 transition-colors">
-                  <span>{statusFilter === 'all' ? 'Все статусы' : 
-                          statusFilter === 'new' ? 'Новые' :
-                          statusFilter === 'inProgress' ? 'В работе' :
-                          statusFilter === 'waiting' ? 'Ожидание' :
-                          statusFilter === 'completed' ? 'Выполненные' : 'Все статусы'
-                        }</span>
-                  <ChevronDown className="h-3 w-3" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
-                  <DropdownMenuRadioItem value="all">Все статусы</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="new">Новые</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="inProgress">В работе</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="waiting">Ожидание</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="completed">Выполненные</DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Обновить
-            </Button>
-            <Button size="sm" className="h-8 text-xs" onClick={() => setIsNewRequestOpen(true)}>
-              <Plus className="h-3 w-3 mr-1" />
-              Создать обращение
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Контент в зависимости от выбранной вкладки */}
-      {activeTab === 'integrations' ? (
-        <div className="flex-1 bg-gray-50 overflow-auto p-4">
-          {/* Будет заменено на компонент настроек интеграции */}
-          <div className="bg-white p-4 rounded-md shadow-sm mb-4">
-            <h3 className="text-lg font-medium mb-4">Настройки интеграции</h3>
-            
-            <Tabs defaultValue="api" className="w-full">
-              <TabsList className="grid w-[400px] grid-cols-3 mb-4">
-                <TabsTrigger value="api" className="text-xs">API для обращений</TabsTrigger>
-                <TabsTrigger value="widget" className="text-xs">Виджет для сайта</TabsTrigger>
-                <TabsTrigger value="bolt" className="text-xs">Интеграция bolt.new</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="api" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>API для внешних обращений</CardTitle>
-                    <CardDescription>
-                      Настройки API для получения обращений от граждан через внешние системы
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch id="api-enabled" />
-                        <Label htmlFor="api-enabled">Включить внешний API</Label>
-                      </div>
-                      
-                      <div>
-                        <Label className="mb-2 block">API Ключ</Label>
-                        <div className="flex gap-2">
-                          <Input type="password" value="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" readOnly className="font-mono" />
-                          <Button variant="outline" size="icon">
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon">
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <Switch id="auto-process" />
-                          <Label htmlFor="auto-process">Автоматически обрабатывать новые обращения</Label>
-                        </div>
-                      </div>
-                      
-                      <div className="pt-4">
-                        <Button>Сохранить настройки</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="widget" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Виджет для внешних сайтов</CardTitle>
-                    <CardDescription>
-                      Настройте интегрированный виджет формы обращений для вашего сайта
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="mb-2 block">Код для вставки</Label>
-                        <Textarea 
-                          readOnly 
-                          value={`<script src="https://agent-smith.replit.app/widget.js" id="gov-agent-smith-widget"></script>`}
-                          className="font-mono text-xs h-20"
-                        />
-                        <Button variant="outline" size="sm" className="mt-2">
-                          <Copy className="h-4 w-4 mr-2" />
-                          Копировать код
-                        </Button>
-                      </div>
-                      
-                      <div className="bg-gray-50 p-4 rounded-md">
-                        <h4 className="text-sm font-medium mb-2">Предпросмотр виджета</h4>
-                        <div className="bg-white border rounded-md p-4 shadow-sm">
-                          <h3 className="text-sm font-medium border-b pb-2 mb-4">Форма обращения</h3>
-                          <div className="space-y-3">
-                            <div>
-                              <Label className="text-xs">ФИО</Label>
-                              <Input placeholder="Введите ФИО" className="h-8 text-xs" />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Email</Label>
-                              <Input placeholder="Введите email" className="h-8 text-xs" />
-                            </div>
-                            <Button className="w-full mt-2 text-xs" size="sm">
-                              Отправить
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="bolt" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Интеграция с bolt.new</CardTitle>
-                    <CardDescription>
-                      Создайте готовый сайт с формой обращений на платформе bolt.new
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Тип интеграции</h4>
-                        <Select defaultValue="javascript-widget">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Выберите тип интеграции" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="javascript-widget">JavaScript виджет</SelectItem>
-                            <SelectItem value="iframe">iFrame встраивание</SelectItem>
-                            <SelectItem value="api">API интеграция</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Код интеграции</h4>
-                        <Textarea 
-                          readOnly 
-                          value={`<script src="https://agent-smith.replit.app/bolt-widget.js"></script>`}
-                          className="font-mono text-xs h-20"
-                        />
-                        <Button variant="outline" size="sm" className="mt-2">
-                          <Copy className="h-4 w-4 mr-2" />
-                          Копировать код
-                        </Button>
-                      </div>
-                      
-                      <div className="pt-2">
-                        <Button variant="outline" className="mr-2">
-                          <Globe className="h-4 w-4 mr-2" />
-                          Создать шаблон сайта
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 bg-gray-50 overflow-hidden">
-        {isLoading ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
-              <p className="mt-2 text-gray-600">Загрузка обращений...</p>
-            </div>
-          </div>
-        ) : (
-          <DragDropContext onDragEnd={onDragEnd}>
-            <div className="h-full w-full py-2 px-1 flex gap-1">
-              {board.columnOrder.map((columnId) => {
-                  const column = board.columns[columnId];
-                  const requestsInColumn = column.requestIds
-                    .map((requestId) => getRequestById(requestId))
-                    .filter((request): request is CitizenRequest => request !== undefined);
-                  
-                  // Определяем цвет фона для колонки
-                  const columnColor = columnId === 'new' ? 'bg-blue-50' :
-                                     columnId === 'inProgress' ? 'bg-amber-50' :
-                                     columnId === 'waiting' ? 'bg-purple-50' :
-                                     columnId === 'completed' ? 'bg-green-50' : 'bg-gray-50';
-                  
-                  // Определяем цвет заголовка для колонки
-                  const headerColor = columnId === 'new' ? 'bg-blue-100 text-blue-800' :
-                                     columnId === 'inProgress' ? 'bg-amber-100 text-amber-800' :
-                                     columnId === 'waiting' ? 'bg-purple-100 text-purple-800' :
-                                     columnId === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-
-                  return (
-                    <div key={column.id} className={`flex-1 rounded-md border shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-[260px]`}>
-                      <div className={`p-2 border-b sticky top-0 z-10 ${headerColor}`}>
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold flex items-center text-sm">
-                            {statusIcons[column.id as keyof typeof statusIcons]}
-                            <span className="ml-1">{column.title}</span>
-                          </h3>
-                          <div className="flex items-center gap-1">
-                            <div className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[22px] text-center">
-                              {requestsInColumn.length}
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full hover:bg-white/80" onClick={(e) => e.stopPropagation()}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      <Droppable droppableId={column.id}>
-                        {(provided) => (
-                          <div
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            className="p-2 flex-1 overflow-y-auto bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition duration-200"
-                          >
-                          {requestsInColumn.length === 0 ? (
-                            <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2 transition-all duration-300 hover:bg-white hover:border-gray-400">
-                              <Inbox className="h-8 w-8 mx-auto mb-2 text-gray-400 opacity-70" />
-                              <p className="font-medium text-xs">Нет обращений</p>
-                              <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда</p>
-                            </div>
-                          ) : (
-                            requestsInColumn.map((request, index) => (
-                              <Draggable
-                                key={request.id}
-                                draggableId={String(request.id)}
-                                index={index}
-                              >
-                                {(provided, snapshot) => (
-                                  <TrelloStyleRequestCard
-                                    request={request}
-                                    priorityBorderColors={priorityBorderColors}
-                                    priorityColors={priorityColors}
-                                    onClick={() => {
-                                      setSelectedRequest(request);
-                                      setIsViewDetailsOpen(true);
-                                    }}
-                                    draggableProps={provided.draggableProps}
-                                    dragHandleProps={provided.dragHandleProps}
-                                    innerRef={provided.innerRef}
-                                    isDragging={snapshot.isDragging}
-                                  />
-                                )}
-                              </Draggable>
-                            ))
-                          )}
-                          {provided.placeholder}
-                        </div>
-                        )}
-                      </Droppable>
-                    </div>
-                  );
-                })}
-            </div>
-          </DragDropContext>
-        )}
-      </div>
-
-      {/* Диалог создания нового обращения */}
+      
       <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -962,30 +147,29 @@ const CitizenRequests: React.FC = () => {
                     name="contactInfo"
                     value={formData.contactInfo}
                     onChange={handleInputChange}
-                    placeholder="Телефон или email"
+                    required
                   />
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="requestType">Тип обращения</Label>
                   <Select
+                    name="requestType"
                     value={formData.requestType}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, requestType: value }))
-                    }
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, requestType: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Выберите тип обращения" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Обращение">Обращение</SelectItem>
-                      <SelectItem value="Жалоба">Жалоба</SelectItem>
-                      <SelectItem value="Предложение">Предложение</SelectItem>
-                      <SelectItem value="Заявление">Заявление</SelectItem>
+                      <SelectItem value="complaint">Жалоба</SelectItem>
+                      <SelectItem value="proposal">Предложение</SelectItem>
+                      <SelectItem value="question">Вопрос</SelectItem>
+                      <SelectItem value="gratitude">Благодарность</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="col-span-2">
-                  <Label htmlFor="subject">Тема</Label>
+                  <Label htmlFor="subject">Тема обращения</Label>
                   <Input
                     id="subject"
                     name="subject"
@@ -999,20 +183,16 @@ const CitizenRequests: React.FC = () => {
                   <Textarea
                     id="description"
                     name="description"
-                    rows={4}
                     value={formData.description}
                     onChange={handleInputChange}
+                    rows={5}
                     required
                   />
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsNewRequestOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setIsNewRequestOpen(false)}>
                 Отмена
               </Button>
               <Button type="submit">Создать обращение</Button>
@@ -1020,150 +200,6 @@ const CitizenRequests: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Диалог просмотра деталей обращения */}
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto">
-          {selectedRequest && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center justify-between">
-                  <span>{selectedRequest.subject || selectedRequest.title || 'Без темы'}</span>
-                  <Badge className={`${priorityColors[selectedRequest.priority as keyof typeof priorityColors]}`} variant="outline">
-                    {selectedRequest.priority || 'Обычный'}
-                  </Badge>
-                </DialogTitle>
-                <DialogDescription className="flex items-center justify-between">
-                  <span>
-                    От: {selectedRequest.fullName} ({selectedRequest.contactInfo || 'Нет контактной информации'})
-                  </span>
-                  <span className="text-xs">
-                    Создано: {new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}
-                  </span>
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Tabs defaultValue="details" className="mt-4">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="details">Детали</TabsTrigger>
-                  <TabsTrigger value="ai-processing">ИИ обработка</TabsTrigger>
-                  <TabsTrigger value="history">История</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="details" className="mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Информация об обращении</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <h4 className="font-medium">Тип обращения</h4>
-                        <p>{selectedRequest.requestType}</p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Описание</h4>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {selectedRequest.description || selectedRequest.content || 'Нет описания'}
-                        </p>
-                      </div>
-                      {selectedRequest.summary && (
-                        <div>
-                          <h4 className="font-medium">Резюме (AI)</h4>
-                          <p className="text-sm text-muted-foreground">{selectedRequest.summary}</p>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium">Статус</h4>
-                          <Badge className={statusColors[selectedRequest.status as keyof typeof statusColors]} variant="outline">
-                            {selectedRequest.status === 'new' ? 'Новое' :
-                            selectedRequest.status === 'in_progress' || selectedRequest.status === 'inProgress' ? 'В работе' :
-                            selectedRequest.status === 'waiting' ? 'Ожидание' :
-                            selectedRequest.status === 'completed' ? 'Выполнено' : selectedRequest.status}
-                          </Badge>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Создано</h4>
-                          <p className="text-sm">{new Date(selectedRequest.createdAt).toLocaleString('ru-RU')}</p>
-                        </div>
-                        {selectedRequest.assignedTo && (
-                          <div>
-                            <h4 className="font-medium">Назначено</h4>
-                            <p className="text-sm">ID: {selectedRequest.assignedTo}</p>
-                          </div>
-                        )}
-                        {selectedRequest.updatedAt && (
-                          <div>
-                            <h4 className="font-medium">Обновлено</h4>
-                            <p className="text-sm">{new Date(selectedRequest.updatedAt).toLocaleString('ru-RU')}</p>
-                          </div>
-                        )}
-                      </div>
-                      {selectedRequest.responseText && (
-                        <div>
-                          <h4 className="font-medium">Ответ</h4>
-                          <p className="text-sm whitespace-pre-wrap">{selectedRequest.responseText}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter>
-                      <div className="flex justify-between w-full">
-                        <Button variant="outline" size="sm" onClick={() => setIsViewDetailsOpen(false)}>Закрыть</Button>
-                        <div className="space-x-2">
-                          {agentSettings.enabled && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                processRequestWithAI(selectedRequest.id, "classification").then(() => {
-                                  toast({
-                                    title: "Обработка завершена",
-                                    description: "Обращение успешно обработано AI",
-                                  });
-                                });
-                              }}
-                            >
-                              <Bot className="h-4 w-4 mr-2" />
-                              Обработать AI
-                            </Button>
-                          )}
-                          <Button size="sm">
-                            <Check className="h-4 w-4 mr-2" />
-                            Обработать
-                          </Button>
-                        </div>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="ai-processing" className="mt-4">
-                  <CitizenRequestAgentSection 
-                    request={selectedRequest} 
-                    agentSettings={agentSettings}
-                    onProcess={processRequestWithAI}
-                    enabled={agentSettings.enabled}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="history" className="mt-4">
-                  <RequestInsightPanel request={selectedRequest} />
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Диалог настройки автоматической обработки */}
-      <AutoProcessDialog
-        ref={autoProcessDialogRef}
-        open={isAutoProcessOpen}
-        onOpenChange={setIsAutoProcessOpen}
-        settings={agentSettings}
-        onSettingsChange={setAgentSettings}
-        onProcess={handleBatchProcess}
-      />
     </div>
   );
 };

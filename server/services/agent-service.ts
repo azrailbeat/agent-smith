@@ -16,6 +16,7 @@ import {
   processUserMessage, 
   detectLanguage 
 } from './openai';
+import { KnowledgeService } from '../vector-storage/knowledge-service';
 
 // Типы для обработки запросов агентами
 export enum AgentTaskType {
