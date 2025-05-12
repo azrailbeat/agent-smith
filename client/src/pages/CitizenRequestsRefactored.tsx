@@ -292,6 +292,24 @@ const CitizenRequests = () => {
   // Состояние для диалога обработки
   const [isProcessingDialogOpen, setIsProcessingDialogOpen] = useState(false);
   
+  // Состояние для диалога автоматической обработки
+  const [isAutoProcessDialogOpen, setIsAutoProcessDialogOpen] = useState(false);
+  
+  // Состояние для настроек автоматической обработки
+  const [autoProcessSettings, setAutoProcessSettings] = useState<{
+    aiEnabled: boolean;
+    selectedAgent: number | null;
+    autoClassification: boolean;
+    responseGeneration: boolean;
+    reprocessAI: boolean;
+  }>({
+    aiEnabled: false,
+    selectedAgent: null,
+    autoClassification: true,
+    responseGeneration: false,
+    reprocessAI: false
+  });
+  
   // Состояние для канбан-доски
   const [board, setBoard] = useState<RequestsKanbanBoard>({
     columns: {
