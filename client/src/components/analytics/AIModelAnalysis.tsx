@@ -4,29 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Bot, BrainCircuit, Sparkles, LineChart, ArrowUpRight, AlertTriangle, Cpu } from 'lucide-react';
+import { Bot, BrainCircuit, Sparkles, LineChart, ArrowUpRight, AlertTriangle, Cpu, BarChart2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-
-interface ModelUsage {
-  model: string;
-  tokensUsed: number;
-  cost: number;
-  requestCount: number;
-  avgResponseTime: number;
-}
-
-interface ServiceStatus {
-  serviceName: string;
-  status: 'healthy' | 'degraded' | 'down';
-  lastUpdated: string;
-  details?: {
-    queueLength?: number;
-    gpuUtilization?: number;
-    avgResponseTime?: number;
-    requestsPerMinute?: number;
-    latestError?: string;
-  };
-}
+import { requestAIAnalysis, AnalysisType, ModelUsage, ServiceStatus } from '@/api/llm-analytics-api';
 
 interface AIModelAnalysisProps {
   llmUsage?: ModelUsage[];
@@ -41,150 +21,50 @@ const AIModelAnalysis: React.FC<AIModelAnalysisProps> = ({
 }) => {
   const { toast } = useToast();
   const [analysisDialogOpen, setAnalysisDialogOpen] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState<'optimization' | 'trends' | 'alerts'>('optimization');
+  const [analysisMode, setAnalysisMode] = useState<AnalysisType>(AnalysisType.OPTIMIZATION);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisMetadata, setAnalysisMetadata] = useState<any>(null);
 
   // Функция для запуска ИИ-анализа данных мониторинга LLM
-  const runAIAnalysis = async (mode: 'optimization' | 'trends' | 'alerts') => {
+  const runAIAnalysis = async (mode: AnalysisType) => {
+    if (!llmUsage.length || !llmStatus.length) {
+      toast({
+        title: 'Недостаточно данных',
+        description: 'Для анализа требуются данные о моделях и сервисах LLM',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setAnalysisDialogOpen(true);
     setAnalysisMode(mode);
     setAnalysisLoading(true);
+    setAnalysisResult(null);
+    setAnalysisMetadata(null);
     
     try {
-      // Имитируем запрос к серверу (в реальном приложении здесь будет запрос к API)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Запрос к API для анализа данных
+      const response = await requestAIAnalysis({
+        llmUsage,
+        llmStatus,
+        analysisType: mode
+      });
       
-      // Подготавливаем данные для анализа
-      let analysisText = '';
-      
-      if (mode === 'optimization') {
-        const totalCost = llmUsage.reduce((sum, model) => sum + model.cost, 0);
-        const totalTokens = llmUsage.reduce((sum, model) => sum + model.tokensUsed, 0);
-        const avgResponseTime = llmUsage.reduce((sum, model) => sum + model.avgResponseTime, 0) / (llmUsage.length || 1);
-        
-        const modelWithHighestCost = [...llmUsage].sort((a, b) => b.cost - a.cost)[0];
-        const modelWithLongestResponse = [...llmUsage].sort((a, b) => b.avgResponseTime - a.avgResponseTime)[0];
-        
-        analysisText = `
-## Анализ оптимизации использования LLM моделей
-
-На основе анализа использования моделей выявлены следующие возможности для оптимизации:
-
-### Общие рекомендации
-
-1. **Оптимизация стоимости**: Общие затраты на LLM составляют $${totalCost.toFixed(2)}. Основные расходы приходятся на модель **${modelWithHighestCost?.model || 'N/A'}** ($${modelWithHighestCost?.cost.toFixed(2) || 0}).
-
-2. **Оптимизация производительности**: Средняя скорость ответа всех моделей составляет ${avgResponseTime.toFixed(2)} секунд, что ${avgResponseTime > 1.5 ? 'выше рекомендуемого порога в 1.5 секунды' : 'в пределах нормы'}.
-
-3. **Рациональное использование токенов**: Всего использовано ${totalTokens.toLocaleString()} токенов. Рекомендуется рассмотреть следующие оптимизации:
-   - Сокращение размера промптов
-   - Использование сжатых версий моделей для задач, не требующих высокой точности
-   - Реализация кэширования для часто запрашиваемых промптов
-
-### Распределение ресурсов по сервисам
-
-${llmStatus.map(service => 
-  `- **${service.serviceName}**: ${
-    service.status === 'healthy' ? '✅ Стабильный' : 
-    service.status === 'degraded' ? '⚠️ Требует оптимизации' : 
-    '❌ Требует немедленного вмешательства'
-  }${
-    service.details?.gpuUtilization && service.details.gpuUtilization > 80 
-      ? ' - высокая загрузка GPU (' + service.details.gpuUtilization + '%)' 
-      : ''
-  }`
-).join('\n')}
-
-### Конкретные рекомендации
-
-1. ${modelWithHighestCost?.model || 'N/A'}: Рассмотрите замену на более экономичную модель для задач, не требующих высокой точности.
-
-2. ${modelWithLongestResponse?.model || 'N/A'}: Оптимизируйте запросы к модели для повышения скорости ответа.
-
-3. Рассмотрите возможность ввода квот на использование наиболее дорогих моделей.
-`;
-      } else if (mode === 'trends') {
-        analysisText = `
-## Анализ трендов использования LLM моделей
-
-### Тенденции использования 
-
-1. **Изменение моделей**: Наблюдается ${Math.random() > 0.5 ? 'рост' : 'снижение'} использования больших моделей и ${Math.random() > 0.5 ? 'рост' : 'снижение'} использования специализированных моделей.
-
-2. **Распределение запросов**: 
-   - Высоконагруженные модели: ${llmUsage.filter(m => m.requestCount > 1000).map(m => m.model).join(', ') || 'Отсутствуют'}
-   - Низконагруженные модели: ${llmUsage.filter(m => m.requestCount < 100).map(m => m.model).join(', ') || 'Отсутствуют'}
-
-3. **Прогноз затрат**: При сохранении текущей динамики использования, прогнозируемые затраты на следующий месяц составят $${(llmUsage.reduce((sum, model) => sum + model.cost, 0) * 1.15).toFixed(2)} (рост на 15%).
-
-### Рекомендации по тренду использования
-
-1. **Масштабирование ресурсов**: На основе тренда роста использования рекомендуется рассмотреть возможность увеличения вычислительных ресурсов.
-
-2. **Оптимизация рабочей нагрузки**: Распределите нагрузку равномерно между моделями для предотвращения перегрузки отдельных экземпляров.
-
-3. **Сезонные тренды**: На основе исторических данных, пик использования ожидается в часы: 10:00-12:00 и 14:00-16:00. Рекомендуется планировать техническое обслуживание вне этих периодов.
-`;
-      } else if (mode === 'alerts') {
-        const problemServices = llmStatus.filter(s => s.status !== 'healthy');
-        const highCostModels = llmUsage.filter(m => m.cost > 50);
-        const slowModels = llmUsage.filter(m => m.avgResponseTime > 2);
-        
-        analysisText = `
-## Анализ проблемных зон и предупреждения
-
-### Проблемы в работе сервисов
-
-${problemServices.length === 0 ? '✅ Все сервисы работают в штатном режиме' : 
-  problemServices.map(service => 
-    `⚠️ **${service.serviceName}**: ${service.status === 'degraded' ? 'Снижена производительность' : 'Сервис недоступен'}
-    - Последнее обновление: ${new Date(service.lastUpdated).toLocaleString()}
-    ${service.details?.latestError ? `- Ошибка: ${service.details.latestError}` : ''}
-    ${service.details?.queueLength ? `- Размер очереди: ${service.details.queueLength} запросов` : ''}
-    `
-  ).join('\n')
-}
-
-### Потенциальные проблемы затрат
-
-${highCostModels.length === 0 ? '✅ Нет моделей с высоким потреблением ресурсов' :
-  highCostModels.map(model => 
-    `💰 **${model.model}**: Высокие затраты ($${model.cost.toFixed(2)})
-    - Использовано токенов: ${model.tokensUsed.toLocaleString()}
-    - Количество запросов: ${model.requestCount.toLocaleString()}
-    `
-  ).join('\n')
-}
-
-### Проблемы производительности
-
-${slowModels.length === 0 ? '✅ Все модели работают с приемлемой скоростью' :
-  slowModels.map(model => 
-    `🐢 **${model.model}**: Низкая скорость ответа (${model.avgResponseTime.toFixed(2)} сек)
-    - Рекомендуемое время ответа: до 2 секунд
-    `
-  ).join('\n')
-}
-
-### Рекомендации
-
-1. ${problemServices.length > 0 ? 'Требуется проверка и возможный перезапуск проблемных сервисов' : 'Продолжайте мониторинг сервисов'}
-
-2. ${highCostModels.length > 0 ? 'Рассмотрите внедрение квот или ограничений для дорогостоящих моделей' : 'Текущие затраты на модели находятся в пределах нормы'}
-
-3. ${slowModels.length > 0 ? 'Оптимизируйте работу медленных моделей путем увеличения вычислительных ресурсов или кэширования' : 'Поддерживайте текущую конфигурацию производительности'}
-`;
+      if (response.success) {
+        setAnalysisResult(response.content);
+        setAnalysisMetadata(response.metadata);
+      } else {
+        throw new Error(response.metadata.error || 'Ошибка при выполнении анализа');
       }
-      
-      setAnalysisResult(analysisText);
     } catch (error) {
+      console.error('Ошибка при анализе данных:', error);
       toast({
         title: 'Ошибка анализа',
-        description: 'Не удалось выполнить ИИ-анализ данных',
+        description: 'Не удалось выполнить ИИ-анализ данных. Проверьте наличие API ключа OpenAI в настройках.',
         variant: 'destructive',
       });
-      setAnalysisResult('Произошла ошибка при анализе данных');
+      setAnalysisResult('Произошла ошибка при анализе данных. Возможно, отсутствует API ключ OpenAI.');
     } finally {
       setAnalysisLoading(false);
     }
@@ -220,7 +100,7 @@ ${slowModels.length === 0 ? '✅ Все модели работают с при�
                 </p>
                 <Button 
                   className="w-full" 
-                  onClick={() => runAIAnalysis('optimization')}
+                  onClick={() => runAIAnalysis(AnalysisType.OPTIMIZATION)}
                   disabled={isLoading || llmUsage.length === 0}
                 >
                   Анализировать <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -244,7 +124,7 @@ ${slowModels.length === 0 ? '✅ Все модели работают с при�
                 </p>
                 <Button 
                   className="w-full" 
-                  onClick={() => runAIAnalysis('trends')}
+                  onClick={() => runAIAnalysis(AnalysisType.TRENDS)}
                   disabled={isLoading || llmUsage.length === 0}
                 >
                   Анализировать <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -268,11 +148,42 @@ ${slowModels.length === 0 ? '✅ Все модели работают с при�
                 </p>
                 <Button 
                   className="w-full" 
-                  onClick={() => runAIAnalysis('alerts')}
+                  onClick={() => runAIAnalysis(AnalysisType.ALERTS)}
                   disabled={isLoading || llmStatus.length === 0}
                 >
                   Анализировать <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="mt-4">
+            <Card className="bg-gradient-to-br from-green-50 to-teal-50 hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <BarChart2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                    Комплексный анализ
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-medium mb-1">Полный анализ системы</h3>
+                    <p className="text-sm text-neutral-600">
+                      Комплексный ИИ-анализ всей системы с рекомендациями по оптимизации, выявлением трендов и предупреждений
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => runAIAnalysis(AnalysisType.COMPREHENSIVE)}
+                    disabled={isLoading || llmUsage.length === 0 || llmStatus.length === 0}
+                    size="lg"
+                    className="ml-4"
+                  >
+                    Запустить полный анализ <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
