@@ -35,7 +35,8 @@ import {
   FileAudio,
   Filter,
   Search,
-  Headphones
+  Headphones,
+  Upload
 } from "lucide-react";
 import MeetingProtocolAgentSection from "@/components/MeetingProtocolAgentSection";
 import { AudioTranscribeDialog } from "@/components/AudioTranscribeDialog";
@@ -2119,12 +2120,20 @@ const Meetings = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Диалог для транскрибации аудио */}
+      {/* Диалог для транскрибации аудио существующего протокола */}
       <AudioTranscribeDialog
         open={isAudioTranscribeOpen}
         onOpenChange={setIsAudioTranscribeOpen}
         onTranscribe={handleTranscribe}
         meetingId={selectedMeeting?.id}
+      />
+
+      {/* Диалог для транскрибации аудио при создании/редактировании протокола */}
+      <AudioTranscribeDialog
+        open={isProtocolAudioTranscribeOpen}
+        onOpenChange={setIsProtocolAudioTranscribeOpen}
+        onTranscribe={handleProtocolTranscription}
+        meetingId={currentMeeting?.id}
       />
     </>
   );
