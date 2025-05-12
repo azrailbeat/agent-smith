@@ -999,7 +999,7 @@ const Meetings = () => {
               </div>
             ) : (
               <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="h-full w-full flex gap-2">
                   {kanbanBoard.columnOrder.map((columnId) => {
                     const column = kanbanBoard.columns[columnId];
                     const columnMeetings = column.meetingIds
@@ -1007,24 +1007,38 @@ const Meetings = () => {
                       .filter(Boolean) as Meeting[];
                     
                     // Определяем цвет заголовка колонки в зависимости от статуса
-                    let headerColor = "bg-neutral-100";
-                    switch (columnId) {
-                      case "scheduled": headerColor = "bg-yellow-50"; break;
-                      case "in_progress": headerColor = "bg-blue-50"; break;
-                      case "completed": headerColor = "bg-green-50"; break;
-                      case "cancelled": headerColor = "bg-red-50"; break;
-                    }
+                    const headerColor = columnId === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                                       columnId === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                       columnId === 'completed' ? 'bg-green-100 text-green-800' :
+                                       columnId === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800';
+                    
+                    // Получаем иконку для колонки
+                    const columnIcon = columnId === 'scheduled' ? <Calendar className="h-3.5 w-3.5" /> :
+                                      columnId === 'in_progress' ? <Clock className="h-3.5 w-3.5" /> :
+                                      columnId === 'completed' ? <CheckCircle className="h-3.5 w-3.5" /> :
+                                      columnId === 'cancelled' ? <XCircle className="h-3.5 w-3.5" /> : null;
                     
                     return (
-                      <div key={columnId} className="flex flex-col">
-                        <div className={`rounded-t-lg px-4 py-3 border-x border-t border-border ${headerColor}`}>
-                          <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-sm font-medium text-foreground">
-                              {column.title}
+                      <div key={columnId} className="flex-1 rounded-md border shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-[260px]">
+                        <div className={`p-2 border-b sticky top-0 z-10 ${headerColor}`}>
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold flex items-center text-sm">
+                              {columnIcon && <span className="mr-1">{columnIcon}</span>}
+                              <span>{column.title}</span>
                             </h3>
-                            <Badge variant="outline">
-                              {columnMeetings.length}
-                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <div className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[22px] text-center">
+                                {columnMeetings.length}
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 rounded-full hover:bg-white/80" 
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                         
@@ -1033,7 +1047,7 @@ const Meetings = () => {
                             <div
                               {...provided.droppableProps}
                               ref={provided.innerRef}
-                              className="flex-1 bg-muted/40 rounded-b-lg p-2 min-h-[500px] border border-border"
+                              className="p-2 flex-1 overflow-y-auto bg-gray-50/50 h-full"
                             >
                               {columnMeetings.map((meeting, index) => (
                                 <Draggable 
