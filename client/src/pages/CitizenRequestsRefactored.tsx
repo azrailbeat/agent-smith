@@ -297,13 +297,7 @@ const CitizenRequests = () => {
   const [isAutoProcessDialogOpen, setIsAutoProcessDialogOpen] = useState(false);
   
   // Состояние для настроек автоматической обработки
-  const [autoProcessSettings, setAutoProcessSettings] = useState<{
-    aiEnabled: boolean;
-    selectedAgent: number | null;
-    autoClassification: boolean;
-    responseGeneration: boolean;
-    reprocessAI: boolean;
-  }>({
+  const [autoProcessSettings, setAutoProcessSettings] = useState<AutoProcessSettings>({
     aiEnabled: false,
     selectedAgent: null,
     autoClassification: true,

@@ -202,6 +202,24 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                 <div className="space-y-1">
                   {/* Меню действий */}
                   <div className="text-[10px] font-bold text-muted-foreground mb-1">Действия</div>
+                  
+                  {/* Кнопка автообработки */}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-start text-[10px] h-6 mb-0.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onAutoProcess) {
+                        onAutoProcess(request);
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    <RefreshCw className="h-2.5 w-2.5 mr-1.5" />
+                    Авто-обработка
+                  </Button>
+                  
                   {/* Назначить агента */}
                   <div className="text-[10px] font-bold text-muted-foreground mt-1.5 mb-1">Назначить агенту</div>
                   <div className="grid grid-cols-1 gap-0.5">
