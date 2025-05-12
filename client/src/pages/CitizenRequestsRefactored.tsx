@@ -62,7 +62,8 @@ import {
   Database,
   RefreshCw,
   Filter,
-  MoreHorizontal
+  MoreHorizontal,
+  Tag
 } from 'lucide-react';
 
 // Интерфейсы для типизации
