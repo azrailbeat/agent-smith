@@ -1,504 +1,309 @@
 /**
- * Agent Smith Виджет для обращений граждан
- * Виджет для встраивания формы обращений на внешние сайты
- * Поддерживает интеграцию с bolt.new и другими платформами
+ * Agent Smith Widget
+ * Виджет для интеграции формы обращений Agent Smith на внешние сайты
  */
 
 (function() {
-  // Основной объект виджета
-  window.AgentSmithWidget = {
-    // Версия виджета
-    version: '1.2.0',
-    
-    // Определение окружения
-    environment: {
-      isBolt: function() {
-        return typeof window !== 'undefined' && 
-               (window.location.hostname.includes('bolt.new') || 
-                window.location.hostname.includes('stackblitz.com'));
-      },
-      isLocalhost: function() {
-        return typeof window !== 'undefined' && 
-               (window.location.hostname === 'localhost' || 
-                window.location.hostname === '127.0.0.1');
-      }
-    },
-    
-    /**
-     * Инициализация виджета
-     * @param {string} containerId - ID контейнера для виджета или сам элемент
-     * @param {string} configBase64 - Конфигурация виджета в формате base64
-     * @param {Object} options - Дополнительные опции (apiUrl, mode)
-     */
-    init: function(containerId, configBase64, options = {}) {
-      try {
-        // Получаем настройки из base64 с поддержкой Unicode
-        const decodedConfig = atob(configBase64);
-        // Используем decodeURIComponent напрямую для декодирования
-        const config = JSON.parse(decodeURIComponent(decodedConfig));
-        
-        // Добавляем дополнительные опции
-        config.apiUrl = options.apiUrl || "https://agent-smith.replit.app/api/citizen-requests";
-        config.mode = options.mode || "widget"; // widget, iframe, api
-        
-        // Находим контейнер
-        const container = typeof containerId === 'string' 
-          ? document.getElementById(containerId) 
-          : containerId;
-          
-        if (!container) {
-          console.error('AgentSmithWidget: Контейнер не найден', containerId);
-          return;
+  // Параметры виджета
+  const scriptTag = document.getElementById('gov-agent-smith-widget');
+  const apiKey = scriptTag ? scriptTag.getAttribute('data-key') : '';
+  const baseColor = scriptTag ? scriptTag.getAttribute('data-color') || '#1e40af' : '#1e40af';
+  
+  // URL для API запросов
+  const API_URL = 'https://agent-smith.replit.app';
+  
+  // Начальное состояние виджета
+  let widgetConfig = {
+    title: 'Форма обращения',
+    subtitle: 'Пожалуйста, заполните форму обращения',
+    primaryColor: baseColor,
+    theme: 'light',
+    formFields: [
+      { id: 1, type: 'text', label: 'ФИО', required: true },
+      { id: 2, type: 'email', label: 'Email', required: true },
+      { id: 3, type: 'select', label: 'Тип обращения', required: true, options: ['Вопрос', 'Обращение', 'Жалоба', 'Предложение'] },
+      { id: 4, type: 'textarea', label: 'Текст обращения', required: true }
+    ]
+  };
+  
+  // Загрузка конфигурации с сервера
+  function loadWidgetConfig() {
+    fetch(`${API_URL}/api/external/widget-config?key=${apiKey}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data && data.settings) {
+          widgetConfig = {...widgetConfig, ...data.settings};
+          renderButton();
         }
-        
-        // Если мы на bolt.new, добавляем спец. стили для улучшенной интеграции
-        if (this.environment.isBolt()) {
-          this.injectBoltStyles();
-        }
-        
-        // Рендерим виджет
-        this.renderWidget(container, config);
-      } catch (err) {
-        console.error('AgentSmithWidget: Ошибка инициализации', err);
-      }
-    },
+      })
+      .catch(error => {
+        console.error('Ошибка загрузки конфигурации виджета:', error);
+      });
+  }
+  
+  // Создание кнопки виджета
+  function renderButton() {
+    const button = document.createElement('button');
+    button.id = 'agent-smith-widget-button';
+    button.innerHTML = 'Обращение граждан';
+    button.style.position = 'fixed';
+    button.style.bottom = '20px';
+    button.style.right = '20px';
+    button.style.padding = '12px 20px';
+    button.style.borderRadius = '30px';
+    button.style.backgroundColor = widgetConfig.primaryColor;
+    button.style.color = '#ffffff';
+    button.style.border = 'none';
+    button.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    button.style.cursor = 'pointer';
+    button.style.fontFamily = 'system-ui, sans-serif';
+    button.style.fontWeight = '500';
+    button.style.fontSize = '14px';
+    button.style.zIndex = '9999';
     
-    /**
-     * Добавляет специальные стили для bolt.new
-     */
-    injectBoltStyles: function() {
-      const style = document.createElement('style');
-      style.textContent = `
-        /* Стили для улучшенной интеграции с bolt.new */
-        .asw-container {
-          font-family: -apple-system, system-ui, sans-serif !important;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1) !important;
-          border-radius: 8px !important;
-          margin: 10px 0 !important;
-        }
-        
-        /* Скорректированные отступы для bolt.new */
-        .bolt-theme .asw-container,
-        [data-theme="bolt"] .asw-container {
-          margin: 1rem auto !important;
-          max-width: 95% !important;
-        }
-      `;
-      document.head.appendChild(style);
-    },
+    // Анимация при наведении
+    button.onmouseover = function() {
+      this.style.transform = 'translateY(-2px)';
+      this.style.boxShadow = '0 6px 8px rgba(0, 0, 0, 0.15)';
+      this.style.transition = 'all 0.2s ease';
+    };
     
-    /**
-     * Рендеринг виджета
-     * @param {HTMLElement} container - Контейнер для виджета
-     * @param {Object} config - Настройки виджета
-     */
-    renderWidget: function(container, config) {
-      // Создаем стили
-      const isDark = config.theme === 'dark';
-      const styles = this.createStyles(config.primaryColor, isDark);
-      
-      // Создаем разметку
-      let html = `
-        <div class="asw-container ${isDark ? 'asw-dark' : 'asw-light'}">
-          <div class="asw-header">
-            <h3 class="asw-title">${this.escapeHtml(config.title)}</h3>
-            <p class="asw-subtitle">${this.escapeHtml(config.subtitle || '')}</p>
-          </div>
-          <div class="asw-content">
-            <form class="asw-form" id="asw-form">
-      `;
-      
-      // Добавляем поля
-      if (config.fields && Array.isArray(config.fields)) {
-        config.fields.forEach(field => {
-          html += this.renderField(field);
-        });
-      }
-      
-      // Добавляем кнопку отправки
-      html += `
-              <div class="asw-form-group">
-                <button type="submit" class="asw-button asw-primary-button">
-                  ${this.escapeHtml(config.buttonText || 'Отправить')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      
-      // Вставляем стили и разметку в контейнер
-      container.innerHTML = `
-        <style>${styles}</style>
-        ${html}
-      `;
-      
-      // Добавляем обработчик отправки формы
-      const form = container.querySelector('#asw-form');
-      if (form) {
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          this.handleSubmit(form, container, config);
-        });
-      }
-    },
+    button.onmouseout = function() {
+      this.style.transform = 'translateY(0)';
+      this.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+      this.style.transition = 'all 0.2s ease';
+    };
     
-    /**
-     * Рендеринг поля формы
-     * @param {Object} field - Настройки поля
-     * @returns {string} HTML разметка поля
-     */
-    renderField: function(field) {
-      if (!field || !field.type || !field.id) return '';
+    // Открытие модального окна при клике
+    button.onclick = openWidgetModal;
+    
+    document.body.appendChild(button);
+  }
+  
+  // Открытие модального окна с формой
+  function openWidgetModal() {
+    // Создаем затемняющий фон
+    const overlay = document.createElement('div');
+    overlay.id = 'agent-smith-widget-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '99999';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    
+    // Создаем модальное окно
+    const modal = document.createElement('div');
+    modal.id = 'agent-smith-widget-modal';
+    modal.style.backgroundColor = widgetConfig.theme === 'light' ? '#ffffff' : '#1f2937';
+    modal.style.color = widgetConfig.theme === 'light' ? '#000000' : '#ffffff';
+    modal.style.borderRadius = '8px';
+    modal.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.2)';
+    modal.style.width = '90%';
+    modal.style.maxWidth = '500px';
+    modal.style.maxHeight = '90vh';
+    modal.style.overflow = 'auto';
+    modal.style.position = 'relative';
+    
+    // Генерируем HTML для модального окна
+    modal.innerHTML = `
+      <div style="padding: 1rem; background-color: ${widgetConfig.primaryColor}; color: white; border-radius: 8px 8px 0 0;">
+        <h3 style="margin: 0; font-weight: 600; font-size: 1.25rem;">${widgetConfig.title}</h3>
+        <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.875rem;">${widgetConfig.subtitle || 'Пожалуйста, заполните форму обращения'}</p>
+      </div>
+      <button id="agent-smith-widget-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; font-size: 18px; cursor: pointer;">&times;</button>
+      <div style="padding: 1.5rem;">
+        <form id="agent-smith-widget-form">
+          ${generateFormFields()}
+          <button type="submit" style="width: 100%; padding: 0.625rem; margin-top: 1rem; font-weight: 500; color: white; background-color: ${widgetConfig.primaryColor}; border: none; border-radius: 0.25rem; cursor: pointer;">
+            Отправить
+          </button>
+        </form>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Обработчик закрытия модального окна
+    document.getElementById('agent-smith-widget-close').onclick = function() {
+      document.body.removeChild(overlay);
+    };
+    
+    // Обработчик клика на фон (закрытие модального окна)
+    overlay.onclick = function(event) {
+      if (event.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    };
+    
+    // Обработчик отправки формы
+    document.getElementById('agent-smith-widget-form').onsubmit = function(event) {
+      event.preventDefault();
+      submitWidgetForm();
+    };
+  }
+  
+  // Генерация HTML для полей формы
+  function generateFormFields() {
+    let fieldsHTML = '';
+    
+    widgetConfig.formFields.forEach(field => {
+      const requiredAttr = field.required ? 'required' : '';
+      const requiredStar = field.required ? ' <span style="color: #e11d48;">*</span>' : '';
       
-      const required = field.required ? 'required' : '';
-      const label = this.escapeHtml(field.label || '');
-      const placeholder = this.escapeHtml(field.placeholder || '');
-      const fieldId = `asw-field-${field.id}`;
-      let fieldHtml = '';
-      
-      // Общая обертка поля
-      fieldHtml += `<div class="asw-form-group">`;
-      
-      // Метка поля
-      fieldHtml += `<label for="${fieldId}" class="asw-label">
-        ${label}${field.required ? ' <span class="asw-required">*</span>' : ''}
-      </label>`;
-      
-      // Рендеринг в зависимости от типа поля
       switch (field.type) {
         case 'text':
         case 'email':
         case 'tel':
-        case 'number':
-        case 'date':
-          fieldHtml += `<input 
-            type="${field.type}" 
-            id="${fieldId}" 
-            name="${fieldId}" 
-            class="asw-input" 
-            placeholder="${placeholder}" 
-            ${required}
-          />`;
+          fieldsHTML += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500;">${field.label}${requiredStar}</label>
+              <input type="${field.type}" name="${field.id}" style="width: 100%; padding: 0.625rem; border: 1px solid ${widgetConfig.theme === 'light' ? '#d1d5db' : '#4b5563'}; border-radius: 0.375rem; background-color: ${widgetConfig.theme === 'light' ? 'white' : '#374151'}; color: ${widgetConfig.theme === 'light' ? 'black' : 'white'};" ${requiredAttr}>
+            </div>
+          `;
           break;
-          
         case 'textarea':
-          fieldHtml += `<textarea 
-            id="${fieldId}" 
-            name="${fieldId}" 
-            class="asw-textarea" 
-            placeholder="${placeholder}" 
-            rows="4" 
-            ${required}
-          ></textarea>`;
+          fieldsHTML += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500;">${field.label}${requiredStar}</label>
+              <textarea name="${field.id}" rows="4" style="width: 100%; padding: 0.625rem; border: 1px solid ${widgetConfig.theme === 'light' ? '#d1d5db' : '#4b5563'}; border-radius: 0.375rem; background-color: ${widgetConfig.theme === 'light' ? 'white' : '#374151'}; color: ${widgetConfig.theme === 'light' ? 'black' : 'white'};" ${requiredAttr}></textarea>
+            </div>
+          `;
           break;
-          
         case 'select':
-          fieldHtml += `<select 
-            id="${fieldId}" 
-            name="${fieldId}" 
-            class="asw-select" 
-            ${required}
-          >
-            <option value="">${placeholder || 'Выберите...'}</option>`;
-            
-          // Добавляем опции, если они есть
+          let options = '';
           if (field.options && Array.isArray(field.options)) {
-            field.options.forEach(option => {
-              const optionValue = this.escapeHtml(option);
-              fieldHtml += `<option value="${optionValue}">${optionValue}</option>`;
-            });
+            options = field.options.map(option => `<option value="${option}">${option}</option>`).join('');
+          } else {
+            options = '<option value="">Выберите...</option><option value="option1">Вариант 1</option><option value="option2">Вариант 2</option>';
           }
           
-          fieldHtml += `</select>`;
-          break;
-          
-        case 'checkbox':
-          fieldHtml += `<div class="asw-checkbox-group">
-            <input 
-              type="checkbox" 
-              id="${fieldId}" 
-              name="${fieldId}" 
-              class="asw-checkbox" 
-              ${required}
-            />
-            <label for="${fieldId}" class="asw-checkbox-label">
-              ${placeholder || label}
-            </label>
-          </div>`;
+          fieldsHTML += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500;">${field.label}${requiredStar}</label>
+              <select name="${field.id}" style="width: 100%; padding: 0.625rem; border: 1px solid ${widgetConfig.theme === 'light' ? '#d1d5db' : '#4b5563'}; border-radius: 0.375rem; background-color: ${widgetConfig.theme === 'light' ? 'white' : '#374151'}; color: ${widgetConfig.theme === 'light' ? 'black' : 'white'};" ${requiredAttr}>
+                <option value="">Выберите...</option>
+                ${options}
+              </select>
+            </div>
+          `;
           break;
       }
-      
-      fieldHtml += `</div>`;
-      return fieldHtml;
-    },
+    });
     
-    /**
-     * Обработка отправки формы
-     * @param {HTMLFormElement} form - Форма
-     * @param {HTMLElement} container - Контейнер виджета
-     * @param {Object} config - Настройки виджета
-     */
-    handleSubmit: function(form, container, config) {
-      // Собираем данные формы
-      const formData = new FormData(form);
-      const data = {};
-      
-      for (let [key, value] of formData.entries()) {
-        data[key] = value;
-      }
-      
-      // Показываем состояние загрузки
-      form.classList.add('asw-loading');
-      const submitButton = form.querySelector('button[type="submit"]');
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.innerHTML = 'Отправка...';
-      }
-      
-      // Подготавливаем данные запроса для API
-      const requestData = {
-        fullName: "",
-        contactInfo: "",
-        requestType: "",
-        subject: "Обращение через виджет",
-        description: ""
-      };
-      
-      // Маппинг полей виджета на структуру API
-      for (let field of config.fields || []) {
-        const fieldId = `asw-field-${field.id}`;
-        const value = data[fieldId] || "";
-        
-        if (field.id === "name" || field.label.includes("ФИО")) {
-          requestData.fullName = value;
-        } else if (field.id === "email" || field.type === "email" || field.label.includes("Email")) {
-          requestData.contactInfo = value;
-        } else if (field.id === "requestType" || field.label.includes("Тип")) {
-          requestData.requestType = value;
-        } else if (field.id === "subject" || field.label.includes("Тема")) {
-          requestData.subject = value;
-        } else if (field.id === "message" || field.type === "textarea") {
-          requestData.description = value;
-        }
-      }
-      
-      // Если не заполнены важные поля, используем запасные значения
-      if (!requestData.fullName) requestData.fullName = "Посетитель сайта";
-      if (!requestData.requestType) requestData.requestType = "Обращение через виджет";
-      
-      // Отправляем данные на сервер
-      const apiUrl = "https://agent-smith.replit.app/api/citizen-requests";
-      
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      })
-      .then(response => {
-        form.classList.remove('asw-loading');
-        
-        // Показываем сообщение об успехе независимо от результата
-        container.innerHTML = `
-          <style>${this.createStyles(config.primaryColor, config.theme === 'dark')}</style>
-          <div class="asw-container ${config.theme === 'dark' ? 'asw-dark' : 'asw-light'}">
-            <div class="asw-success">
-              <div class="asw-success-icon">✓</div>
-              <h3 class="asw-success-title">${this.escapeHtml(config.successMessage || 'Сообщение отправлено!')}</h3>
-              <p class="asw-success-text">Благодарим за обращение. Мы свяжемся с вами в ближайшее время.</p>
-            </div>
-          </div>
-        `;
-        
-        console.log('AgentSmithWidget: Данные отправлены', requestData);
-      })
-      .catch(error => {
-        // В случае ошибки все равно показываем успешное сообщение,
-        // но логируем ошибку в консоль
-        form.classList.remove('asw-loading');
-        
-        container.innerHTML = `
-          <style>${this.createStyles(config.primaryColor, config.theme === 'dark')}</style>
-          <div class="asw-container ${config.theme === 'dark' ? 'asw-dark' : 'asw-light'}">
-            <div class="asw-success">
-              <div class="asw-success-icon">✓</div>
-              <h3 class="asw-success-title">${this.escapeHtml(config.successMessage || 'Сообщение отправлено!')}</h3>
-              <p class="asw-success-text">Благодарим за обращение. Мы свяжемся с вами в ближайшее время.</p>
-            </div>
-          </div>
-        `;
-        
-        console.error('AgentSmithWidget: Ошибка отправки', error);
-      });
-    },
+    return fieldsHTML;
+  }
+  
+  // Отправка формы на сервер
+  function submitWidgetForm() {
+    const form = document.getElementById('agent-smith-widget-form');
+    const formData = new FormData(form);
+    const data = {};
     
-    /**
-     * Создание стилей для виджета
-     * @param {string} primaryColor - Основной цвет
-     * @param {boolean} isDark - Темная тема
-     * @returns {string} CSS стили
-     */
-    createStyles: function(primaryColor, isDark) {
-      const bgColor = isDark ? '#1a1a1a' : '#ffffff';
-      const textColor = isDark ? '#f5f5f5' : '#333333';
-      const borderColor = isDark ? '#444444' : '#e1e1e1';
-      
-      return `
-        .asw-container {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-          max-width: 100%;
-          border-radius: 8px;
-          overflow: hidden;
-          background-color: ${bgColor};
-          color: ${textColor};
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .asw-header {
-          background-color: ${primaryColor};
-          color: white;
-          padding: 16px 20px;
-        }
-        
-        .asw-title {
-          margin: 0 0 5px 0;
-          font-size: 18px;
-          font-weight: 600;
-        }
-        
-        .asw-subtitle {
-          margin: 0;
-          font-size: 14px;
-          opacity: 0.9;
-        }
-        
-        .asw-content {
-          padding: 20px;
-        }
-        
-        .asw-form-group {
-          margin-bottom: 16px;
-        }
-        
-        .asw-label {
-          display: block;
-          margin-bottom: 5px;
-          font-size: 14px;
-          font-weight: 500;
-        }
-        
-        .asw-required {
-          color: #e53935;
-        }
-        
-        .asw-input,
-        .asw-textarea,
-        .asw-select {
-          width: 100%;
-          padding: 10px 12px;
-          border-radius: 4px;
-          border: 1px solid ${borderColor};
-          background-color: ${isDark ? '#2a2a2a' : '#ffffff'};
-          color: ${textColor};
-          font-size: 14px;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        
-        .asw-input:focus,
-        .asw-textarea:focus,
-        .asw-select:focus {
-          outline: none;
-          border-color: ${primaryColor};
-          box-shadow: 0 0 0 2px ${primaryColor}33;
-        }
-        
-        .asw-checkbox-group {
-          display: flex;
-          align-items: flex-start;
-        }
-        
-        .asw-checkbox {
-          margin-right: 8px;
-          margin-top: 3px;
-        }
-        
-        .asw-checkbox-label {
-          font-size: 14px;
-        }
-        
-        .asw-button {
-          cursor: pointer;
-          padding: 10px 16px;
-          border-radius: 4px;
-          font-weight: 500;
-          font-size: 14px;
-          transition: opacity 0.2s;
-        }
-        
-        .asw-button:hover {
-          opacity: 0.9;
-        }
-        
-        .asw-primary-button {
-          background-color: ${primaryColor};
-          color: white;
-          border: none;
-        }
-        
-        .asw-loading .asw-primary-button {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-        
-        .asw-success {
-          text-align: center;
-          padding: 40px 20px;
-        }
-        
-        .asw-success-icon {
-          font-size: 32px;
-          width: 60px;
-          height: 60px;
-          line-height: 60px;
-          border-radius: 50%;
-          background-color: ${primaryColor};
-          color: white;
-          margin: 0 auto 20px;
-        }
-        
-        .asw-success-title {
-          font-size: 18px;
-          font-weight: 600;
-          margin: 0 0 10px 0;
-        }
-        
-        .asw-success-text {
-          font-size: 14px;
-          opacity: 0.8;
-          margin: 0;
-        }
-      `;
-    },
-    
-    /**
-     * Экранирование HTML
-     * @param {string} text - Текст для экранирования
-     * @returns {string} Экранированный текст
-     */
-    escapeHtml: function(text) {
-      if (!text) return '';
-      
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
-      
-      return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    // Преобразуем данные формы в объект
+    for(let pair of formData.entries()) {
+      const field = widgetConfig.formFields.find(f => f.id.toString() === pair[0]);
+      if (field) {
+        data[field.label] = pair[1];
+      }
     }
-  };
+    
+    // Добавляем служебную информацию
+    data.source = window.location.hostname;
+    data.apiKey = apiKey;
+    
+    // Отправка запроса на сервер
+    fetch(`${API_URL}/api/external/citizen-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        showSuccessMessage();
+      } else {
+        showErrorMessage(result.error || 'Произошла ошибка при отправке обращения');
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка отправки формы:', error);
+      showErrorMessage('Не удалось отправить обращение. Пожалуйста, попробуйте позже.');
+    });
+  }
+  
+  // Показать сообщение об успешной отправке
+  function showSuccessMessage() {
+    const overlay = document.getElementById('agent-smith-widget-overlay');
+    const modal = document.getElementById('agent-smith-widget-modal');
+    
+    if (modal) {
+      modal.innerHTML = `
+        <div style="padding: 1rem; background-color: ${widgetConfig.primaryColor}; color: white; border-radius: 8px 8px 0 0;">
+          <h3 style="margin: 0; font-weight: 600; font-size: 1.25rem;">Обращение отправлено</h3>
+        </div>
+        <button id="agent-smith-widget-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; font-size: 18px; cursor: pointer;">&times;</button>
+        <div style="padding: 1.5rem; text-align: center;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">✓</div>
+          <h4 style="margin-top: 0; font-size: 1.25rem;">Спасибо за ваше обращение!</h4>
+          <p style="margin-bottom: 1.5rem;">Ваше обращение успешно отправлено и будет обработано в ближайшее время.</p>
+          <button id="agent-smith-widget-close-btn" style="padding: 0.625rem 1.25rem; font-weight: 500; color: white; background-color: ${widgetConfig.primaryColor}; border: none; border-radius: 0.25rem; cursor: pointer;">
+            Закрыть
+          </button>
+        </div>
+      `;
+      
+      document.getElementById('agent-smith-widget-close').onclick = function() {
+        document.body.removeChild(overlay);
+      };
+      
+      document.getElementById('agent-smith-widget-close-btn').onclick = function() {
+        document.body.removeChild(overlay);
+      };
+    }
+  }
+  
+  // Показать сообщение об ошибке
+  function showErrorMessage(message) {
+    const form = document.getElementById('agent-smith-widget-form');
+    
+    // Удалить предыдущее сообщение об ошибке, если оно есть
+    const existingError = document.getElementById('agent-smith-widget-error');
+    if (existingError) {
+      existingError.parentNode.removeChild(existingError);
+    }
+    
+    // Создать новое сообщение об ошибке
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'agent-smith-widget-error';
+    errorDiv.style.backgroundColor = '#fee2e2';
+    errorDiv.style.color = '#b91c1c';
+    errorDiv.style.padding = '0.75rem';
+    errorDiv.style.borderRadius = '0.375rem';
+    errorDiv.style.marginBottom = '1rem';
+    errorDiv.innerText = message;
+    
+    // Вставить сообщение в начало формы
+    form.insertBefore(errorDiv, form.firstChild);
+  }
+  
+  // Инициализация виджета
+  function init() {
+    loadWidgetConfig();
+  }
+  
+  // Запуск инициализации после загрузки страницы
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

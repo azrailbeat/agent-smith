@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Code, Copy, Trash, GripVertical, Plus, ArrowDown, ArrowUp, Check } from 'lucide-react';
+import { Copy, Trash, GripVertical, Plus, ArrowDown, ArrowUp, Check } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 
 interface WidgetField {
@@ -166,7 +165,7 @@ export function WidgetSettings({ refreshTab }: WidgetSettingsProps) {
 
   // Функция генерации кода для вставки
   const generateEmbedCode = () => {
-    return `<script src="https://agent-smith.gov.kz/js/widget.js" id="agent-smith-widget" data-key="${settings.type}"></script>`;
+    return `<div id="agent-smith-citizen-request-widget"></div>\n<script src="https://agent-smith.replit.app/widget.js" id="agent-smith-widget" data-color="${settings.settings.primaryColor}"></script>`;
   };
 
   // Функция копирования кода для вставки
@@ -175,6 +174,10 @@ export function WidgetSettings({ refreshTab }: WidgetSettingsProps) {
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    toast({
+      title: "Скопировано",
+      description: "Код виджета скопирован в буфер обмена",
+    });
   };
 
   // Функция добавления нового поля
@@ -347,168 +350,168 @@ export function WidgetSettings({ refreshTab }: WidgetSettingsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="md:col-span-2 space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Настройки виджета</h3>
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="widget-enabled" 
-              checked={settings.enabled}
-              onCheckedChange={handleEnabledChange}
-            />
-            <Label htmlFor="widget-enabled">Включить виджет</Label>
-          </div>
-        </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Настройки виджета</CardTitle>
-            <CardDescription>
-              Основные параметры отображения виджета на сайте
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Заголовок</Label>
-              <Input 
-                id="title" 
-                value={settings.settings.title} 
-                onChange={handleTitleChange}
-                placeholder="Форма обращения"
-              />
-            </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Виджет для сайта</h3>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1" 
+          onClick={() => saveSettings()}
+        >
+          Сгенерировать код
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <div className="space-y-4 border rounded-lg p-4 bg-card">
+            <h4 className="text-sm font-medium mb-2">Настройки виджета</h4>
             
-            <div className="space-y-2">
-              <Label htmlFor="subtitle">Подзаголовок</Label>
-              <Input 
-                id="subtitle" 
-                value={settings.settings.subtitle || ''} 
-                onChange={handleSubtitleChange}
-                placeholder="Пожалуйста, заполните форму обращения"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="theme">Тема оформления</Label>
-              <RadioGroup 
-                defaultValue={settings.settings.theme} 
-                className="flex items-center space-x-4"
-                onValueChange={(value) => handleThemeChange(value as 'light' | 'dark')}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="light" id="theme-light" />
-                  <Label htmlFor="theme-light">Светлая</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="dark" id="theme-dark" />
-                  <Label htmlFor="theme-dark">Темная</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="color">Основной цвет</Label>
-              <div className="flex items-center space-x-2">
-                <div 
-                  className="w-8 h-8 rounded border"
-                  style={{ backgroundColor: settings.settings.primaryColor }}
-                ></div>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="title">Заголовок</Label>
                 <Input 
-                  id="color" 
-                  type="text"
-                  value={settings.settings.primaryColor} 
-                  onChange={handleColorChange}
-                  className="flex-1"
-                />
-                <input 
-                  type="color" 
-                  value={settings.settings.primaryColor}
-                  onChange={handleColorChange}
-                  className="w-10 h-10 p-1 cursor-pointer"
+                  id="title" 
+                  value={settings.settings.title} 
+                  onChange={handleTitleChange}
+                  placeholder="Форма обращения"
+                  className="mt-1"
                 />
               </div>
+              
+              <div>
+                <Label htmlFor="subtitle">Фраза обращения</Label>
+                <Input 
+                  id="subtitle" 
+                  value={settings.settings.subtitle || ''} 
+                  onChange={handleSubtitleChange}
+                  placeholder="Пожалуйста, заполните форму обращения"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="theme">Тема оформления</Label>
+                <div className="flex gap-2 mt-2">
+                  <div 
+                    className={`flex items-center justify-center rounded-md p-2 border cursor-pointer ${settings.settings.theme === 'light' ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => handleThemeChange('light')}
+                  >
+                    <span className="bg-white text-black rounded-full p-3 text-xs">Светлая</span>
+                  </div>
+                  <div 
+                    className={`flex items-center justify-center rounded-md p-2 border cursor-pointer ${settings.settings.theme === 'dark' ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => handleThemeChange('dark')}
+                  >
+                    <span className="bg-slate-900 text-white rounded-full p-3 text-xs">Темная</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="color">Основной цвет</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input 
+                    type="color" 
+                    value={settings.settings.primaryColor} 
+                    onChange={handleColorChange}
+                    className="w-12 h-9 p-1"
+                  />
+                  <Input 
+                    type="text" 
+                    value={settings.settings.primaryColor} 
+                    onChange={handleColorChange}
+                  />
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Поля формы</CardTitle>
-            <CardDescription>
+          </div>
+          
+          <div className="space-y-4 border rounded-lg p-4 bg-card">
+            <h4 className="text-sm font-medium mb-2">Поля формы</h4>
+            <p className="text-xs text-muted-foreground mb-2">
               Настройте поля, которые будут отображаться в форме обращений
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+            
+            <div className="grid grid-cols-3 gap-4 items-center border-b pb-2 text-xs font-medium text-muted-foreground mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-5"></span>
+                <span>Тип поля</span>
+              </div>
+              <div>Заголовок</div>
+              <div className="flex justify-end">Действия</div>
+            </div>
+            
             {settings.settings.formFields.map((field, index) => (
-              <div key={field.id} className="p-4 border rounded-md bg-muted/50 relative">
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-1 flex items-center justify-center">
-                    <div className="flex flex-col items-center">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => moveFieldUp(field.id)} 
-                        disabled={index === 0}
-                        className="h-6 w-6"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => moveFieldDown(field.id)} 
-                        disabled={index === settings.settings.formFields.length - 1}
-                        className="h-6 w-6"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="col-span-3 space-y-1">
-                    <Label htmlFor={`field-type-${field.id}`} className="text-xs">Тип поля</Label>
-                    <select 
-                      id={`field-type-${field.id}`}
-                      value={field.type}
-                      onChange={(e) => updateFieldType(field.id, e.target.value)}
-                      className="w-full p-2 border rounded-md text-sm"
-                    >
-                      {fieldTypes.map(type => (
-                        <option key={type.value} value={type.value}>
+              <div key={field.id} className="grid grid-cols-3 gap-4 items-center py-2 border-b border-dashed last:border-0">
+                <div className="flex items-center gap-2">
+                  <span className="cursor-move">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                  <Select 
+                    value={field.type} 
+                    onValueChange={(value) => updateFieldType(field.id, value)}
+                  >
+                    <SelectTrigger className="h-8 w-full">
+                      <SelectValue placeholder="Выберите тип поля" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fieldTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
                           {type.label}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </div>
-                  
-                  <div className="col-span-6 space-y-1">
-                    <Label htmlFor={`field-label-${field.id}`} className="text-xs">Название поля</Label>
-                    <Input 
-                      id={`field-label-${field.id}`}
-                      value={field.label}
-                      onChange={(e) => updateFieldLabel(field.id, e.target.value)}
-                      className="text-sm"
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Input 
+                    value={field.label}
+                    onChange={(e) => updateFieldLabel(field.id, e.target.value)}
+                    className="h-8"
+                    placeholder="Название поля"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center gap-1">
+                    <Switch 
+                      id={`field-required-${field.id}`}
+                      checked={field.required}
+                      onCheckedChange={(checked) => updateFieldRequired(field.id, checked)}
+                      className="scale-75"
                     />
+                    <Label htmlFor={`field-required-${field.id}`} className="text-xs whitespace-nowrap">
+                      Обязательное
+                    </Label>
                   </div>
                   
-                  <div className="col-span-2 flex items-end space-x-2">
-                    <div className="flex items-center space-x-2 h-10">
-                      <Switch 
-                        id={`field-required-${field.id}`}
-                        checked={field.required}
-                        onCheckedChange={(checked) => updateFieldRequired(field.id, checked)}
-                      />
-                      <Label htmlFor={`field-required-${field.id}`} className="text-xs">Обязательное</Label>
-                    </div>
-                    
+                  <div className="flex gap-1">
                     <Button 
-                      variant="destructive" 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => moveFieldUp(field.id)}
+                      disabled={index === 0}
+                      className="h-7 w-7"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => moveFieldDown(field.id)}
+                      disabled={index === settings.settings.formFields.length - 1}
+                      className="h-7 w-7"
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
                       size="icon"
                       onClick={() => removeField(field.id)}
-                      className="h-10 w-10"
-                      disabled={settings.settings.formFields.length <= 1}
+                      className="h-7 w-7 text-destructive hover:text-destructive"
                     >
                       <Trash className="h-4 w-4" />
                     </Button>
@@ -517,53 +520,50 @@ export function WidgetSettings({ refreshTab }: WidgetSettingsProps) {
               </div>
             ))}
             
-            <Button variant="outline" onClick={addField} className="w-full">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full mt-2" 
+              onClick={addField}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Добавить поле
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Код для вставки</CardTitle>
-            <CardDescription>
+        <div className="space-y-6">
+          <div className="border rounded-lg p-4 bg-card">
+            <h4 className="text-sm font-medium mb-2">Предпросмотр виджета</h4>
+            <p className="text-xs text-muted-foreground mb-4">
+              Так виджет будет выглядеть на вашем сайте
+            </p>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <div dangerouslySetInnerHTML={{ __html: widgetPreview.html }} />
+            </div>
+          </div>
+          
+          <div className="border rounded-lg p-4 bg-card">
+            <h4 className="text-sm font-medium mb-2">Код для встраивания</h4>
+            <p className="text-xs text-muted-foreground mb-4">
               Вставьте этот код на ваш сайт для отображения виджета
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-muted rounded-md p-4 relative">
-              <pre className="text-xs overflow-auto text-muted-foreground">
-                <code>{generateEmbedCode()}</code>
-              </pre>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+            </p>
+            
+            <div className="relative">
+              <div className="bg-muted p-3 rounded-md text-xs font-mono whitespace-pre-wrap break-all overflow-x-auto">
+                {generateEmbedCode()}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
                 className="absolute top-2 right-2"
                 onClick={copyEmbedCode}
               >
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-        
-        <div className="flex justify-end">
-          <Button onClick={saveSettings} disabled={saveSettingsMutation.isPending}>
-            {saveSettingsMutation.isPending ? "Сохранение..." : "Сохранить настройки"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="md:col-span-1">
-        <div className="sticky top-6">
-          <h3 className="text-lg font-medium mb-4">Предпросмотр виджета</h3>
-          <p className="text-sm text-muted-foreground mb-4">Так виджет будет выглядеть на вашем сайте</p>
-          
-          <div 
-            className="border rounded-md overflow-hidden shadow-md"
-            dangerouslySetInnerHTML={{ __html: widgetPreview.html }}
-          />
+          </div>
         </div>
       </div>
     </div>

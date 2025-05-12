@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Code, Copy, Check } from 'lucide-react';
+import { Copy, Check, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
 
 interface ApiSettingsProps {
   refreshTab?: () => void;
@@ -34,6 +32,7 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [settings, setSettings] = useState<ApiSettings>({
     type: 'api',
     enabled: false,
@@ -169,6 +168,10 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
       navigator.clipboard.writeText(settings.settings.apiKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "Скопировано",
+        description: "API ключ скопирован в буфер обмена",
+      });
     }
   };
 
@@ -183,34 +186,39 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium">API для внешних обращений</h3>
-        <div className="flex items-center space-x-2">
-          <Switch 
-            id="api-enabled" 
-            checked={settings.enabled}
-            onCheckedChange={handleEnabledChange}
-          />
-          <Label htmlFor="api-enabled">Включить внешний API</Label>
-        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="ml-auto" 
+          onClick={generateNewApiKey}
+        >
+          Сгенерировать новый ключ
+        </Button>
       </div>
-      
-      <p className="text-sm text-muted-foreground">
+
+      <p className="text-sm text-muted-foreground mb-6">
         Настройки API для получения обращений от граждан через внешние системы
       </p>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Доступ к API</CardTitle>
-          <CardDescription>
-            Настройки авторизации для доступа к API
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="flex items-center space-x-2 mb-6">
+        <Switch 
+          id="api-enabled" 
+          checked={settings.enabled}
+          onCheckedChange={handleEnabledChange}
+        />
+        <Label htmlFor="api-enabled">Включить внешний API</Label>
+      </div>
+      
+      <div className="space-y-6">
+        <div className="space-y-4 border rounded-lg p-4 bg-card">
+          <h4 className="text-sm font-medium">Доступ к API</h4>
+          
           <div className="space-y-2">
             <Label htmlFor="auth-type">Тип авторизации</Label>
             <Select defaultValue="api_key" disabled>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Выберите тип авторизации" />
               </SelectTrigger>
               <SelectContent>
@@ -221,42 +229,41 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
           
           <div className="space-y-2">
             <Label htmlFor="api-key">API Ключ</Label>
-            <div className="flex">
-              <Input 
-                id="api-key" 
-                type="password" 
-                value={settings.settings.apiKey || ''}
-                readOnly
-                className="flex-1"
-              />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="ml-2" 
-                onClick={copyApiKey}
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input 
+                  id="api-key" 
+                  type={showApiKey ? "text" : "password"} 
+                  value={settings.settings.apiKey || '••••••••••••••••••••••••••••••'}
+                  readOnly
+                  className="pr-10"
+                />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2" 
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <Button variant="outline" size="icon" onClick={copyApiKey}>
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={generateNewApiKey}>
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               API ключ используется для авторизации запросов от внешних систем
             </p>
           </div>
+        </div>
+        
+        <div className="space-y-4 border rounded-lg p-4 bg-card">
+          <h4 className="text-sm font-medium">Обработка обращений</h4>
           
-          <Button onClick={generateNewApiKey}>
-            Сгенерировать новый ключ
-          </Button>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Обработка обращений</CardTitle>
-          <CardDescription>
-            Настройки автоматической обработки входящих обращений через API
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
           <div className="flex items-center space-x-2">
             <Switch 
               id="auto-process" 
@@ -266,14 +273,14 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
             <Label htmlFor="auto-process">Автоматически обрабатывать обращения</Label>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-2 mt-4">
             <Label htmlFor="default-agent">AI Агент по умолчанию</Label>
             <Select 
               value={settings.settings.selectedAgent?.toString() || ''} 
               onValueChange={handleAgentChange}
               disabled={!settings.settings.autoProcess}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Выберите агента" />
               </SelectTrigger>
               <SelectContent>
@@ -288,24 +295,18 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
               Агент, который будет использоваться для автоматической обработки входящих обращений
             </p>
           </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Пример использования API</CardTitle>
-          <CardDescription>
-            Пример запроса для отправки обращения через API
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-muted rounded-md p-4 relative">
-            <pre className="text-xs text-muted-foreground overflow-auto">
-              <code className="text-green-600">POST /api/external/citizen-requests</code>
+        </div>
+        
+        <div className="space-y-4 border rounded-lg p-4 bg-card">
+          <h4 className="text-sm font-medium">Пример использования API</h4>
+          
+          <div className="bg-gray-900 rounded-md p-4 text-white">
+            <pre className="text-xs overflow-x-auto whitespace-pre">
+              <code className="text-green-400">POST /api/external/citizen-requests</code>
               {`
-curl -X POST https://agent-smith.gov.kz/api/external/citizen-requests \\
+curl -X POST https://agent-smith.replit.app/api/external/citizen-requests \\
 -H "Content-Type: application/json" \\
--H "X-API-Key: ${settings.settings.apiKey || 'your_api_key_here'}" \\
+-H "X-API-Key: ${showApiKey ? settings.settings.apiKey || 'your_api_key_here' : 'your_api_key_here'}" \\
 -d '{
   "fullName": "Иван Петров",
   "contactInfo": "ivan@example.com",
@@ -313,44 +314,23 @@ curl -X POST https://agent-smith.gov.kz/api/external/citizen-requests \\
   "description": "Прошу предоставить справку о составе семьи",
   "requestType": "Справка",
   "priority": "medium",
-  "externalId": "REQ-12345",
+  "externalId": "REQ-1234",
   "sourceSystem": "portal"
 }'`}
             </pre>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute top-2 right-2"
-              onClick={() => {
-                navigator.clipboard.writeText(`curl -X POST https://agent-smith.gov.kz/api/external/citizen-requests \\
--H "Content-Type: application/json" \\
--H "X-API-Key: ${settings.settings.apiKey || 'your_api_key_here'}" \\
--d '{
-  "fullName": "Иван Петров",
-  "contactInfo": "ivan@example.com",
-  "subject": "Запрос на получение справки",
-  "description": "Прошу предоставить справку о составе семьи",
-  "requestType": "Справка",
-  "priority": "medium",
-  "externalId": "REQ-12345",
-  "sourceSystem": "portal"
-}'`);
-                toast({
-                  title: "Скопировано",
-                  description: "Пример запроса скопирован в буфер обмена",
-                  variant: "default",
-                });
-              }}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-xs text-muted-foreground">
+            Используйте этот эндпоинт для отправки обращений граждан из внешних систем
+          </p>
+        </div>
+      </div>
       
-      <div className="flex justify-end">
+      <div className="flex justify-end mt-6">
+        <Button variant="outline" className="mr-2">
+          Отмена
+        </Button>
         <Button onClick={saveSettings} disabled={saveSettingsMutation.isPending}>
-          {saveSettingsMutation.isPending ? "Сохранение..." : "Сохранить настройки"}
+          {saveSettingsMutation.isPending ? "Сохранение..." : "Сохранить изменения"}
         </Button>
       </div>
     </div>
