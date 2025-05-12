@@ -1219,6 +1219,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+  
+  // Удаление обращения с записью в блокчейн
+  app.delete('/api/citizen-requests/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      // Получаем информацию о запросе перед удалением
+      const request = await storage.getCitizenRequest(id);
+      if (!request) {
+        return res.status(404).json({ error: 'Request not found' });
+      }
+      
+      // Записываем удаление в блокчейн
+      const userId = req.session?.userId || 1;
+      const transactionHash = await recordToBlockchain({
+        entityId: id,
+        entityType: 'citizen_request',
+        action: 'deletion',
+        userId,
+        metadata: {
+          requestInfo: {
+            subject: request.subject,
+            fullName: request.fullName,
+            status: request.status,
+            createdAt: request.createdAt
+          },
+          deletedAt: new Date(),
+          deletedBy: userId
+        }
+      });
+      
+      // Создаем запись активности
+      await storage.createActivity({
+        userId,
+        actionType: 'citizen_request_deleted',
+        description: `Удалено обращение "${request.subject}" от ${request.fullName}`,
+        relatedId: id,
+        relatedType: 'citizen_request',
+        blockchainHash: transactionHash
+      });
+      
+      // Удаляем обращение
+      const deleted = await storage.deleteCitizenRequest(id);
+      
+      res.json({ 
+        success: deleted,
+        blockchainHash: transactionHash,
+        message: 'Запись о удалении сохранена в блокчейне',
+        deletedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error deleting citizen request:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Получение результатов работы агентов по обращению (по ID обращения)
   app.get('/api/citizen-requests/:id/agent-results', async (req, res) => {
