@@ -87,13 +87,19 @@ const CitizenRequestAgentSection: React.FC<CitizenRequestAgentSectionProps> = ({
 
   // Фильтруем агентов по типу (citizen_requests)
   /**
-   * Фильтруем агентов и оставляем только ключевых
-   * Оставляем только главного агента с ID 640 для обработки обращений граждан
+   * Фильтруем агентов по типу и убираем дубликаты
    * @type {Agent[]}
    */
-  const citizenRequestAgents = agents.filter(agent => 
-    agent.type === "citizen_requests" && agent.id === 640
-  );
+  const citizenRequestAgents = agents
+    .filter(agent => agent.type === "citizen_requests")
+    // Фильтр для удаления дубликатов - сохраняем только первого агента с уникальным именем
+    .reduce<Agent[]>((unique, agent) => {
+      const exists = unique.find(a => a.name === agent.name);
+      if (!exists) {
+        unique.push(agent);
+      }
+      return unique;
+    }, []);
 
   /**
    * Обработка запроса с помощью ИИ

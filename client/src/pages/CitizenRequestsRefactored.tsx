@@ -253,8 +253,19 @@ const CitizenRequests: React.FC = () => {
   // Обработка обращения с помощью AI
   const processRequestWithAI = async (requestId: number, actionType: string = "classification") => {
     try {
+      // Получаем первого доступного агента, если агент не выбран
+      let agentId = agentSettings.agentId;
+      if (!agentId) {
+        const agents = await apiRequest('GET', '/api/agents?type=citizen_requests');
+        if (agents && agents.length > 0) {
+          agentId = agents[0].id;
+          // Сохраняем выбранного агента в настройках
+          setAgentSettings(prev => ({ ...prev, agentId }));
+        }
+      }
+      
       const response = await apiRequest('POST', `/api/citizen-requests/${requestId}/process`, {
-        agentId: agentSettings.agentId,
+        agentId,
         actionType
       });
       
