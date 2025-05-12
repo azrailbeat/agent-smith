@@ -36,10 +36,13 @@ import {
   Filter,
   Search,
   Headphones,
-  Upload
+  Upload,
+  ChevronDown,
+  Inbox
 } from "lucide-react";
 import MeetingProtocolAgentSection from "@/components/MeetingProtocolAgentSection";
 import { AudioTranscribeDialog } from "@/components/AudioTranscribeDialog";
+import TrelloStyleMeetingCard from "@/components/TrelloStyleMeetingCard";
 import { 
   Dialog, 
   DialogContent, 
