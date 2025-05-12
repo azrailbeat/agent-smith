@@ -11,9 +11,12 @@ import {
   updateRequestAgentSettings,
   getRAGConfig,
   updateRAGConfig,
+  getIntegrationSettings,
+  updateIntegrationSettings,
   ButtonConfigSettings,
   RequestAgentSettings,
-  RAGConfig
+  RAGConfig,
+  IntegrationSettings
 } from './services/system-settings';
 
 export function registerSystemRoutes(app: express.Express): void {

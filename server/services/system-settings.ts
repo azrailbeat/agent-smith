@@ -41,10 +41,17 @@ export interface RAGConfig {
   defaultPrompt: string;
 }
 
+export interface IntegrationSettings {
+  type: string;  // 'api' | 'widget' | 'bolt' | 'email' | 'activedirectory'
+  enabled: boolean;
+  settings: Record<string, any>;
+}
+
 export interface ISystemSettings {
   buttonConfigs: ButtonConfigSettings[];
   requestAgentSettings: RequestAgentSettings[];
   ragConfig: RAGConfig;
+  integrationSettings: IntegrationSettings[];
   [key: string]: any;
 }
 
@@ -223,10 +230,108 @@ export class SystemSettings {
   }
 }
 
+// Добавим методы для работы с настройками интеграций
+public static getIntegrationSettings(type: string): IntegrationSettings | undefined {
+  const settings = SystemSettings.getSettings();
+  return settings.integrationSettings.find(c => c.type === type);
+}
+
+public static updateIntegrationSettings(config: IntegrationSettings): void {
+  const instance = SystemSettings.getInstance();
+  const settings = instance.settings;
+  
+  const existingIndex = settings.integrationSettings.findIndex(c => c.type === config.type);
+  
+  if (existingIndex >= 0) {
+    settings.integrationSettings[existingIndex] = config;
+  } else {
+    settings.integrationSettings.push(config);
+  }
+  
+  instance.saveSettings(settings);
+  
+  // Логирование активности
+  logActivity({
+    action: 'update',
+    entityType: 'system_settings',
+    description: `Обновлены настройки интеграции "${config.type}"`,
+    metadata: {
+      settingType: 'integrationSettings',
+      integrationType: config.type,
+      enabled: config.enabled
+    }
+  }).catch(err => console.error('Error logging activity:', err));
+}
+
 // Значения настроек по умолчанию
 const DEFAULT_SETTINGS: ISystemSettings = {
   buttonConfigs: [],
   requestAgentSettings: [],
+  integrationSettings: [
+    {
+      type: 'api',
+      enabled: false,
+      settings: {
+        apiKey: '',
+        autoProcess: false,
+        selectedAgent: null
+      }
+    },
+    {
+      type: 'widget',
+      enabled: false,
+      settings: {
+        title: 'Форма обращения',
+        primaryColor: '#1c64f2',
+        theme: 'light',
+        formFields: [
+          { id: 1, type: 'text', label: 'ФИО', required: true },
+          { id: 2, type: 'email', label: 'Email', required: true }
+        ]
+      }
+    },
+    {
+      type: 'bolt',
+      enabled: false,
+      settings: {
+        template: 'landing-page',
+        integrationMethod: 'javascript-widget',
+        generatedTemplate: false
+      }
+    },
+    {
+      type: 'email',
+      enabled: false,
+      settings: {
+        provider: 'smtp',
+        sendgrid: {
+          apiKey: '',
+          defaultFrom: 'Agent Smith <no-reply@agentsmith.gov.kz>'
+        },
+        smtp: {
+          host: '',
+          port: 587,
+          secure: false,
+          auth: {
+            user: '',
+            pass: ''
+          }
+        }
+      }
+    },
+    {
+      type: 'activedirectory',
+      enabled: false,
+      settings: {
+        url: '',
+        baseDN: '',
+        domain: '',
+        username: '',
+        password: '',
+        useTLS: false
+      }
+    }
+  ],
   ragConfig: {
     enabled: true,
     retrievalStrategy: 'hybrid',
@@ -321,4 +426,14 @@ export function getRAGConfig(): RAGConfig {
 // Для совместимости со старым кодом
 export function initializeSettings(): void {
   SystemSettings.initialize();
+}
+
+// Для совместимости со старым кодом для настроек интеграций
+export function getIntegrationSettings(type: string): IntegrationSettings | undefined {
+  return SystemSettings.getIntegrationSettings(type);
+}
+
+// Для совместимости со старым кодом для настроек интеграций
+export function updateIntegrationSettings(config: IntegrationSettings): void {
+  SystemSettings.updateIntegrationSettings(config);
 }
