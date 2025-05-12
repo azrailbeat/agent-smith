@@ -154,6 +154,12 @@ export class MemStorage implements IStorage {
   // Данные для работы с базами знаний агентов
   private agentKnowledgeBases: AgentKnowledgeBase[] = [];
   private knowledgeDocuments: KnowledgeDocument[] = [];
+  
+  // Получение всех баз знаний (необходимо для интерфейса IStorage)
+  async getAllAgentKnowledgeBases(): Promise<AgentKnowledgeBase[]> {
+    return [...this.agentKnowledgeBases];
+  }
+  
   private users: Map<number, User>;
   private tasks: Map<number, Task>;
   private documents: Map<number, Document>;
