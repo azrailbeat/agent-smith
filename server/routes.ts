@@ -32,6 +32,7 @@ import { registerKnowledgeRoutes } from "./vector-storage/knowledge-api";
 import { registerMeetingRoutes } from "./meeting-api";
 import { registerAudioRoutes } from "./audio-api";
 import agentRoutes from "./routes/agent-routes";
+import llmAnalyticsRoutes from "./routes/llm-analytics-routes";
 import {
   getTaskRules,
   getTaskRuleById,
