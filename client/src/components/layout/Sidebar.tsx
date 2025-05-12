@@ -75,7 +75,7 @@ const Sidebar = ({
       title: "Основное",
       items: [
         {
-          name: "Аналитика и мониторинг",
+          name: "Мониторинг",
           path: "/",
           icon: <LayoutDashboard size={20} />
         },
