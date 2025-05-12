@@ -269,6 +269,34 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       });
     },
   });
+  
+  // Мутация для отправки ответа
+  const sendReplyMutation = useMutation({
+    mutationFn: ({ requestId, replyText }: { requestId: number; replyText: string }) => {
+      return apiRequest('POST', `/api/citizen-requests/${requestId}/reply`, { responseText: replyText });
+    },
+    onSuccess: () => {
+      setReplyText('');
+      setReplyDialogOpen(false);
+      
+      // Обновляем статус и перезагружаем данные
+      onStatusChange(request.id, 'completed');
+      onRequestUpdate();
+      
+      toast({
+        title: "Ответ отправлен",
+        description: "Ваш ответ был успешно отправлен заявителю.",
+      });
+    },
+    onError: (error) => {
+      console.error("Ошибка при отправке ответа:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить ответ. Попробуйте еще раз.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Загрузка активностей при открытии компонента
   useEffect(() => {
@@ -373,6 +401,15 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   // Подтверждение удаления обращения
   const handleDeleteRequest = () => {
     deleteRequestMutation.mutate(request.id);
+  };
+  
+  // Отправка ответа на обращение
+  const handleSendReply = () => {
+    if (!replyText.trim()) return;
+    sendReplyMutation.mutate({
+      requestId: request.id,
+      replyText: replyText
+    });
   };
 
   return (
@@ -674,6 +711,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 variant="ghost" 
                 size="sm" 
                 className="w-full justify-start text-sm h-10 text-green-600 hover:bg-green-50 hover:text-green-700"
+                onClick={() => setReplyDialogOpen(true)}
               >
                 <Mail className="h-5 w-5 mr-3" />
                 Ответить
@@ -782,6 +820,46 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             </div>
           </div>
         </div>
+        
+        {/* Диалоговое окно для ответа на обращение */}
+        <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Ответ на обращение</DialogTitle>
+              <DialogDescription>
+                Напишите ответ заявителю. После отправки ответа обращение будет автоматически помечено как выполненное.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <Label htmlFor="reply-text" className="mb-2 block">Текст ответа</Label>
+              <Textarea 
+                id="reply-text"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Введите текст ответа на обращение..."
+                className="min-h-[200px]"
+              />
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReplyDialogOpen(false)}>Отмена</Button>
+              <Button 
+                onClick={handleSendReply}
+                disabled={!replyText.trim() || sendReplyMutation.isPending}
+              >
+                {sendReplyMutation.isPending ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                    Отправка...
+                  </>
+                ) : "Отправить ответ"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Диалоговое окно подтверждения удаления */}
       
       {/* Диалог подтверждения удаления */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
