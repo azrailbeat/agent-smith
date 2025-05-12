@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface CitizenRequest {
   id: number;
@@ -90,13 +90,13 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   // Мутация для обработки обращения агентом
   const processWithAgentMutation = useMutation({
     mutationFn: (agentId: number) => {
-      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId });
+      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId, action: 'full' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
       toast({
         title: "Обращение обработано",
-        description: "Обращение передано на обработку ИИ агенту",
+        description: "Обращение успешно обработано ИИ агентом",
       });
       setIsProcessing(false);
     },
@@ -105,6 +105,30 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       toast({
         title: "Ошибка",
         description: "Не удалось обработать обращение",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    },
+  });
+  
+  // Мутация для автоматической обработки
+  const autoProcessMutation = useMutation({
+    mutationFn: (agentId: number) => {
+      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId, action: 'auto' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+      toast({
+        title: "Авто-обработка",
+        description: "Обращение успешно обработано в автоматическом режиме",
+      });
+      setIsProcessing(false);
+    },
+    onError: (error) => {
+      console.error("Error auto-processing request:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось выполнить автоматическую обработку",
         variant: "destructive",
       });
       setIsProcessing(false);
@@ -264,6 +288,44 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                 Обработано ИИ, ожидание результатов...
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Кнопки для обработки ИИ внизу карточки */}
+        {!request.aiProcessed && citizenRequestAgents.length > 0 && (
+          <div className="flex justify-between gap-2 mb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] h-6 border-dashed border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (citizenRequestAgents.length > 0) {
+                  handleProcessWithAgent(citizenRequestAgents[0].id, e);
+                }
+              }}
+              disabled={isProcessing}
+            >
+              <Bot className="h-2.5 w-2.5 mr-1.5" />
+              {isProcessing ? "Обработка..." : "Обработать ИИ"}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-[10px] h-6 border-dashed border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (citizenRequestAgents.length > 0) {
+                  setIsProcessing(true);
+                  autoProcessMutation.mutate(citizenRequestAgents[0].id);
+                }
+              }}
+              disabled={isProcessing}
+            >
+              <RefreshCw className="h-2.5 w-2.5 mr-1.5" />
+              {isProcessing ? "Обработка..." : "Авто-обработка"}
+            </Button>
           </div>
         )}
         
