@@ -171,7 +171,7 @@ const CitizenRequests = () => {
 
   // Фильтруем агентов для обработки обращений граждан
   const availableAgents = agents.filter(agent => 
-    agent.type === "citizen_requests" && agent.isActive
+    agent.type === "citizen_requests" && (agent.isActive !== false) // Считаем агента активным, если isActive не false или undefined
   );
 
   // Мутация для создания обращения
