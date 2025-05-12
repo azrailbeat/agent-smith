@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, RefreshCw, ChevronDown,
-         MessageSquare, FileText, Clock, Edit, CreditCard, Flag, Info, Plus, Tag, UserCheck } from 'lucide-react';
+         MessageSquare, FileText, Clock, Edit, CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2 } from 'lucide-react';
 
 interface Activity {
   id: number;
@@ -221,6 +221,28 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
     },
   });
   
+  // Мутация для удаления обращения
+  const deleteRequestMutation = useMutation({
+    mutationFn: () => {
+      return apiRequest('DELETE', `/api/citizen-requests/${request.id}`);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+      toast({
+        title: "Обращение удалено",
+        description: `Запись об удалении сохранена в блокчейне: ${data.blockchainHash ? data.blockchainHash.substring(0, 8) + '...' : 'успешно'}`,
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting request:", error);
+      toast({
+        title: "Ошибка удаления",
+        description: "Не удалось удалить обращение",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Мутация для автоматической обработки
   const autoProcessMutation = useMutation({
     mutationFn: (agentId: number) => {
@@ -340,6 +362,22 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                   >
                     <Database className="h-3 w-3 mr-2" />
                     Сохранить в блокчейн
+                  </Button>
+                  
+                  {/* Кнопка удаления */}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-start text-[11px] h-7 mb-0.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Вы уверены, что хотите удалить это обращение? Эта операция не может быть отменена и будет записана в блокчейн.')) {
+                        deleteRequestMutation.mutate();
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3 mr-2" />
+                    Удалить обращение
                   </Button>
                   
                   {/* Назначить агента */}
