@@ -1,100 +1,39 @@
 /**
- * Типы данных для мониторинга и аналитики
+ * Типы данных для системы мониторинга
  */
 
-/**
- * Тип для статуса LLM сервисов
- */
-export interface ServiceStatus {
-  serviceName: string;
-  status: 'healthy' | 'degraded' | 'down';
-  lastUpdated: string;
-  details?: {
-    queueLength?: number;
-    gpuUtilization?: number;
-    avgResponseTime?: number;
-    requestsPerMinute?: number;
-    latestError?: string;
-  };
+// Запрос на анализ производительности LLM модели
+export interface LLMPerformanceAnalysisRequest {
+  // Имя модели для анализа (если не указано, анализируются все модели)
+  model?: string;
+  
+  // Включать ли обнаружение аномалий
+  includeAnomalyDetection?: boolean;
+  
+  // Период для анализа в днях (по умолчанию 30)
+  period?: number;
 }
 
-/**
- * Тип для использования LLM моделей
- */
-export interface ModelUsage {
-  model: string;
-  tokensUsed: number;
-  cost: number;
-  requestCount: number;
-  avgResponseTime: number;
-}
+// Типы трендов
+export type TrendType = 'increasing' | 'decreasing' | 'stable';
 
-/**
- * Тип для запроса анализа данных LLM
- */
-export interface AIAnalysisRequest {
-  llmUsage: ModelUsage[];
-  llmStatus: ServiceStatus[];
-  analysisType: 'optimization' | 'trends' | 'alerts' | 'comprehensive';
-  userId?: number;
-}
-
-/**
- * Тип для ответа анализа данных LLM
- */
-export interface AIAnalysisResponse {
-  success: boolean;
-  analysisType: string;
-  content: string;
-  metadata: {
-    tokensUsed?: number;
-    modelUsed?: string;
-    generationMethod?: string;
-    error?: string;
-    timestamp: string;
-  };
-}
-
-/**
- * Тип для записи метрик LLM моделей
- */
-export interface LLMMetricsRecord {
-  id: number;
-  model: string;
-  timestamp: string;
-  requestCount: number;
-  tokensUsed: number;
-  cost: number;
-  avgResponseTime: number;
-  errorRate: number;
-}
-
-/**
- * Тип для истории производительности LLM
- */
-export interface LLMPerformanceHistory {
-  model: string;
-  timePoints: string[];
-  responseTimeSeries: number[];
-  costSeries: number[];
-  tokensSeries: number[];
-  requestsSeries: number[];
-}
-
-/**
- * Тип для данных аналитики производительности LLM
- */
+// Аналитика производительности LLM
 export interface LLMPerformanceAnalytics {
+  // Средние показатели
   averages: {
     tokensPerRequest: number;
     costPerRequest: number;
     responseTime: number;
   };
+  
+  // Тренды
   trends: {
-    costTrend: 'increasing' | 'decreasing' | 'stable';
-    usageTrend: 'increasing' | 'decreasing' | 'stable';
-    responseTimeTrend: 'increasing' | 'decreasing' | 'stable';
+    costTrend: TrendType;
+    usageTrend: TrendType;
+    responseTimeTrend: TrendType;
   };
+  
+  // Аномалии
   anomalies: Array<{
     timestamp: string;
     metric: string;
@@ -104,31 +43,96 @@ export interface LLMPerformanceAnalytics {
   }>;
 }
 
-/**
- * Тип для запроса анализа производительности LLM моделей
- */
-export interface LLMPerformanceAnalysisRequest {
-  model?: string;
-  startDate?: string;
-  endDate?: string;
-  metrics?: Array<'responseTime' | 'cost' | 'tokens' | 'requests'>;
-  includeAnomalyDetection?: boolean;
+// История производительности LLM
+export interface LLMPerformanceHistory {
+  // Название модели
+  model: string;
+  
+  // Временные точки
+  timePoints: string[];
+  
+  // Серия данных времени ответа
+  responseTimeSeries: number[];
+  
+  // Серия данных стоимости
+  costSeries: number[];
+  
+  // Серия данных токенов
+  tokensSeries: number[];
+  
+  // Серия данных запросов
+  requestsSeries: number[];
 }
 
-/**
- * Тип для ответа анализа производительности LLM моделей
- */
-export interface LLMPerformanceAnalysisResponse {
-  success: boolean;
-  data: {
-    analysisId: string;
-    performanceAnalytics: LLMPerformanceAnalytics;
-    historicalData: LLMPerformanceHistory[];
-    aiInsights?: string;
+// Тип анализа для AI моделей
+export enum AIAnalysisType {
+  PERFORMANCE = 'performance',
+  OPTIMIZATION = 'optimization',
+  TREND = 'trend',
+  ALERTS = 'alerts'
+}
+
+// Запрос на анализ с помощью AI
+export interface AIModelAnalysisRequest {
+  // Тип анализа
+  analysisType: AIAnalysisType;
+  
+  // Модель для анализа
+  model?: string;
+  
+  // Дополнительные параметры
+  options?: Record<string, any>;
+}
+
+// Результат анализа производительности LLM с помощью AI
+export interface AIModelAnalysisResult {
+  // Идентификатор анализа
+  analysisId: string;
+  
+  // Тип анализа
+  analysisType: AIAnalysisType;
+  
+  // Модель
+  model?: string;
+  
+  // Результаты анализа
+  results: {
+    // Базовая аналитика
+    analytics?: LLMPerformanceAnalytics;
+    
+    // Исторические данные
+    historicalData?: LLMPerformanceHistory[];
+    
+    // Рекомендации по оптимизации
+    optimizationSuggestions?: string[];
+    
+    // Предупреждения
+    alerts?: Array<{
+      level: 'info' | 'warning' | 'critical';
+      message: string;
+      timestamp: string;
+    }>;
+    
+    // Анализ тенденций
+    trendAnalysis?: {
+      usage: {
+        trend: TrendType;
+        analysis: string;
+      };
+      cost: {
+        trend: TrendType;
+        analysis: string;
+      };
+      performance: {
+        trend: TrendType;
+        analysis: string;
+      };
+    };
   };
-  metadata: {
-    analyzedModels: string[];
-    dateRange: [string, string];
-    generatedAt: string;
-  };
+  
+  // Выводы AI
+  aiInsights: string;
+  
+  // Дата создания
+  createdAt: string;
 }

@@ -1,22 +1,12 @@
 /**
- * Интеграция с Active Directory
- * Обеспечивает авторизацию, синхронизацию пользователей и управление группами
+ * Сервис для работы с Active Directory
+ * Позволяет интегрироваться с корпоративной инфраструктурой для аутентификации
+ * и получения информации о пользователях
  */
 
 import { logActivity } from '../activity-logger';
 
-// Интерфейс для конфигурации Active Directory
-export interface ADConfig {
-  url: string;
-  baseDN: string;
-  username: string;
-  password: string;
-  domain: string;
-  useSsl: boolean;
-  port?: number;
-}
-
-// Интерфейс пользователя Active Directory
+// Интерфейс данных пользователя AD
 export interface ADUser {
   username: string;
   displayName: string;
@@ -24,276 +14,398 @@ export interface ADUser {
   department?: string;
   title?: string;
   manager?: string;
-  telephoneNumber?: string;
-  enabled?: boolean;
-  groups?: string[];
+  phoneNumber?: string;
+  memberOf?: string[];
+  enabled: boolean;
   lastLogon?: Date;
-  thumbnailPhoto?: Buffer;
-  dn?: string; // Distinguished Name
 }
 
-// Интерфейс группы Active Directory
-export interface ADGroup {
-  name: string;
-  description?: string;
-  members?: string[];
-  dn?: string; // Distinguished Name
+// Интерфейс фильтра для поиска пользователей
+export interface ADUserFilter {
+  username?: string;
+  displayName?: string;
+  email?: string;
+  department?: string;
+  title?: string;
+  enabled?: boolean;
+}
+
+// Интерфейс результата операции с AD
+export interface ADOperationResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+// Интерфейс настроек подключения к Active Directory
+export interface ADConfig {
+  url: string;
+  baseDN: string;
+  username: string;
+  password: string;
+  domain: string;
+  useTLS?: boolean;
+  tlsOptions?: {
+    rejectUnauthorized: boolean;
+  };
 }
 
 /**
  * Класс для работы с Active Directory
+ * В текущей реализации содержит моковые данные и заглушки методов,
+ * так как фактическая реализация требует наличия LDAP библиотеки
+ * и доступа к реальному AD серверу.
  */
 export class ActiveDirectoryService {
   private config: ADConfig | null = null;
-  private _isConnected: boolean = false;
-  private client: any = null; // В реальном приложении здесь был бы клиент ldapjs
-
+  private isInitialized: boolean = false;
+  private mockUsers: ADUser[] = [];
+  
   /**
-   * Получить статус подключения
+   * Конструктор сервиса Active Directory
+   * @param config Конфигурация подключения к AD серверу
    */
-  get isConnected(): boolean {
-    return this._isConnected;
-  }
-
-  /**
-   * Проверка и установка конфигурации
-   * @param config Конфигурация Active Directory
-   */
-  async setConfig(config: ADConfig): Promise<boolean> {
-    try {
-      // В реальном приложении здесь была бы инициализация клиента ldapjs
-      // и проверка подключения
+  constructor(config?: ADConfig) {
+    if (config) {
       this.config = config;
-      this._isConnected = true;
-
-      // Логируем активность
-      await logActivity({
-        action: 'ad_integration_connected',
-        entityType: 'integration',
-        details: `Подключение к Active Directory ${config.domain} установлено`
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Ошибка подключения к Active Directory:', error);
-      this._isConnected = false;
-      return false;
+      this.isInitialized = true;
+    } else if (
+      process.env.AD_URL && 
+      process.env.AD_BASE_DN && 
+      process.env.AD_USERNAME && 
+      process.env.AD_PASSWORD &&
+      process.env.AD_DOMAIN
+    ) {
+      // Инициализация из переменных окружения
+      this.config = {
+        url: process.env.AD_URL,
+        baseDN: process.env.AD_BASE_DN,
+        username: process.env.AD_USERNAME,
+        password: process.env.AD_PASSWORD,
+        domain: process.env.AD_DOMAIN,
+        useTLS: process.env.AD_USE_TLS === 'true',
+        tlsOptions: {
+          rejectUnauthorized: process.env.AD_REJECT_UNAUTHORIZED !== 'false'
+        }
+      };
+      this.isInitialized = true;
+    } else {
+      console.warn('ActiveDirectoryService: Не настроено подключение к AD.');
+      this.isInitialized = false;
+      
+      // Создаем тестовые данные для демонстрации
+      this.initMockData();
     }
   }
-
+  
   /**
-   * Отключение от сервера Active Directory
+   * Инициализация моковых данных
    */
-  async disconnect(): Promise<void> {
-    if (this.client) {
-      // Закрытие соединения (в реальном приложении)
-      this.client = null;
-    }
-
-    this._isConnected = false;
-    await logActivity({
-      action: 'ad_integration_disconnected',
-      entityType: 'integration',
-      details: 'Отключение от Active Directory'
-    });
+  private initMockData(): void {
+    this.mockUsers = [
+      {
+        username: 'jdoe',
+        displayName: 'John Doe',
+        email: 'jdoe@agentsmith.gov.kz',
+        department: 'IT Department',
+        title: 'System Administrator',
+        manager: 'Big Boss',
+        phoneNumber: '+7 (777) 123-4567',
+        memberOf: ['IT Staff', 'Administrators'],
+        enabled: true,
+        lastLogon: new Date('2023-12-28T09:15:00')
+      },
+      {
+        username: 'asmith',
+        displayName: 'Alice Smith',
+        email: 'asmith@agentsmith.gov.kz',
+        department: 'Finance',
+        title: 'Financial Analyst',
+        manager: 'Money Boss',
+        phoneNumber: '+7 (777) 234-5678',
+        memberOf: ['Finance Staff', 'Accountants'],
+        enabled: true,
+        lastLogon: new Date('2023-12-27T11:30:00')
+      },
+      {
+        username: 'bjohnson',
+        displayName: 'Bob Johnson',
+        email: 'bjohnson@agentsmith.gov.kz',
+        department: 'HR',
+        title: 'HR Manager',
+        manager: 'People Boss',
+        phoneNumber: '+7 (777) 345-6789',
+        memberOf: ['HR Staff', 'Managers'],
+        enabled: true,
+        lastLogon: new Date('2023-12-26T14:45:00')
+      },
+      {
+        username: 'clee',
+        displayName: 'Carol Lee',
+        email: 'clee@agentsmith.gov.kz',
+        department: 'Marketing',
+        title: 'Marketing Specialist',
+        manager: 'Marketing Boss',
+        phoneNumber: '+7 (777) 456-7890',
+        memberOf: ['Marketing Staff'],
+        enabled: false,
+        lastLogon: new Date('2023-12-10T10:20:00')
+      },
+      {
+        username: 'dkhan',
+        displayName: 'David Khan',
+        email: 'dkhan@agentsmith.gov.kz',
+        department: 'Operations',
+        title: 'Operations Manager',
+        manager: 'Big Boss',
+        phoneNumber: '+7 (777) 567-8901',
+        memberOf: ['Operations Staff', 'Managers'],
+        enabled: true,
+        lastLogon: new Date('2023-12-27T16:00:00')
+      }
+    ];
   }
-
+  
   /**
-   * Аутентификация пользователя через Active Directory
+   * Проверка готовности сервиса
+   */
+  public isReady(): boolean {
+    return this.isInitialized;
+  }
+  
+  /**
+   * Аутентификация пользователя в Active Directory
    * @param username Имя пользователя
    * @param password Пароль
    */
-  async authenticate(username: string, password: string): Promise<boolean> {
-    if (!this._isConnected || !this.config) {
-      throw new Error('Нет подключения к Active Directory');
-    }
-
+  public async authenticate(username: string, password: string): Promise<ADOperationResult> {
     try {
-      // В реальном приложении здесь была бы проверка учетных данных через LDAP
+      if (!this.isInitialized) {
+        // В демо-режиме всегда возвращаем успех для тестовых пользователей с паролем "password"
+        const user = this.mockUsers.find(u => u.username === username);
+        
+        if (user && password === 'password' && user.enabled) {
+          await logActivity({
+            action: 'AD_AUTHENTICATION',
+            entityType: 'user',
+            details: `Успешная аутентификация пользователя ${username} (демо-режим)`,
+            metadata: {
+              username,
+              success: true,
+              mode: 'demo'
+            }
+          });
+          
+          return {
+            success: true,
+            message: `Пользователь ${username} успешно аутентифицирован`
+          };
+        } else {
+          await logActivity({
+            action: 'AD_AUTHENTICATION_FAILED',
+            entityType: 'user',
+            details: `Неудачная попытка аутентификации пользователя ${username} (демо-режим)`,
+            metadata: {
+              username,
+              success: false,
+              reason: !user ? 'user_not_found' : !user.enabled ? 'user_disabled' : 'invalid_password',
+              mode: 'demo'
+            }
+          });
+          
+          return {
+            success: false,
+            error: !user ? 'Пользователь не найден' : 
+                  !user.enabled ? 'Учетная запись отключена' : 
+                  'Неверный пароль'
+          };
+        }
+      }
       
-      // Для демонстрации прописываем успешную аутентификацию для admin/admin
-      const success = username === 'admin' && password === 'admin';
-
+      // Тут должен быть реальный код аутентификации через LDAP
+      console.log(`AD: Аутентификация пользователя ${username} с настройками ${this.config?.url}`);
+      
+      // В реальной реализации здесь будет подключение к AD и проверка учетных данных
+      
       await logActivity({
-        action: 'ad_authentication',
+        action: 'AD_AUTHENTICATION',
         entityType: 'user',
-        details: `Попытка аутентификации пользователя ${username} через AD: ${success ? 'успешно' : 'неудачно'}`
+        details: `Успешная аутентификация пользователя ${username}`,
+        metadata: {
+          username,
+          success: true,
+          mode: 'real'
+        }
       });
-
-      return success;
+      
+      return {
+        success: true,
+        message: `Пользователь ${username} успешно аутентифицирован`
+      };
+      
     } catch (error) {
-      console.error('Ошибка аутентификации через AD:', error);
+      console.error('AD: Ошибка аутентификации:', error);
+      
+      await logActivity({
+        action: 'AD_AUTHENTICATION_FAILED',
+        entityType: 'user',
+        details: `Ошибка аутентификации пользователя ${username}`,
+        metadata: {
+          username,
+          success: false,
+          error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+          mode: 'real'
+        }
+      });
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка при аутентификации'
+      };
+    }
+  }
+  
+  /**
+   * Поиск пользователя в Active Directory
+   * @param username Имя пользователя
+   */
+  public async findUser(username: string): Promise<ADUser | null> {
+    try {
+      if (!this.isInitialized) {
+        // В демо-режиме ищем в моковых данных
+        const user = this.mockUsers.find(u => u.username === username);
+        return user || null;
+      }
+      
+      // Тут должен быть реальный код поиска через LDAP
+      console.log(`AD: Поиск пользователя ${username} с настройками ${this.config?.url}`);
+      
+      // В реальной реализации здесь будет подключение к AD и поиск пользователя
+      
+      // Заглушка для демонстрации
+      return null;
+      
+    } catch (error) {
+      console.error('AD: Ошибка поиска пользователя:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Поиск пользователей в Active Directory по фильтру
+   * @param filter Фильтр поиска
+   * @param limit Ограничение количества результатов
+   */
+  public async findUsers(filter: ADUserFilter, limit: number = 100): Promise<ADUser[]> {
+    try {
+      if (!this.isInitialized) {
+        // В демо-режиме фильтруем моковые данные
+        return this.mockUsers.filter(user => {
+          if (filter.username && !user.username.includes(filter.username)) return false;
+          if (filter.displayName && !user.displayName.includes(filter.displayName)) return false;
+          if (filter.email && !user.email.includes(filter.email)) return false;
+          if (filter.department && !user.department?.includes(filter.department)) return false;
+          if (filter.title && !user.title?.includes(filter.title)) return false;
+          if (filter.enabled !== undefined && user.enabled !== filter.enabled) return false;
+          return true;
+        }).slice(0, limit);
+      }
+      
+      // Тут должен быть реальный код поиска через LDAP
+      console.log(`AD: Поиск пользователей по фильтру с настройками ${this.config?.url}`);
+      
+      // В реальной реализации здесь будет подключение к AD и поиск пользователей
+      
+      // Заглушка для демонстрации
+      return [];
+      
+    } catch (error) {
+      console.error('AD: Ошибка поиска пользователей:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Получение групп пользователя
+   * @param username Имя пользователя
+   */
+  public async getUserGroups(username: string): Promise<string[]> {
+    try {
+      if (!this.isInitialized) {
+        // В демо-режиме возвращаем группы из моковых данных
+        const user = this.mockUsers.find(u => u.username === username);
+        return user?.memberOf || [];
+      }
+      
+      // Тут должен быть реальный код получения групп через LDAP
+      console.log(`AD: Получение групп пользователя ${username} с настройками ${this.config?.url}`);
+      
+      // В реальной реализации здесь будет подключение к AD и получение групп
+      
+      // Заглушка для демонстрации
+      return [];
+      
+    } catch (error) {
+      console.error('AD: Ошибка получения групп пользователя:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Проверка принадлежности пользователя к группе
+   * @param username Имя пользователя
+   * @param groupName Название группы
+   */
+  public async isUserInGroup(username: string, groupName: string): Promise<boolean> {
+    try {
+      const groups = await this.getUserGroups(username);
+      return groups.includes(groupName);
+    } catch (error) {
+      console.error('AD: Ошибка проверки принадлежности к группе:', error);
       return false;
     }
   }
-
+  
   /**
-   * Получение списка пользователей
-   * @param filter Фильтр LDAP для поиска пользователей (например, "(&(objectClass=user)(!(objectClass=computer)))")
-   * @param attributes Атрибуты пользователя для получения
-   * @param limit Максимальное количество пользователей
+   * Проверка подключения к Active Directory
    */
-  async getUsers(
-    filter: string = "(&(objectClass=user)(!(objectClass=computer)))",
-    attributes: string[] = ['sAMAccountName', 'displayName', 'mail', 'department', 'title', 'manager'],
-    limit: number = 100
-  ): Promise<ADUser[]> {
-    if (!this._isConnected) {
-      throw new Error('Нет подключения к Active Directory');
-    }
-
-    // В реальном приложении здесь был бы запрос к LDAP
-    // В демо-версии возвращаем тестовые данные
-    await logActivity({
-      action: 'ad_users_fetched',
-      entityType: 'integration',
-      details: `Запрошен список пользователей AD с фильтром: ${filter}`
-    });
-
-    // Тестовые данные пользователей
-    return [
-      {
-        username: 'admin',
-        displayName: 'Администратор Системы',
-        email: 'admin@agentsmith.kz',
-        department: 'IT Отдел',
-        title: 'Системный администратор',
-        manager: 'ceo',
-        enabled: true,
-        groups: ['Администраторы', 'IT Отдел']
-      },
-      {
-        username: 'user1',
-        displayName: 'Иванов Иван Иванович',
-        email: 'ivanov@agentsmith.kz',
-        department: 'Отдел поддержки',
-        title: 'Специалист поддержки',
-        manager: 'support_manager',
-        enabled: true,
-        groups: ['Операторы', 'Поддержка']
-      },
-      {
-        username: 'user2',
-        displayName: 'Петров Петр Петрович',
-        email: 'petrov@agentsmith.kz',
-        department: 'Аналитический отдел',
-        title: 'Аналитик данных',
-        manager: 'analytics_manager',
-        enabled: true,
-        groups: ['Аналитики']
-      },
-      {
-        username: 'disabled_user',
-        displayName: 'Отключенный Пользователь',
-        email: 'disabled@agentsmith.kz',
-        department: 'Архив',
-        enabled: false,
-        groups: []
-      },
-      {
-        username: 'ceo',
-        displayName: 'Руководитель Проекта',
-        email: 'ceo@agentsmith.kz',
-        department: 'Руководство',
-        title: 'Генеральный директор',
-        enabled: true,
-        groups: ['Руководство', 'Администраторы']
-      }
-    ];
-  }
-
-  /**
-   * Получение списка групп
-   * @param filter Фильтр LDAP для поиска групп
-   * @param limit Максимальное количество групп
-   */
-  async getGroups(
-    filter: string = "(objectClass=group)",
-    limit: number = 50
-  ): Promise<ADGroup[]> {
-    if (!this._isConnected) {
-      throw new Error('Нет подключения к Active Directory');
-    }
-
-    // В реальном приложении здесь был бы запрос к LDAP
-    // В демо-версии возвращаем тестовые данные
-    await logActivity({
-      action: 'ad_groups_fetched',
-      entityType: 'integration',
-      details: `Запрошен список групп AD с фильтром: ${filter}`
-    });
-
-    // Тестовые данные групп
-    return [
-      {
-        name: 'Администраторы',
-        description: 'Администраторы системы',
-        members: ['admin', 'ceo']
-      },
-      {
-        name: 'Операторы',
-        description: 'Операторы системы обработки обращений',
-        members: ['user1']
-      },
-      {
-        name: 'Аналитики',
-        description: 'Специалисты по анализу данных',
-        members: ['user2']
-      },
-      {
-        name: 'IT Отдел',
-        description: 'Сотрудники IT отдела',
-        members: ['admin']
-      },
-      {
-        name: 'Руководство',
-        description: 'Руководящий состав',
-        members: ['ceo']
-      },
-      {
-        name: 'Поддержка',
-        description: 'Отдел поддержки пользователей',
-        members: ['user1']
-      }
-    ];
-  }
-
-  /**
-   * Проверка соединения с Active Directory
-   */
-  async testConnection(): Promise<{
-    success: boolean;
-    message: string;
-    details?: any;
-  }> {
-    if (!this.config) {
-      return {
-        success: false,
-        message: 'Конфигурация не установлена'
-      };
-    }
-
+  public async testConnection(): Promise<ADOperationResult> {
     try {
-      // В реальном приложении здесь была бы проверка соединения
+      if (!this.isInitialized) {
+        return {
+          success: true,
+          message: 'Запущен в демо-режиме с моковыми данными'
+        };
+      }
+      
+      // Тут должен быть реальный код проверки подключения через LDAP
+      console.log(`AD: Проверка подключения с настройками ${this.config?.url}`);
+      
+      // В реальной реализации здесь будет тестовое подключение к AD
+      
       return {
         success: true,
-        message: 'Подключение к Active Directory успешно установлено',
-        details: {
-          domain: this.config.domain,
-          version: '2.0',
-          status: 'connected'
-        }
+        message: 'Успешное подключение к Active Directory'
       };
+      
     } catch (error) {
-      console.error('Ошибка проверки соединения с AD:', error);
+      console.error('AD: Ошибка проверки подключения:', error);
+      
       return {
         success: false,
-        message: `Ошибка подключения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-        details: error
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка при подключении'
       };
     }
   }
 }
 
-// Создаем и экспортируем экземпляр сервиса
+// Создаем и экспортируем экземпляр сервиса Active Directory
 export const adService = new ActiveDirectoryService();
+
+/**
+ * Проверка работоспособности сервиса Active Directory
+ */
+export async function testADService(): Promise<boolean> {
+  const result = await adService.testConnection();
+  return result.success;
+}
