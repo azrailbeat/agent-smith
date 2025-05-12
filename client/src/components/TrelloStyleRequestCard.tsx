@@ -92,7 +92,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   // Мутация для обработки обращения агентом
   const processWithAgentMutation = useMutation({
     mutationFn: (agentId: number) => {
-      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId, action: 'full' });
+      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId, actionType: 'full' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
@@ -116,7 +116,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   // Мутация для автоматической обработки
   const autoProcessMutation = useMutation({
     mutationFn: (agentId: number) => {
-      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId, action: 'auto' });
+      return apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { agentId, actionType: 'auto' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
