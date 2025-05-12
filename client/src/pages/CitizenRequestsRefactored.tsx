@@ -923,12 +923,12 @@ const CitizenRequests = () => {
       {/* Диалог просмотра деталей обращения */}
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
         {selectedRequest && (
-          <DialogContent className="sm:max-w-[1100px] max-h-[90vh] p-0">
+          <DialogContent className="sm:max-w-[1100px] max-h-[90vh] p-0" aria-describedby="request-detail-view">
             <TrelloStyleRequestDetailView 
               request={selectedRequest}
               onClose={() => setIsViewDetailsOpen(false)}
               onStatusChange={(id, status) => {
-                updateRequestStatusMutation.mutate({ id, status });
+                updateRequestMutation.mutate({ id, status });
               }}
               onRequestUpdate={() => {
                 queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
@@ -936,8 +936,8 @@ const CitizenRequests = () => {
               onProcess={(requestId, actionType) => {
                 return new Promise((resolve, reject) => {
                   // Используем мутацию для обработки обращения
-                  processRequestMutation.mutate(
-                    { requestId, actionType },
+                  processWithAgentMutation.mutate(
+                    { requestId, agentId: 640, action: actionType },
                     {
                       onSuccess: (data) => {
                         resolve(data);

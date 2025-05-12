@@ -374,212 +374,215 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   };
 
   return (
-    <div className="flex h-full max-h-[85vh]">
-      {/* Основное содержимое */}
-      <div className="flex-1 overflow-y-auto max-w-3xl pr-4">
-        {/* Заголовок и информация о заявителе */}
-        <div className="mb-4">
-          <h1 className="text-xl font-semibold mb-2 line-clamp-2">
-            {request.subject || request.title || "Обращение без темы"}
-          </h1>
-          <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <span>в списке</span>
-            <Badge variant="outline" className="rounded-sm font-normal">
-              {request.status === 'new' ? 'Новые' : 
-               request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
-               request.status === 'waiting' ? 'Ожидание' : 
-               request.status === 'completed' ? 'Завершенные' : 'Другое'}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Основная информация и ИИ-обработка в табах */}
-        <Tabs defaultValue="info" className="mb-6">
-          <TabsList className="mb-2">
-            <TabsTrigger value="info" className="text-sm">Информация</TabsTrigger>
-            <TabsTrigger value="ai" className="text-sm">ИИ обработка</TabsTrigger>
-          </TabsList>
-          
-          {/* Вкладка с основной информацией */}
-          <TabsContent value="info" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Тип обращения</label>
-                <div className="font-medium">{request.requestType || "Не указан"}</div>
-              </div>
-              
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Приоритет</label>
-                <Badge className={`${priorityColors[request.priority] || "bg-gray-100 text-gray-800"}`}>
-                  {request.priority === 'low' ? 'Низкий' : 
-                   request.priority === 'medium' ? 'Средний' : 
-                   request.priority === 'high' ? 'Высокий' : 
-                   request.priority === 'urgent' ? 'Срочный' : 'Не указан'}
+    <div>
+      {/* Скрытый заголовок для доступности */}
+      <DialogHeader className="sr-only">
+        <DialogTitle>Детали обращения №{request.id}</DialogTitle>
+        <DialogDescription id="request-detail-view">
+          Просмотр деталей обращения от {request.fullName}
+        </DialogDescription>
+      </DialogHeader>
+      
+      <div className="flex h-full">
+        {/* Основная секция */}
+        <div className="flex-1 pl-4 pb-4 pr-8 pt-4">
+          {/* Заголовок обращения */}
+          <div className="border-b pb-2 mb-4">
+            <h2 className="text-lg font-medium">Обращение через виджет</h2>
+            <div className="flex items-center text-sm text-gray-600 mt-1">
+              <div className="flex items-center">
+                <span className="mr-1">в списке</span>
+                <Badge variant="outline" className="rounded-sm font-normal text-xs mr-4">
+                  {request.status === 'new' ? 'Новые' : 
+                  request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
+                  request.status === 'waiting' ? 'Ожидание' : 
+                  request.status === 'completed' ? 'Завершенные' : 'Другое'}
                 </Badge>
               </div>
-            </div>
-            
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Описание</label>
-              <div className="bg-gray-50 p-3 rounded-md text-sm min-h-[100px]">
-                {request.description || request.content || "Описание отсутствует"}
+              <div>
+                в обработке
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Создано</label>
-                <div className="text-sm flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5 text-gray-500" />
-                  {new Date(request.createdAt).toLocaleDateString('ru-RU')} в {new Date(request.createdAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
+          </div>
+
+          {/* Табы */}
+          <div className="border-b mb-6">
+            <div className="flex">
+              <div className={`py-2 px-4 border-b-2 ${activeTab === 'main' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
+                <button 
+                  className="text-sm" 
+                  onClick={() => setActiveTab('main')}
+                >
+                  Информация
+                </button>
+              </div>
+              <div className={`py-2 px-4 border-b-2 ${activeTab === 'ai' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
+                <button 
+                  className="text-sm flex items-center" 
+                  onClick={() => setActiveTab('ai')}
+                >
+                  ИИ обработка
+                  {request.aiProcessed && <div className="ml-1 h-2 w-2 rounded-full bg-green-500"></div>}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Контент в зависимости от активной вкладки */}
+          {activeTab === 'main' && (
+            <div>
+              <div className="grid grid-cols-2 gap-x-16 gap-y-6 mb-6">
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Тип обращения</div>
+                  <div className="font-medium">{request.requestType || "Не указан"}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Приоритет</div>
+                  <Badge className={`bg-amber-100 text-amber-800 border-0`}>
+                    {request.priority === 'low' ? 'Низкий' : 
+                    request.priority === 'medium' ? 'Средний' : 
+                    request.priority === 'high' ? 'Высокий' : 
+                    request.priority === 'urgent' ? 'Срочный' : 'Не указан'}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Статус</div>
+                  <div className="font-medium">
+                    {request.status === 'new' ? 'Новое' : 
+                    request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
+                    request.status === 'waiting' ? 'Ожидание' : 
+                    request.status === 'completed' ? 'Выполнено' : 'Другое'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">ID</div>
+                  <div className="font-medium">#{request.id}</div>
                 </div>
               </div>
               
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Обновлено</label>
-                <div className="text-sm flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5 text-gray-500" />
-                  {new Date(request.updatedAt).toLocaleDateString('ru-RU')} в {new Date(request.updatedAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
+              <div className="mb-6">
+                <div className="text-sm text-gray-500 mb-1">Описание</div>
+                <div className="whitespace-pre-wrap">
+                  {request.description || request.content || "Описание отсутствует"}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Создано</div>
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 text-gray-500 mr-1" />
+                    {new Date(request.createdAt).toLocaleDateString('ru-RU')} в {new Date(request.createdAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Обновлено</div>
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                    {new Date(request.updatedAt).toLocaleDateString('ru-RU')} в {new Date(request.updatedAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
+                  </div>
                 </div>
               </div>
             </div>
-          </TabsContent>
-          
-          {/* Вкладка с ИИ-обработкой */}
-          <TabsContent value="ai" className="space-y-4">
-            {/* Результаты ИИ обработки */}
-            {request.aiProcessed ? (
-              <div className="space-y-4">
-                {request.aiClassification && (
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
-                      <Tag className="h-3.5 w-3.5" /> Классификация
-                    </label>
-                    <div className="bg-gray-50 p-3 rounded-md text-sm">
-                      {request.aiClassification}
-                    </div>
-                  </div>
-                )}
-                
-                {request.summary && (
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
-                      <FileText className="h-3.5 w-3.5" /> Резюме
-                    </label>
-                    <div className="bg-gray-50 p-3 rounded-md text-sm">
-                      {request.summary}
-                    </div>
-                  </div>
-                )}
-                
-                {request.aiSuggestion && (
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
-                      <BrainCircuit className="h-3.5 w-3.5" /> Рекомендация ИИ
-                    </label>
-                    <div className="bg-gray-50 p-3 rounded-md text-sm">
-                      {request.aiSuggestion}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-4 bg-amber-50 rounded-md border border-amber-200 text-center">
-                <Bot className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                <h3 className="font-medium text-amber-800 mb-1">Обращение не обработано ИИ</h3>
-                <p className="text-sm text-amber-700 mb-3">
-                  Используйте ИИ-обработку для классификации, анализа и формирования рекомендаций по данному обращению.
-                </p>
-                
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="mb-2">
-                    <label className="text-xs font-medium text-amber-800 mb-1 block text-left">Выберите действие:</label>
-                    <Select
-                      value={selectedAction}
-                      onValueChange={setSelectedAction}
-                    >
-                      <SelectTrigger className="border-amber-300 bg-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="classification">
-                          <div className="flex items-center gap-2">
-                            <Tag className="h-4 w-4" />
-                            <span>Классификация</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="summarization">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            <span>Резюмирование</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="response_generation">
-                          <div className="flex items-center gap-2">
-                            <Lightbulb className="h-4 w-4" />
-                            <span>Генерация ответа</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="full">
-                          <div className="flex items-center gap-2">
-                            <Bot className="h-4 w-4" />
-                            <span>Полная обработка</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          )}
 
-                  <Button
-                    onClick={handleProcessWithAgent}
-                    disabled={isProcessing}
-                    className="w-full bg-amber-600 hover:bg-amber-700"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
-                        Обработка...
-                      </>
-                    ) : (
-                      <>
-                        <Bot className="h-4 w-4 mr-2" />
-                        Обработать с помощью ИИ
-                      </>
-                    )}
-                  </Button>
+          {activeTab === 'ai' && (
+            <div>
+              {request.aiProcessed ? (
+                <div className="space-y-4">
+                  {request.aiClassification && (
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <Tag className="h-4 w-4 mr-2 text-blue-600" />
+                        <div className="font-medium">Классификация</div>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        {request.aiClassification}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {request.aiSuggestion && (
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <BrainCircuit className="h-4 w-4 mr-2 text-purple-600" />
+                        <div className="font-medium">Рекомендации ИИ</div>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap">
+                        {request.aiSuggestion}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 flex justify-end">
+                    <Button variant="outline" size="sm" className="mr-2">
+                      Обработано
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+              ) : (
+                <div>
+                  <div className="text-center py-6">
+                    <Bot className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                    <div className="font-medium text-lg mb-2">Обращение не обработано ИИ</div>
+                    <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                      Для анализа обращения и получения рекомендаций используйте ИИ-обработку
+                    </p>
+                    
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={handleProcessWithAgent}
+                        disabled={isProcessing}
+                        className="px-6"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                            Обработка...
+                          </>
+                        ) : (
+                          <>
+                            <Bot className="h-4 w-4 mr-2" />
+                            Обработать с помощью ИИ
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Блок для комментариев */}
-        <div className="mb-4">
-          <h3 className="text-sm font-medium mb-2 flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" /> Комментарии
-          </h3>
-          
-          <div className="mb-3">
-            <Textarea
-              placeholder="Напишите комментарий..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              className="min-h-[80px] text-sm"
-            />
-            <div className="flex justify-end mt-2">
-              <Button 
-                size="sm" 
-                onClick={handleAddComment}
-                disabled={!comment.trim()}
-              >
-                Добавить комментарий
-              </Button>
+          {/* Комментарии */}
+          <div className="mt-8">
+            <div className="flex items-center mb-3">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              <h3 className="font-medium">Комментарии</h3>
+            </div>
+            
+            <div className="mb-4">
+              <Textarea
+                placeholder="Напишите комментарий..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="min-h-[80px] text-sm mb-2"
+              />
+              <div className="flex justify-end">
+                <Button 
+                  size="sm" 
+                  onClick={handleAddComment}
+                  disabled={!comment.trim()}
+                >
+                  Добавить комментарий
+                </Button>
+              </div>
             </div>
           </div>
           
-          {/* Список активностей */}
-          <div className="space-y-3 mt-4">
-            <h3 className="text-sm font-medium mb-2">История активностей</h3>
+          {/* История активностей */}
+          <div className="mt-6">
+            <h3 className="font-medium mb-4">История активностей</h3>
             
             {activitiesLoading ? (
               <div className="text-center py-4">
@@ -587,19 +590,19 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 <p className="text-sm text-gray-500 mt-2">Загрузка активностей...</p>
               </div>
             ) : activities.length > 0 ? (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              <div>
                 {activities.map((activity) => (
-                  <div key={activity.id} className="border-l-2 pl-3 py-1 border-gray-200 hover:border-primary transition-colors">
+                  <div key={activity.id} className="py-2 border-b">
                     <div className="flex items-start gap-2">
-                      <div className="p-1 rounded-full bg-gray-100 mt-0.5">
+                      <div className="p-1.5 rounded-full bg-gray-100">
                         {getActionIcon(activity.actionType || activity.action || '')}
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-medium">
+                        <div className="font-medium">
                           {activity.userName || 'Система'}
                         </div>
                         <div className="text-sm text-gray-600">{activity.description}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">
+                        <div className="text-xs text-gray-400 mt-1">
                           {formatActivityDate(activity.timestamp || activity.createdAt)}
                         </div>
                       </div>
@@ -608,138 +611,130 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500 text-sm">
+              <div className="text-center py-6 text-gray-500">
                 Нет активностей для этого обращения
               </div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Правая панель с действиями */}
-      <div className="w-64 border-l pl-4">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Действия</h3>
-          <div className="space-y-1.5">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-sm"
-              onClick={() => {
-                // Окно формы перемещения в список
-                // Пока просто показываем выбор статуса
+        {/* Правая панель с действиями */}
+        <div className="w-64 border-l p-4 bg-gray-50">
+          <div className="mb-6">
+            <h3 className="text-sm font-medium mb-3">Действия</h3>
+            <div className="space-y-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start text-sm"
+              >
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Переместить
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start text-sm"
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Копировать
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start text-sm"
+                onClick={() => handleProcessWithAgent()}
+                disabled={isProcessing}
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                Обработка ИИ
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Удалить
+              </Button>
+            </div>
+          </div>
+          
+          {/* Блок статуса */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium mb-3">Статус</h3>
+            <Select
+              defaultValue={request.status}
+              onValueChange={(value) => {
+                onStatusChange(request.id, value);
               }}
             >
-              <LayoutGrid className="h-4 w-4 mr-2" />
-              Переместить
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-sm"
-            >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Копировать
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-sm"
-              onClick={() => handleProcessWithAgent()}
-              disabled={isProcessing}
-            >
-              <Bot className="h-4 w-4 mr-2" />
-              Обработка ИИ
-            </Button>
-            
-            <Separator className="my-2" />
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Удалить
-            </Button>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Выберите статус" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">Новое</SelectItem>
+                <SelectItem value="in_progress">В обработке</SelectItem>
+                <SelectItem value="waiting">Ожидание</SelectItem>
+                <SelectItem value="completed">Выполнено</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-        
-        {/* Блок статуса */}
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Статус</h3>
-          <Select
-            defaultValue={request.status}
-            onValueChange={(value) => {
-              onStatusChange(request.id, value);
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Выберите статус" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new">Новое</SelectItem>
-              <SelectItem value="in_progress">В обработке</SelectItem>
-              <SelectItem value="waiting">Ожидание</SelectItem>
-              <SelectItem value="completed">Выполнено</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {/* Блок с информацией о заявителе */}
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Заявитель</h3>
-          <div className="p-2 bg-gray-50 rounded border">
-            <div className="font-medium text-sm">{request.fullName}</div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <Mail className="h-3 w-3" />
-              {request.contactInfo}
-            </div>
-          </div>
-        </div>
-        
-        {/* Организационная структура и ответственные */}
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Ответственные</h3>
-          <div className="space-y-2">
-            {/* Отображаем заглушку с информацией о иерархии */}
-            <div className="p-2 bg-gray-50 rounded border">
-              <div className="text-xs font-medium">Министерство</div>
-              <div className="text-sm">
-                Министерство цифрового развития, инноваций и аэрокосмической промышленности
-              </div>
-            </div>
-            
-            <div className="p-2 bg-gray-50 rounded border">
-              <div className="text-xs font-medium">Департамент</div>
-              <div className="text-sm">
-                Департамент цифровизации и развития государственных услуг
-              </div>
-            </div>
-            
-            <div className="p-2 bg-gray-50 rounded border">
-              <div className="text-xs font-medium">Отдел</div>
-              <div className="text-sm">
-                Отдел по работе с обращениями граждан
-              </div>
-            </div>
-            
-            <div className="p-2 bg-gray-50 rounded border">
-              <div className="text-xs font-medium">Ответственный</div>
-              <div className="text-sm flex items-center gap-1">
-                <User className="h-3 w-3" />
-                Оператор системы
+          
+          {/* Блок с информацией о заявителе */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium mb-3">Заявитель</h3>
+            <div className="border bg-white p-3 rounded-md">
+              <div className="font-medium mb-1">{request.fullName}</div>
+              <div className="text-sm text-gray-500 flex items-center">
+                <Mail className="h-3.5 w-3.5 mr-1.5" />
+                {request.contactInfo}
               </div>
             </div>
           </div>
-          <div className="text-xs text-center mt-2 text-gray-500">
-            * Данные организационной структуры будут автоматически подгружаться после её настройки
+          
+          {/* Организационная структура и ответственные */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">Ответственные</h3>
+            <div className="space-y-2">
+              <div className="border bg-white p-3 rounded-md">
+                <div className="text-xs text-gray-500 mb-1">Министерство</div>
+                <div className="text-sm leading-tight">
+                  Министерство цифрового развития, инноваций и аэрокосмической промышленности
+                </div>
+              </div>
+              
+              <div className="border bg-white p-3 rounded-md">
+                <div className="text-xs text-gray-500 mb-1">Департамент</div>
+                <div className="text-sm leading-tight">
+                  Департамент цифровизации и развития государственных услуг
+                </div>
+              </div>
+              
+              <div className="border bg-white p-3 rounded-md">
+                <div className="text-xs text-gray-500 mb-1">Отдел</div>
+                <div className="text-sm leading-tight">
+                  Отдел по работе с обращениями граждан
+                </div>
+              </div>
+              
+              <div className="border bg-white p-3 rounded-md">
+                <div className="text-xs text-gray-500 mb-1">Ответственный</div>
+                <div className="text-sm flex items-center">
+                  <User className="h-3.5 w-3.5 mr-1.5" />
+                  Оператор системы
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-center mt-2 text-gray-500">
+              * Данные организационной структуры будут автоматически подгружаться после её настройки
+            </div>
           </div>
         </div>
-      </div>
       
       {/* Диалог подтверждения удаления */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -763,6 +758,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  </div>
   );
 };
 
