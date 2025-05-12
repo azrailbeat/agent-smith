@@ -3,7 +3,8 @@ import {
   users, tasks, documents, blockchainRecords, 
   messages, activities, systemStatus, integrations,
   agents, agentResults, citizenRequests, departments, positions,
-  ministries, agentTypes, plankaLinks, organizationalRules
+  ministries, agentTypes, plankaLinks, organizationalRules,
+  agentKnowledgeBases, knowledgeDocuments
 } from "@shared/schema";
 import { eq, desc, sql, and, isNull, not } from 'drizzle-orm';
 import { IStorage } from "./storage";
@@ -21,7 +22,9 @@ import {
   Ministry, InsertMinistry,
   AgentType, InsertAgentType,
   PlankaLink, InsertPlankaLink,
-  InsertAgentResult
+  InsertAgentResult,
+  AgentKnowledgeBase, InsertAgentKnowledgeBase,
+  KnowledgeDocument, InsertKnowledgeDocument
 } from "@shared/schema";
 
 // Database storage implementation
@@ -780,5 +783,275 @@ export class DatabaseStorage implements IStorage {
   async deleteMeeting(id: number): Promise<boolean> {
     // Временное решение
     return true;
+  }
+
+  // Knowledge bases for agents
+  async getAgentKnowledgeBase(id: number): Promise<AgentKnowledgeBase | undefined> {
+    const query = `
+      SELECT * FROM agent_knowledge_bases
+      WHERE id = $1
+    `;
+    const result = await this.query(query, [id]);
+    return result.rows[0] as AgentKnowledgeBase | undefined;
+  }
+
+  async getAgentKnowledgeBases(agentId: number): Promise<AgentKnowledgeBase[]> {
+    const query = `
+      SELECT * FROM agent_knowledge_bases
+      WHERE agent_id = $1
+      ORDER BY created_at DESC
+    `;
+    const result = await this.query(query, [agentId]);
+    return result.rows as AgentKnowledgeBase[];
+  }
+
+  async getAllAgentKnowledgeBases(): Promise<AgentKnowledgeBase[]> {
+    const query = `
+      SELECT * FROM agent_knowledge_bases
+      ORDER BY created_at DESC
+    `;
+    const result = await this.query(query, []);
+    return result.rows as AgentKnowledgeBase[];
+  }
+
+  async createAgentKnowledgeBase(knowledgeBase: InsertAgentKnowledgeBase): Promise<AgentKnowledgeBase> {
+    const { 
+      name, 
+      description, 
+      agentId, 
+      vectorStorageType, 
+      vectorStorageUrl, 
+      vectorStorageApiKey, 
+      collectionName 
+    } = knowledgeBase;
+    
+    const query = `
+      INSERT INTO agent_knowledge_bases
+        (name, description, agent_id, vector_storage_type, vector_storage_url, vector_storage_api_key, collection_name, created_at, updated_at)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *
+    `;
+    
+    const result = await this.query(query, [
+      name,
+      description || null,
+      agentId || null,
+      vectorStorageType,
+      vectorStorageUrl || null,
+      vectorStorageApiKey || null,
+      collectionName || null
+    ]);
+    
+    return result.rows[0] as AgentKnowledgeBase;
+  }
+
+  async updateAgentKnowledgeBase(id: number, data: Partial<InsertAgentKnowledgeBase>): Promise<AgentKnowledgeBase | undefined> {
+    const knowledgeBase = await this.getAgentKnowledgeBase(id);
+    if (!knowledgeBase) return undefined;
+    
+    const {
+      name,
+      description,
+      agentId,
+      vectorStorageType,
+      vectorStorageUrl,
+      vectorStorageApiKey,
+      collectionName
+    } = data;
+    
+    const updateFields = [];
+    const values = [];
+    let paramIndex = 1;
+    
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex}`);
+      values.push(name);
+      paramIndex++;
+    }
+    
+    if (description !== undefined) {
+      updateFields.push(`description = $${paramIndex}`);
+      values.push(description);
+      paramIndex++;
+    }
+    
+    if (agentId !== undefined) {
+      updateFields.push(`agent_id = $${paramIndex}`);
+      values.push(agentId);
+      paramIndex++;
+    }
+    
+    if (vectorStorageType !== undefined) {
+      updateFields.push(`vector_storage_type = $${paramIndex}`);
+      values.push(vectorStorageType);
+      paramIndex++;
+    }
+    
+    if (vectorStorageUrl !== undefined) {
+      updateFields.push(`vector_storage_url = $${paramIndex}`);
+      values.push(vectorStorageUrl);
+      paramIndex++;
+    }
+    
+    if (vectorStorageApiKey !== undefined) {
+      updateFields.push(`vector_storage_api_key = $${paramIndex}`);
+      values.push(vectorStorageApiKey);
+      paramIndex++;
+    }
+    
+    if (collectionName !== undefined) {
+      updateFields.push(`collection_name = $${paramIndex}`);
+      values.push(collectionName);
+      paramIndex++;
+    }
+    
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    
+    if (updateFields.length === 0) {
+      return knowledgeBase;
+    }
+    
+    const query = `
+      UPDATE agent_knowledge_bases
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    values.push(id);
+    
+    const result = await this.query(query, values);
+    return result.rows[0] as AgentKnowledgeBase;
+  }
+
+  async deleteAgentKnowledgeBase(id: number): Promise<boolean> {
+    // Сначала удаляем связанные документы
+    const deleteDocsQuery = `
+      DELETE FROM knowledge_documents
+      WHERE knowledge_base_id = $1
+    `;
+    await this.query(deleteDocsQuery, [id]);
+    
+    // Затем удаляем саму базу знаний
+    const query = `
+      DELETE FROM agent_knowledge_bases
+      WHERE id = $1
+    `;
+    const result = await this.query(query, [id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Knowledge documents
+  async getKnowledgeDocument(id: number): Promise<KnowledgeDocument | undefined> {
+    const query = `
+      SELECT * FROM knowledge_documents
+      WHERE id = $1
+    `;
+    const result = await this.query(query, [id]);
+    return result.rows[0] as KnowledgeDocument | undefined;
+  }
+
+  async getKnowledgeDocuments(knowledgeBaseId: number): Promise<KnowledgeDocument[]> {
+    const query = `
+      SELECT * FROM knowledge_documents
+      WHERE knowledge_base_id = $1
+      ORDER BY created_at DESC
+    `;
+    const result = await this.query(query, [knowledgeBaseId]);
+    return result.rows as KnowledgeDocument[];
+  }
+
+  async createKnowledgeDocument(document: InsertKnowledgeDocument): Promise<KnowledgeDocument> {
+    const {
+      knowledgeBaseId,
+      title,
+      content,
+      vectorId,
+      metadata
+    } = document;
+    
+    const query = `
+      INSERT INTO knowledge_documents
+        (knowledge_base_id, title, content, vector_id, metadata, created_at, updated_at)
+      VALUES
+        ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *
+    `;
+    
+    const result = await this.query(query, [
+      knowledgeBaseId,
+      title,
+      content,
+      vectorId || null,
+      metadata || {}
+    ]);
+    
+    return result.rows[0] as KnowledgeDocument;
+  }
+
+  async updateKnowledgeDocument(id: number, data: Partial<InsertKnowledgeDocument>): Promise<KnowledgeDocument | undefined> {
+    const document = await this.getKnowledgeDocument(id);
+    if (!document) return undefined;
+    
+    const {
+      title,
+      content,
+      vectorId,
+      metadata
+    } = data;
+    
+    const updateFields = [];
+    const values = [];
+    let paramIndex = 1;
+    
+    if (title !== undefined) {
+      updateFields.push(`title = $${paramIndex}`);
+      values.push(title);
+      paramIndex++;
+    }
+    
+    if (content !== undefined) {
+      updateFields.push(`content = $${paramIndex}`);
+      values.push(content);
+      paramIndex++;
+    }
+    
+    if (vectorId !== undefined) {
+      updateFields.push(`vector_id = $${paramIndex}`);
+      values.push(vectorId);
+      paramIndex++;
+    }
+    
+    if (metadata !== undefined) {
+      updateFields.push(`metadata = $${paramIndex}`);
+      values.push(metadata);
+      paramIndex++;
+    }
+    
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    
+    if (updateFields.length === 0) {
+      return document;
+    }
+    
+    const query = `
+      UPDATE knowledge_documents
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    values.push(id);
+    
+    const result = await this.query(query, values);
+    return result.rows[0] as KnowledgeDocument;
+  }
+
+  async deleteKnowledgeDocument(id: number): Promise<boolean> {
+    const query = `
+      DELETE FROM knowledge_documents
+      WHERE id = $1
+    `;
+    const result = await this.query(query, [id]);
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }

@@ -20,6 +20,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -44,7 +45,7 @@ import CitizenRequestAgentSection from '@/components/CitizenRequestAgentSection'
 import RequestInsightPanel from '@/components/RequestInsightPanel';
 import { AutoProcessDialog, AutoProcessDialogRef } from '../components/AutoProcessDialog';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
-import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User, Plus, ChevronDown } from 'lucide-react';
+import { Bot, Calendar, Check, Clock, Database, FileText, Inbox, RefreshCw, User, Plus, ChevronDown, MoveHorizontal, ListChecks, BarChart2, Share2, Settings, Copy, Globe } from 'lucide-react';
 
 // Типы данных
 interface CitizenRequest {
@@ -259,8 +260,9 @@ const CitizenRequests: React.FC = () => {
       // Получаем первого доступного агента, если агент не выбран
       let agentId = agentSettings.agentId;
       if (!agentId) {
-        const agents = await apiRequest('GET', '/api/agents?type=citizen_requests');
-        if (agents && agents.length > 0) {
+        const agentsResponse = await apiRequest('GET', '/api/agents?type=citizen_requests');
+        const agents = Array.isArray(agentsResponse) ? agentsResponse : [];
+        if (agents.length > 0) {
           agentId = agents[0].id;
           // Сохраняем выбранного агента в настройках
           setAgentSettings(prev => ({ ...prev, agentId }));
@@ -591,64 +593,250 @@ const CitizenRequests: React.FC = () => {
         </div>
       </div>
       
-      {/* Панель инструментов */}
-      <div className="bg-white border-b py-1 px-4 flex items-center justify-between">
-        <div className="relative w-64">
-          <Input
-            placeholder="Поиск обращений..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground">ИИ обработка:</span>
-            <Switch
-              className="h-4 w-7"
-              checked={agentSettings.enabled}
-              onCheckedChange={(checked) => setAgentSettings({ ...agentSettings, enabled: checked })}
-            />
+      {/* Панель с табами */}
+      <div className="bg-white border-b">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="px-4 pt-1">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="kanban" className="text-xs">
+                <MoveHorizontal className="h-3.5 w-3.5 mr-1" />
+                Канбан-доска
+              </TabsTrigger>
+              <TabsTrigger value="list" className="text-xs">
+                <ListChecks className="h-3.5 w-3.5 mr-1" />
+                Список обращений
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs">
+                <BarChart2 className="h-3.5 w-3.5 mr-1" />
+                Аналитика
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="text-xs">
+                <Share2 className="h-3.5 w-3.5 mr-1" />
+                Интеграции
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="text-xs">
+                <Settings className="h-3.5 w-3.5 mr-1" />
+                Настройки
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsAutoProcessOpen(true)}>
-            <Bot className="h-3 w-3 mr-1" />
-            Авто-обработка
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center text-xs gap-1 h-8 cursor-pointer hover:bg-gray-200 transition-colors">
-                <span>{statusFilter === 'all' ? 'Все статусы' : 
-                        statusFilter === 'new' ? 'Новые' :
-                        statusFilter === 'inProgress' ? 'В работе' :
-                        statusFilter === 'waiting' ? 'Ожидание' :
-                        statusFilter === 'completed' ? 'Выполненные' : 'Все статусы'
-                      }</span>
-                <ChevronDown className="h-3 w-3" />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
-                <DropdownMenuRadioItem value="all">Все статусы</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="new">Новые</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="inProgress">В работе</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="waiting">Ожидание</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="completed">Выполненные</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
-            <RefreshCw className="h-3 w-3 mr-1" />
-            Обновить
-          </Button>
-          <Button size="sm" className="h-8 text-xs" onClick={() => setIsNewRequestOpen(true)}>
-            <Plus className="h-3 w-3 mr-1" />
-            Создать обращение
-          </Button>
-        </div>
+        </Tabs>
       </div>
 
-      {/* Канбан-доска обращений */}
-      <div className="flex-1 bg-gray-50 overflow-hidden">
+      {/* Панель инструментов */}
+      {activeTab !== 'integrations' && (
+        <div className="bg-white border-b py-1 px-4 flex items-center justify-between">
+          <div className="relative w-64">
+            <Input
+              placeholder="Поиск обращений..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">ИИ обработка:</span>
+              <Switch
+                className="h-4 w-7"
+                checked={agentSettings.enabled}
+                onCheckedChange={(checked) => setAgentSettings({ ...agentSettings, enabled: checked })}
+              />
+            </div>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setIsAutoProcessOpen(true)}>
+              <Bot className="h-3 w-3 mr-1" />
+              Авто-обработка
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center text-xs gap-1 h-8 cursor-pointer hover:bg-gray-200 transition-colors">
+                  <span>{statusFilter === 'all' ? 'Все статусы' : 
+                          statusFilter === 'new' ? 'Новые' :
+                          statusFilter === 'inProgress' ? 'В работе' :
+                          statusFilter === 'waiting' ? 'Ожидание' :
+                          statusFilter === 'completed' ? 'Выполненные' : 'Все статусы'
+                        }</span>
+                  <ChevronDown className="h-3 w-3" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
+                  <DropdownMenuRadioItem value="all">Все статусы</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="new">Новые</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="inProgress">В работе</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="waiting">Ожидание</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="completed">Выполненные</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}>
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Обновить
+            </Button>
+            <Button size="sm" className="h-8 text-xs" onClick={() => setIsNewRequestOpen(true)}>
+              <Plus className="h-3 w-3 mr-1" />
+              Создать обращение
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Контент в зависимости от выбранной вкладки */}
+      {activeTab === 'integrations' ? (
+        <div className="flex-1 bg-gray-50 overflow-auto p-4">
+          {/* Будет заменено на компонент настроек интеграции */}
+          <div className="bg-white p-4 rounded-md shadow-sm mb-4">
+            <h3 className="text-lg font-medium mb-4">Настройки интеграции</h3>
+            
+            <Tabs defaultValue="api" className="w-full">
+              <TabsList className="grid w-[400px] grid-cols-3 mb-4">
+                <TabsTrigger value="api" className="text-xs">API для обращений</TabsTrigger>
+                <TabsTrigger value="widget" className="text-xs">Виджет для сайта</TabsTrigger>
+                <TabsTrigger value="bolt" className="text-xs">Интеграция bolt.new</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="api" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>API для внешних обращений</CardTitle>
+                    <CardDescription>
+                      Настройки API для получения обращений от граждан через внешние системы
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Switch id="api-enabled" />
+                        <Label htmlFor="api-enabled">Включить внешний API</Label>
+                      </div>
+                      
+                      <div>
+                        <Label className="mb-2 block">API Ключ</Label>
+                        <div className="flex gap-2">
+                          <Input type="password" value="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" readOnly className="font-mono" />
+                          <Button variant="outline" size="icon">
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="icon">
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <Switch id="auto-process" />
+                          <Label htmlFor="auto-process">Автоматически обрабатывать новые обращения</Label>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button>Сохранить настройки</Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="widget" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Виджет для внешних сайтов</CardTitle>
+                    <CardDescription>
+                      Настройте интегрированный виджет формы обращений для вашего сайта
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="mb-2 block">Код для вставки</Label>
+                        <Textarea 
+                          readOnly 
+                          value={`<script src="https://agent-smith.replit.app/widget.js" id="gov-agent-smith-widget"></script>`}
+                          className="font-mono text-xs h-20"
+                        />
+                        <Button variant="outline" size="sm" className="mt-2">
+                          <Copy className="h-4 w-4 mr-2" />
+                          Копировать код
+                        </Button>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        <h4 className="text-sm font-medium mb-2">Предпросмотр виджета</h4>
+                        <div className="bg-white border rounded-md p-4 shadow-sm">
+                          <h3 className="text-sm font-medium border-b pb-2 mb-4">Форма обращения</h3>
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-xs">ФИО</Label>
+                              <Input placeholder="Введите ФИО" className="h-8 text-xs" />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Email</Label>
+                              <Input placeholder="Введите email" className="h-8 text-xs" />
+                            </div>
+                            <Button className="w-full mt-2 text-xs" size="sm">
+                              Отправить
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="bolt" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Интеграция с bolt.new</CardTitle>
+                    <CardDescription>
+                      Создайте готовый сайт с формой обращений на платформе bolt.new
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Тип интеграции</h4>
+                        <Select defaultValue="javascript-widget">
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите тип интеграции" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="javascript-widget">JavaScript виджет</SelectItem>
+                            <SelectItem value="iframe">iFrame встраивание</SelectItem>
+                            <SelectItem value="api">API интеграция</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Код интеграции</h4>
+                        <Textarea 
+                          readOnly 
+                          value={`<script src="https://agent-smith.replit.app/bolt-widget.js"></script>`}
+                          className="font-mono text-xs h-20"
+                        />
+                        <Button variant="outline" size="sm" className="mt-2">
+                          <Copy className="h-4 w-4 mr-2" />
+                          Копировать код
+                        </Button>
+                      </div>
+                      
+                      <div className="pt-2">
+                        <Button variant="outline" className="mr-2">
+                          <Globe className="h-4 w-4 mr-2" />
+                          Создать шаблон сайта
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 bg-gray-50 overflow-hidden">
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">

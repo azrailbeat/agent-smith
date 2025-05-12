@@ -44,6 +44,12 @@ import {
   processRequestByOrgStructure,
   createDefaultOrgStructure
 } from "./services/org-structure";
+import { 
+  AgentKnowledgeBase, 
+  InsertAgentKnowledgeBase,
+  KnowledgeDocument,
+  InsertKnowledgeDocument 
+} from "@shared/schema";
 import { initializeSettings, getSystemSettings, updateSystemSettings } from "./services/system-settings";
 import { agentService } from "./services/agent-service";
 import { databaseConnector, DatabaseProvider } from "./services/database-connector";
@@ -4400,6 +4406,166 @@ async function submitRequestToAgentSmith(requestData) {
     } catch (error) {
       console.error('Ошибка при генерации конфигурации bolt.new:', error);
       res.status(500).json({ success: false, message: 'Ошибка при генерации конфигурации' });
+    }
+  });
+
+  // API для работы с базами знаний агентов
+  app.get('/api/knowledge-bases', async (req, res) => {
+    try {
+      const agentId = req.query.agentId ? parseInt(req.query.agentId as string) : undefined;
+      
+      let knowledgeBases;
+      if (agentId) {
+        knowledgeBases = await storage.getAgentKnowledgeBases(agentId);
+      } else {
+        knowledgeBases = await storage.getAllAgentKnowledgeBases();
+      }
+      
+      res.json(knowledgeBases);
+    } catch (error) {
+      console.error('Error fetching knowledge bases:', error);
+      res.status(500).json({ error: 'Failed to fetch knowledge bases: ' + error.message });
+    }
+  });
+
+  app.get('/api/knowledge-bases/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const knowledgeBase = await storage.getAgentKnowledgeBase(id);
+      
+      if (!knowledgeBase) {
+        return res.status(404).json({ error: 'Knowledge base not found' });
+      }
+      
+      res.json(knowledgeBase);
+    } catch (error) {
+      console.error('Error fetching knowledge base:', error);
+      res.status(500).json({ error: 'Failed to fetch knowledge base: ' + error.message });
+    }
+  });
+
+  app.post('/api/knowledge-bases', async (req, res) => {
+    try {
+      const knowledgeBaseData = req.body;
+      const knowledgeBase = await storage.createAgentKnowledgeBase(knowledgeBaseData);
+      
+      res.status(201).json(knowledgeBase);
+    } catch (error) {
+      console.error('Error creating knowledge base:', error);
+      res.status(500).json({ error: 'Failed to create knowledge base: ' + error.message });
+    }
+  });
+
+  app.put('/api/knowledge-bases/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const knowledgeBaseData = req.body;
+      
+      const updatedKnowledgeBase = await storage.updateAgentKnowledgeBase(id, knowledgeBaseData);
+      
+      if (!updatedKnowledgeBase) {
+        return res.status(404).json({ error: 'Knowledge base not found' });
+      }
+      
+      res.json(updatedKnowledgeBase);
+    } catch (error) {
+      console.error('Error updating knowledge base:', error);
+      res.status(500).json({ error: 'Failed to update knowledge base: ' + error.message });
+    }
+  });
+
+  app.delete('/api/knowledge-bases/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAgentKnowledgeBase(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Knowledge base not found or already deleted' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting knowledge base:', error);
+      res.status(500).json({ error: 'Failed to delete knowledge base: ' + error.message });
+    }
+  });
+
+  // API для работы с документами баз знаний
+  app.get('/api/knowledge-documents', async (req, res) => {
+    try {
+      const knowledgeBaseId = req.query.knowledgeBaseId ? parseInt(req.query.knowledgeBaseId as string) : undefined;
+      
+      if (!knowledgeBaseId) {
+        return res.status(400).json({ error: 'Knowledge base ID is required' });
+      }
+      
+      const documents = await storage.getKnowledgeDocuments(knowledgeBaseId);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching knowledge documents:', error);
+      res.status(500).json({ error: 'Failed to fetch knowledge documents: ' + error.message });
+    }
+  });
+
+  app.get('/api/knowledge-documents/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getKnowledgeDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ error: 'Knowledge document not found' });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      console.error('Error fetching knowledge document:', error);
+      res.status(500).json({ error: 'Failed to fetch knowledge document: ' + error.message });
+    }
+  });
+
+  app.post('/api/knowledge-documents', async (req, res) => {
+    try {
+      const documentData = req.body;
+      const document = await storage.createKnowledgeDocument(documentData);
+      
+      res.status(201).json(document);
+    } catch (error) {
+      console.error('Error creating knowledge document:', error);
+      res.status(500).json({ error: 'Failed to create knowledge document: ' + error.message });
+    }
+  });
+
+  app.put('/api/knowledge-documents/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const documentData = req.body;
+      
+      const updatedDocument = await storage.updateKnowledgeDocument(id, documentData);
+      
+      if (!updatedDocument) {
+        return res.status(404).json({ error: 'Knowledge document not found' });
+      }
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error('Error updating knowledge document:', error);
+      res.status(500).json({ error: 'Failed to update knowledge document: ' + error.message });
+    }
+  });
+
+  app.delete('/api/knowledge-documents/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteKnowledgeDocument(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Knowledge document not found or already deleted' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting knowledge document:', error);
+      res.status(500).json({ error: 'Failed to delete knowledge document: ' + error.message });
     }
   });
 

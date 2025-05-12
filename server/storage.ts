@@ -9,7 +9,9 @@ import {
   Integration, InsertIntegration,
   Agent, InsertAgent,
   CitizenRequest, InsertCitizenRequest,
-  InsertAgentResult
+  InsertAgentResult,
+  AgentKnowledgeBase, InsertAgentKnowledgeBase,
+  KnowledgeDocument, InsertKnowledgeDocument
 } from "@shared/schema";
 
 // Import the DatabaseStorage class
@@ -130,10 +132,28 @@ export interface IStorage {
   createMeeting(meeting: any): Promise<any>;
   updateMeeting(id: number, meeting: any): Promise<any | undefined>;
   deleteMeeting(id: number): Promise<boolean>;
+  
+  // Knowledge bases for agents
+  getAgentKnowledgeBase(id: number): Promise<AgentKnowledgeBase | undefined>;
+  getAgentKnowledgeBases(agentId: number): Promise<AgentKnowledgeBase[]>;
+  getAllAgentKnowledgeBases(): Promise<AgentKnowledgeBase[]>;
+  createAgentKnowledgeBase(knowledgeBase: InsertAgentKnowledgeBase): Promise<AgentKnowledgeBase>;
+  updateAgentKnowledgeBase(id: number, data: Partial<InsertAgentKnowledgeBase>): Promise<AgentKnowledgeBase | undefined>;
+  deleteAgentKnowledgeBase(id: number): Promise<boolean>;
+  
+  // Knowledge documents
+  getKnowledgeDocument(id: number): Promise<KnowledgeDocument | undefined>;
+  getKnowledgeDocuments(knowledgeBaseId: number): Promise<KnowledgeDocument[]>;
+  createKnowledgeDocument(document: InsertKnowledgeDocument): Promise<KnowledgeDocument>;
+  updateKnowledgeDocument(id: number, data: Partial<InsertKnowledgeDocument>): Promise<KnowledgeDocument | undefined>;
+  deleteKnowledgeDocument(id: number): Promise<boolean>;
 }
 
 // In-memory storage implementation
 export class MemStorage implements IStorage {
+  // Данные для работы с базами знаний агентов
+  private agentKnowledgeBases: AgentKnowledgeBase[] = [];
+  private knowledgeDocuments: KnowledgeDocument[] = [];
   private users: Map<number, User>;
   private tasks: Map<number, Task>;
   private documents: Map<number, Document>;
@@ -1853,6 +1873,159 @@ export class MemStorage implements IStorage {
   async deleteMeeting(id: number): Promise<boolean> {
     // Для хранения в памяти просто возвращаем успешный результат
     return true;
+  }
+  
+  // Knowledge bases for agents
+  async getAgentKnowledgeBase(id: number): Promise<AgentKnowledgeBase | undefined> {
+    return this.agentKnowledgeBases.find(kb => kb.id === id);
+  }
+
+  async getAgentKnowledgeBases(agentId: number): Promise<AgentKnowledgeBase[]> {
+    return this.agentKnowledgeBases.filter(kb => kb.agentId === agentId);
+  }
+
+  async getAllAgentKnowledgeBases(): Promise<AgentKnowledgeBase[]> {
+    return [...this.agentKnowledgeBases];
+  }
+
+  async createAgentKnowledgeBase(knowledgeBase: InsertAgentKnowledgeBase): Promise<AgentKnowledgeBase> {
+    const newId = this.agentKnowledgeBases.length > 0 
+      ? Math.max(...this.agentKnowledgeBases.map(kb => kb.id)) + 1 
+      : 1;
+      
+    const newKnowledgeBase: AgentKnowledgeBase = {
+      id: newId,
+      name: knowledgeBase.name,
+      description: knowledgeBase.description || null,
+      agentId: knowledgeBase.agentId || null,
+      vectorStorageType: knowledgeBase.vectorStorageType,
+      vectorStorageUrl: knowledgeBase.vectorStorageUrl || null,
+      vectorStorageApiKey: knowledgeBase.vectorStorageApiKey || null,
+      collectionName: knowledgeBase.collectionName || null,
+      documentCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.agentKnowledgeBases.push(newKnowledgeBase);
+    return newKnowledgeBase;
+  }
+
+  async updateAgentKnowledgeBase(id: number, data: Partial<InsertAgentKnowledgeBase>): Promise<AgentKnowledgeBase | undefined> {
+    const index = this.agentKnowledgeBases.findIndex(kb => kb.id === id);
+    if (index === -1) return undefined;
+    
+    const knowledgeBase = this.agentKnowledgeBases[index];
+    
+    this.agentKnowledgeBases[index] = {
+      ...knowledgeBase,
+      name: data.name !== undefined ? data.name : knowledgeBase.name,
+      description: data.description !== undefined ? data.description : knowledgeBase.description,
+      agentId: data.agentId !== undefined ? data.agentId : knowledgeBase.agentId,
+      vectorStorageType: data.vectorStorageType !== undefined ? data.vectorStorageType : knowledgeBase.vectorStorageType,
+      vectorStorageUrl: data.vectorStorageUrl !== undefined ? data.vectorStorageUrl : knowledgeBase.vectorStorageUrl,
+      vectorStorageApiKey: data.vectorStorageApiKey !== undefined ? data.vectorStorageApiKey : knowledgeBase.vectorStorageApiKey,
+      collectionName: data.collectionName !== undefined ? data.collectionName : knowledgeBase.collectionName,
+      updatedAt: new Date()
+    };
+    
+    return this.agentKnowledgeBases[index];
+  }
+
+  async deleteAgentKnowledgeBase(id: number): Promise<boolean> {
+    const initialLength = this.agentKnowledgeBases.length;
+    
+    // Сначала удаляем связанные документы
+    this.knowledgeDocuments = this.knowledgeDocuments.filter(
+      doc => doc.knowledgeBaseId !== id
+    );
+    
+    // Затем удаляем базу знаний
+    this.agentKnowledgeBases = this.agentKnowledgeBases.filter(
+      kb => kb.id !== id
+    );
+    
+    return this.agentKnowledgeBases.length < initialLength;
+  }
+  
+  // Knowledge documents
+  async getKnowledgeDocument(id: number): Promise<KnowledgeDocument | undefined> {
+    return this.knowledgeDocuments.find(doc => doc.id === id);
+  }
+
+  async getKnowledgeDocuments(knowledgeBaseId: number): Promise<KnowledgeDocument[]> {
+    return this.knowledgeDocuments.filter(doc => doc.knowledgeBaseId === knowledgeBaseId);
+  }
+
+  async createKnowledgeDocument(document: InsertKnowledgeDocument): Promise<KnowledgeDocument> {
+    const newId = this.knowledgeDocuments.length > 0 
+      ? Math.max(...this.knowledgeDocuments.map(doc => doc.id)) + 1 
+      : 1;
+      
+    const newDocument: KnowledgeDocument = {
+      id: newId,
+      knowledgeBaseId: document.knowledgeBaseId,
+      title: document.title || null,
+      content: document.content,
+      vectorId: document.externalId || null,
+      metadata: document.metadata || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.knowledgeDocuments.push(newDocument);
+    
+    // Обновляем счетчик документов в базе знаний
+    const knowledgeBaseIndex = this.agentKnowledgeBases.findIndex(kb => kb.id === document.knowledgeBaseId);
+    if (knowledgeBaseIndex !== -1) {
+      const knowledgeBase = this.agentKnowledgeBases[knowledgeBaseIndex];
+      this.agentKnowledgeBases[knowledgeBaseIndex] = {
+        ...knowledgeBase,
+        documentCount: (knowledgeBase.documentCount || 0) + 1,
+        updatedAt: new Date()
+      };
+    }
+    
+    return newDocument;
+  }
+
+  async updateKnowledgeDocument(id: number, data: Partial<InsertKnowledgeDocument>): Promise<KnowledgeDocument | undefined> {
+    const index = this.knowledgeDocuments.findIndex(doc => doc.id === id);
+    if (index === -1) return undefined;
+    
+    const document = this.knowledgeDocuments[index];
+    
+    this.knowledgeDocuments[index] = {
+      ...document,
+      title: data.title !== undefined ? data.title : document.title,
+      content: data.content !== undefined ? data.content : document.content,
+      vectorId: data.externalId !== undefined ? data.externalId : document.vectorId,
+      metadata: data.metadata !== undefined ? data.metadata : document.metadata,
+      updatedAt: new Date()
+    };
+    
+    return this.knowledgeDocuments[index];
+  }
+
+  async deleteKnowledgeDocument(id: number): Promise<boolean> {
+    const document = this.knowledgeDocuments.find(doc => doc.id === id);
+    if (!document) return false;
+    
+    const initialLength = this.knowledgeDocuments.length;
+    this.knowledgeDocuments = this.knowledgeDocuments.filter(doc => doc.id !== id);
+    
+    // Обновляем счетчик документов в базе знаний
+    const knowledgeBaseIndex = this.agentKnowledgeBases.findIndex(kb => kb.id === document.knowledgeBaseId);
+    if (knowledgeBaseIndex !== -1) {
+      const knowledgeBase = this.agentKnowledgeBases[knowledgeBaseIndex];
+      this.agentKnowledgeBases[knowledgeBaseIndex] = {
+        ...knowledgeBase,
+        documentCount: Math.max(0, (knowledgeBase.documentCount || 0) - 1),
+        updatedAt: new Date()
+      };
+    }
+    
+    return this.knowledgeDocuments.length < initialLength;
   }
 }
 

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -397,6 +397,61 @@ export const insertAgentResultSchema = createInsertSchema(agentResults).pick({
   result: true,
   feedback: true,
 });
+
+export type AgentResult = typeof agentResults.$inferSelect;
+export type InsertAgentResult = z.infer<typeof insertAgentResultSchema>;
+
+// База знаний агентов (для RAG)
+export const agentKnowledgeBases = pgTable("agent_knowledge_bases", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  agentId: integer("agent_id").references(() => agents.id),
+  vectorStorageType: text("vector_storage_type").notNull(), // qdrant, milvus
+  vectorStorageUrl: text("vector_storage_url"),
+  vectorStorageApiKey: text("vector_storage_api_key"),
+  collectionName: text("collection_name").notNull(),
+  documentCount: integer("document_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAgentKnowledgeBaseSchema = createInsertSchema(agentKnowledgeBases).pick({
+  name: true,
+  description: true,
+  agentId: true,
+  vectorStorageType: true,
+  vectorStorageUrl: true,
+  vectorStorageApiKey: true,
+  collectionName: true,
+  documentCount: true,
+});
+
+export type AgentKnowledgeBase = typeof agentKnowledgeBases.$inferSelect;
+export type InsertAgentKnowledgeBase = z.infer<typeof insertAgentKnowledgeBaseSchema>;
+
+// Документы в базе знаний
+export const knowledgeDocuments = pgTable("knowledge_documents", {
+  id: serial("id").primaryKey(),
+  knowledgeBaseId: integer("knowledge_base_id").references(() => agentKnowledgeBases.id).notNull(),
+  externalId: varchar("external_id", { length: 255 }), // ID в векторном хранилище
+  title: text("title"),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertKnowledgeDocumentSchema = createInsertSchema(knowledgeDocuments).pick({
+  knowledgeBaseId: true,
+  externalId: true,
+  title: true,
+  content: true,
+  metadata: true,
+});
+
+export type KnowledgeDocument = typeof knowledgeDocuments.$inferSelect;
+export type InsertKnowledgeDocument = z.infer<typeof insertKnowledgeDocumentSchema>;
 
 // Схема правил распределения (организационная структура)
 export const organizationalRules = pgTable("organizational_rules", {
