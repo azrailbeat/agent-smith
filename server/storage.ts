@@ -191,6 +191,7 @@ export class MemStorage implements IStorage {
   private blockchainRecordIdCounter: number;
   private messageIdCounter: number;
   private activityIdCounter: number;
+  private commentIdCounter: number;
   private systemStatusIdCounter: number;
   private integrationIdCounter: number;
   private agentIdCounter: number;
@@ -207,6 +208,7 @@ export class MemStorage implements IStorage {
     this.blockchainRecords = new Map();
     this.messages = new Map();
     this.activities = new Map();
+    this.comments = new Map();
     this.systemStatuses = new Map();
     this.integrations = new Map();
     this.agents = new Map();
@@ -223,6 +225,7 @@ export class MemStorage implements IStorage {
     this.blockchainRecordIdCounter = 1;
     this.messageIdCounter = 1;
     this.activityIdCounter = 1;
+    this.commentIdCounter = 1;
     this.systemStatusIdCounter = 1;
     this.integrationIdCounter = 1;
     this.agentIdCounter = 1;
