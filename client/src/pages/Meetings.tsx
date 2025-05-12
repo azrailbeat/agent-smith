@@ -1049,113 +1049,44 @@ const Meetings = () => {
                               ref={provided.innerRef}
                               className="p-2 flex-1 overflow-y-auto bg-gray-50/50 h-full"
                             >
-                              {columnMeetings.map((meeting, index) => (
-                                <Draggable 
-                                  key={`meeting-${meeting.id}`}
-                                  draggableId={`meeting-${meeting.id}`} 
-                                  index={index}
-                                >
-                                  {(provided) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className="mb-3"
-                                    >
-                                      <Card 
-                                        className="overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                              {columnMeetings.length === 0 ? (
+                                <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2 transition-all duration-300 hover:bg-white hover:border-gray-400">
+                                  <Inbox className="h-8 w-8 mx-auto mb-2 text-gray-400 opacity-70" />
+                                  <p className="font-medium text-xs">Нет протоколов</p>
+                                  <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда</p>
+                                </div>
+                              ) : (
+                                columnMeetings.map((meeting, index) => (
+                                  <Draggable 
+                                    key={`meeting-${meeting.id}`}
+                                    draggableId={`meeting-${meeting.id}`} 
+                                    index={index}
+                                  >
+                                    {(provided, snapshot) => (
+                                      <TrelloStyleMeetingCard
+                                        meeting={meeting}
                                         onClick={() => {
                                           setSelectedMeeting(meeting);
                                           setViewProtocolDialogOpen(true);
                                         }}
-                                      >
-                                        <div className="p-4">
-                                          <div>
-                                            <h3 className="text-sm font-semibold line-clamp-1">{meeting.title}</h3>
-                                            <div className="mt-1 text-xs text-neutral-500">
-                                              {formatDate(meeting.date)} • {meeting.duration} мин
-                                            </div>
-                                            <div className="mt-1">
-                                              <Badge variant="outline" className="text-xs">{meeting.organizer}</Badge>
-                                            </div>
-                                          </div>
-                                          
-                                          {meeting.description && (
-                                            <div className="mt-2 text-xs text-neutral-600 line-clamp-2">
-                                              {meeting.description}
-                                            </div>
-                                          )}
-                                          
-                                          {meeting.protocol?.summary && (
-                                            <div className="mt-2 text-xs text-neutral-700 bg-neutral-50 p-2 rounded border border-neutral-200 line-clamp-2">
-                                              {meeting.protocol.summary}
-                                            </div>
-                                          )}
-                                          
-                                          <div className="mt-3 flex justify-between items-center">
-                                            <div className="flex items-center space-x-1">
-                                              <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                                <Users className="h-3 w-3" /> {meeting.participants.length}
-                                              </Badge>
-                                              
-                                              {meeting.protocol?.tasks && meeting.protocol.tasks.length > 0 && (
-                                                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                                  <ListChecks className="h-3 w-3" /> {meeting.protocol.tasks.length}
-                                                </Badge>
-                                              )}
-                                            </div>
-                                            
-                                            <div>
-                                              {meeting.blockchainHash && (
-                                                <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                                                  <Check className="h-3 w-3 mr-1" /> GovChain
-                                                </Badge>
-                                              )}
-                                              
-                                              <div className="flex gap-1 items-center">
-                                                {meeting.protocol && (
-                                                  <Button 
-                                                    size="sm" 
-                                                    variant="ghost"
-                                                    className="h-6 ml-1 p-0 w-6"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      viewProtocol(meeting);
-                                                    }}
-                                                  >
-                                                    <FileText className="h-4 w-4" />
-                                                  </Button>
-                                                )}
-                                                
-                                                <Button 
-                                                  size="sm" 
-                                                  variant="ghost"
-                                                  className="h-6 p-0 w-6"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedMeeting(meeting);
-                                                    setViewProtocolDialogOpen(true);
-                                                  }}
-                                                >
-                                                  <ExternalLink className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </Card>
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))}
-                              {provided.placeholder}
-                              
-                              {columnMeetings.length === 0 && (
-                                <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border border-dashed border-muted-foreground/30 rounded-md m-4">
-                                  <MoveHorizontal className="h-3 w-3 mr-2" />
-                                  Перетащите встречи сюда
-                                </div>
+                                        draggableProps={provided.draggableProps}
+                                        dragHandleProps={provided.dragHandleProps}
+                                        innerRef={provided.innerRef}
+                                        isDragging={snapshot.isDragging}
+                                        onTranscribeClick={(e) => {
+                                          e.stopPropagation();
+                                          openAudioTranscribeDialog(meeting);
+                                        }}
+                                        onViewProtocolClick={(e) => {
+                                          e.stopPropagation();
+                                          viewProtocol(meeting);
+                                        }}
+                                      />
+                                    )}
+                                  </Draggable>
+                                ))
                               )}
+                              {provided.placeholder}
                             </div>
                           )}
                         </Droppable>
