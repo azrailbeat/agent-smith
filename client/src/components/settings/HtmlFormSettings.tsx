@@ -32,6 +32,45 @@ interface FormSettings {
   primaryColor: string;
 }
 
+interface PageTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: 'government' | 'ministry' | 'agency' | 'department';
+  imagePreview: string;
+}
+
+interface LandingPageSettings {
+  organizationName: string;
+  organizationType: 'government' | 'ministry' | 'agency' | 'department';
+  organizationDescription: string;
+  address: string;
+  phone: string;
+  email: string;
+  logo?: string;
+  headerLinks: string[];
+  footerLinks: string[];
+  templateId: string;
+  customCSS: string;
+  formSettings: FormSettings;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroImageURL?: string;
+  sections: PageSection[];
+  showSocialLinks: boolean;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
+}
+
+interface PageSection {
+  id: string;
+  type: 'text' | 'services' | 'faq' | 'contacts' | 'gallery' | 'documents' | 'news';
+  title: string;
+  content: string;
+  items?: any[];
+}
+
 const fieldTypes = [
   { value: 'text', label: 'Текстовое поле' },
   { value: 'email', label: 'Email' },
@@ -45,6 +84,56 @@ const fieldTypes = [
   { value: 'file', label: 'Файл' }
 ];
 
+const pageTemplates: PageTemplate[] = [
+  { 
+    id: 'govt-standard',
+    name: 'Стандартный государственный портал',
+    description: 'Базовый шаблон для правительственного портала с официальным стилем',
+    type: 'government',
+    imagePreview: '/templates/govt-standard.jpg'
+  },
+  {
+    id: 'ministry-modern',
+    name: 'Современное министерство',
+    description: 'Современный дизайн для министерств с акцентом на доступность',
+    type: 'ministry',
+    imagePreview: '/templates/ministry-modern.jpg'
+  },
+  {
+    id: 'agency-service',
+    name: 'Портал государственных услуг',
+    description: 'Портал для агентств, предоставляющих услуги гражданам',
+    type: 'agency',
+    imagePreview: '/templates/agency-service.jpg'
+  },
+  {
+    id: 'department-local',
+    name: 'Региональное ведомство',
+    description: 'Шаблон для локальных органов власти с адаптацией под местные нужды',
+    type: 'department',
+    imagePreview: '/templates/department-local.jpg'
+  }
+];
+
+const sectionTypes = [
+  { value: 'text', label: 'Текстовый блок' },
+  { value: 'services', label: 'Услуги' },
+  { value: 'faq', label: 'Вопросы и ответы' },
+  { value: 'contacts', label: 'Контактная информация' },
+  { value: 'gallery', label: 'Галерея' },
+  { value: 'documents', label: 'Документы' },
+  { value: 'news', label: 'Новости' }
+];
+
+// Примеры промптов для генерации сайтов госорганизаций
+const promptExamples = [
+  'Создать сайт для Министерства цифрового развития с формой обращения граждан по вопросам государственных услуг',
+  'Создать сайт для Агентства защиты прав потребителей с формой для подачи жалоб на некачественные товары',
+  'Создать сайт для Министерства образования с формой записи на консультацию по вопросам поступления в вузы',
+  'Создать сайт для Комитета по социальной защите с формой для подачи заявления на получение социальной помощи',
+  'Создать сайт для Налогового комитета с формой для обращений по вопросам налоговой отчетности'
+];
+
 interface HtmlFormSettingsProps {
   refreshTab?: () => void;
 }
@@ -55,6 +144,9 @@ export function HtmlFormSettings({ refreshTab }: HtmlFormSettingsProps) {
   const [copied, setCopied] = useState(false);
   const [htmlPreview, setHtmlPreview] = useState('');
   const [htmlCode, setHtmlCode] = useState('');
+  const [activeTab, setActiveTab] = useState<string>('form');
+  const [promptText, setPromptText] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
   // Стандартные настройки формы
   const defaultSettings: FormSettings = {
@@ -73,7 +165,54 @@ export function HtmlFormSettings({ refreshTab }: HtmlFormSettingsProps) {
     primaryColor: '#1c64f2'
   };
 
+  // Стандартные настройки лендинга
+  const defaultLandingSettings: LandingPageSettings = {
+    organizationName: 'Министерство цифрового развития',
+    organizationType: 'ministry',
+    organizationDescription: 'Официальный сайт Министерства цифрового развития Республики Казахстан',
+    address: 'г. Астана, пр. Мангилик Ел, 8, подъезд 29',
+    phone: '+7 (7172) 74-99-98',
+    email: 'info@digital.gov.kz',
+    headerLinks: ['Главная', 'О министерстве', 'Услуги', 'Документы', 'Контакты'],
+    footerLinks: ['Правовая информация', 'Карта сайта', 'Открытые данные', 'Государственные закупки'],
+    templateId: 'ministry-modern',
+    customCSS: '',
+    formSettings: defaultSettings,
+    heroTitle: 'Цифровое будущее начинается сегодня',
+    heroSubtitle: 'Развитие цифровых технологий для комфортной и безопасной жизни каждого гражданина',
+    sections: [
+      {
+        id: '1',
+        type: 'text',
+        title: 'О министерстве',
+        content: 'Министерство цифрового развития Республики Казахстан является центральным исполнительным органом, осуществляющим руководство в сферах информатизации, связи, оказания государственных услуг, электронного правительства, развития инфраструктуры и защиты данных.'
+      },
+      {
+        id: '2',
+        type: 'services',
+        title: 'Государственные услуги',
+        content: 'Министерство осуществляет предоставление различных государственных услуг в электронном формате',
+        items: [
+          { title: 'Выдача электронной цифровой подписи', description: 'Получение ЭЦП для физических и юридических лиц' },
+          { title: 'Регистрация бизнеса', description: 'Регистрация юридических лиц и ИП в электронном формате' },
+          { title: 'Получение справок', description: 'Выдача различных справок из государственных баз данных' }
+        ]
+      },
+      {
+        id: '3',
+        type: 'contacts',
+        title: 'Контактная информация',
+        content: 'Для связи с министерством вы можете использовать следующие контактные данные'
+      }
+    ],
+    showSocialLinks: true,
+    seoTitle: 'Министерство цифрового развития Республики Казахстан - Официальный сайт',
+    seoDescription: 'Официальный интернет-ресурс Министерства цифрового развития Республики Казахстан',
+    seoKeywords: 'министерство, цифровое развитие, казахстан, госуслуги, электронное правительство'
+  };
+
   const [settings, setSettings] = useState<FormSettings>(defaultSettings);
+  const [landingSettings, setLandingSettings] = useState<LandingPageSettings>(defaultLandingSettings);
 
   // Получение настроек формы с сервера (заглушка)
   const { data: formSettings, isLoading: isLoadingSettings } = useQuery<FormSettings>({
@@ -94,11 +233,131 @@ export function HtmlFormSettings({ refreshTab }: HtmlFormSettingsProps) {
 
   // Генерация HTML кода при изменении настроек
   useEffect(() => {
-    generateHtml();
-  }, [settings]);
+    if (activeTab === 'form' || activeTab === 'editor') {
+      generateFormHtml();
+    } else if (activeTab === 'landing' || activeTab === 'prompt') {
+      generateLandingHtml();
+    }
+  }, [settings, activeTab, landingSettings]);
 
-  // Генерация HTML кода для формы
-  const generateHtml = () => {
+  // Функция генерации лендинга на основе промпта с использованием Anthropic
+  const generateFromPrompt = async () => {
+    if (!promptText || promptText.trim() === '') {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, введите промпт для генерации сайта",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      // Запрос к серверу для использования Anthropic API
+      const response = await fetch('/api/ai/generate-landing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: promptText,
+          currentSettings: landingSettings
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при генерации лендинга');
+      }
+
+      const data = await response.json();
+      
+      // Обновляем настройки на основе ответа
+      if (data.landingSettings) {
+        setLandingSettings(data.landingSettings);
+        
+        if (data.landingSettings.formSettings) {
+          setSettings(data.landingSettings.formSettings);
+        }
+        
+        setActiveTab('landing');
+        
+        toast({
+          title: "Успешно",
+          description: "Лендинг сгенерирован на основе промпта",
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при генерации лендинга:', error);
+      
+      // Если API не доступен, используем заглушку - просто меняем некоторые настройки по промпту
+      const newSettings = { ...landingSettings };
+      
+      // Извлекаем название организации из промпта
+      if (promptText.includes('для')) {
+        const match = promptText.match(/для\s+(.*?)(?:\s+с\s+формой|\s*$)/i);
+        if (match && match[1]) {
+          newSettings.organizationName = match[1].trim();
+          
+          // Определяем тип организации
+          if (match[1].toLowerCase().includes('министерство')) {
+            newSettings.organizationType = 'ministry';
+            newSettings.templateId = 'ministry-modern';
+          } else if (match[1].toLowerCase().includes('агентство')) {
+            newSettings.organizationType = 'agency';
+            newSettings.templateId = 'agency-service';
+          } else if (match[1].toLowerCase().includes('комитет') || match[1].toLowerCase().includes('департамент')) {
+            newSettings.organizationType = 'department';
+            newSettings.templateId = 'department-local';
+          } else {
+            newSettings.organizationType = 'government';
+            newSettings.templateId = 'govt-standard';
+          }
+        }
+      }
+      
+      // Обновляем SEO поля
+      newSettings.seoTitle = `${newSettings.organizationName} - Официальный сайт`;
+      newSettings.seoDescription = `Официальный интернет-ресурс ${newSettings.organizationName}`;
+      
+      // Обновляем заголовок и подзаголовок
+      if (newSettings.organizationType === 'ministry') {
+        newSettings.heroTitle = `На страже интересов граждан`;
+        newSettings.heroSubtitle = `${newSettings.organizationName} работает для улучшения жизни каждого гражданина Казахстана`;
+      } else if (newSettings.organizationType === 'agency') {
+        newSettings.heroTitle = `Услуги для граждан и бизнеса`;
+        newSettings.heroSubtitle = `${newSettings.organizationName} предоставляет качественные государственные услуги для всех`;
+      }
+      
+      // Обновляем форму
+      if (promptText.includes('форм')) {
+        const formMatch = promptText.match(/(?:с\s+формой|формой)\s+(?:для|по)\s+(.*?)(?:\s*$)/i);
+        if (formMatch && formMatch[1]) {
+          const formType = formMatch[1].trim();
+          const formSettings = { ...newSettings.formSettings };
+          
+          formSettings.title = `Форма для ${formType}`;
+          formSettings.subtitle = `Заполните форму, чтобы отправить обращение по ${formType}`;
+          
+          newSettings.formSettings = formSettings;
+          setSettings(formSettings);
+        }
+      }
+      
+      setLandingSettings(newSettings);
+      setActiveTab('landing');
+      
+      toast({
+        title: "Успешно",
+        description: "Лендинг сгенерирован на основе промпта (используется локальная обработка)",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Генерация HTML кода для простой формы
+  const generateFormHtml = () => {
     let fieldsHtml = '';
     
     settings.fields.forEach(field => {
