@@ -1,0 +1,131 @@
+{
+  "buttonConfigs": [],
+  "requestAgentSettings": [],
+  "integrationSettings": [
+    {
+      "type": "api",
+      "enabled": false,
+      "settings": {
+        "apiKey": "",
+        "autoProcess": false,
+        "selectedAgent": null
+      }
+    },
+    {
+      "type": "widget",
+      "enabled": false,
+      "settings": {
+        "title": "Форма обращения",
+        "primaryColor": "#1c64f2",
+        "theme": "dark",
+        "formFields": [
+          {
+            "id": 1,
+            "type": "text",
+            "label": "ФИО",
+            "required": true
+          },
+          {
+            "id": 2,
+            "type": "email",
+            "label": "Email",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "bolt",
+      "enabled": false,
+      "settings": {
+        "template": "landing-page",
+        "integrationMethod": "javascript-widget",
+        "generatedTemplate": false
+      }
+    },
+    {
+      "type": "email",
+      "enabled": false,
+      "settings": {
+        "provider": "smtp",
+        "sendgrid": {
+          "apiKey": "",
+          "defaultFrom": "Agent Smith <no-reply@agentsmith.gov.kz>"
+        },
+        "smtp": {
+          "host": "",
+          "port": 587,
+          "secure": false,
+          "auth": {
+            "user": "",
+            "pass": ""
+          }
+        }
+      }
+    },
+    {
+      "type": "activedirectory",
+      "enabled": false,
+      "settings": {
+        "url": "",
+        "baseDN": "",
+        "domain": "",
+        "username": "",
+        "password": "",
+        "useTLS": false
+      }
+    }
+  ],
+  "ragConfig": {
+    "enabled": true,
+    "retrievalStrategy": "hybrid",
+    "retrievalTopK": 5,
+    "sources": [
+      {
+        "id": "milvus-gov",
+        "name": "Государственные документы",
+        "type": "vectordb",
+        "description": "База государственных документов и НПА",
+        "enabled": true,
+        "metadata": {
+          "collection": "gov_documents",
+          "engine": "milvus"
+        }
+      },
+      {
+        "id": "internal-knowledge",
+        "name": "Внутренние базы знаний",
+        "type": "internal",
+        "description": "Внутренние справочники и базы знаний",
+        "enabled": true,
+        "metadata": {
+          "path": "/data/knowledge"
+        }
+      },
+      {
+        "id": "document-archive",
+        "name": "Архив документов",
+        "type": "document",
+        "description": "Исторический архив документов и справочников",
+        "enabled": false,
+        "metadata": {
+          "path": "/data/archive"
+        }
+      },
+      {
+        "id": "web-sources",
+        "name": "Веб-источники",
+        "type": "web",
+        "description": "Данные из проверенных государственных веб-ресурсов",
+        "enabled": false,
+        "metadata": {
+          "allowedDomains": [
+            "gov.kz",
+            "egov.kz"
+          ]
+        }
+      }
+    ],
+    "defaultPrompt": "Используйте только данные из проверенных источников для ответа на этот вопрос:"
+  }
+}

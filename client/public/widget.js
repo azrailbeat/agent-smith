@@ -1,13 +1,14 @@
 /**
  * Agent Smith Widget
  * Виджет для интеграции формы обращений Agent Smith на внешние сайты
+ * Версия: 1.0.0
  */
 
 (function() {
   // Параметры виджета
-  const scriptTag = document.getElementById('gov-agent-smith-widget');
+  const scriptTag = document.getElementById('agent-smith-widget');
   const apiKey = scriptTag ? scriptTag.getAttribute('data-key') : '';
-  const baseColor = scriptTag ? scriptTag.getAttribute('data-color') || '#1e40af' : '#1e40af';
+  const baseColor = scriptTag ? scriptTag.getAttribute('data-color') || '#1c64f2' : '#1c64f2';
   
   // URL для API запросов
   const API_URL = 'https://agent-smith.replit.app';
