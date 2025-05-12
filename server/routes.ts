@@ -1440,6 +1440,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to delete citizen request', message: error.message });
     }
   });
+  
+  // Добавление активности для обращения (для отслеживания перемещений карточек)
+  app.post('/api/citizen-requests/:id/activities', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      const { actionType, description, relatedId, relatedType } = req.body;
+      
+      if (!actionType || !description) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Создаем новую активность
+      const activity = await storage.createActivity({
+        actionType,
+        description,
+        relatedId: relatedId || id,
+        relatedType: relatedType || 'citizen_request'
+      });
+      
+      // Пытаемся записать действие в блокчейн, если это перемещение карточки или другое значимое действие
+      if (actionType === 'status_change' || actionType === 'ai_process' || actionType === 'manual_update') {
+        try {
+          // Получаем обращение для записи в блокчейн
+          const request = await storage.getCitizenRequest(id);
+          
+          // Формируем данные для записи в блокчейн
+          const blockchainData = {
+            entityId: id,
+            entityType: 'citizen_request',
+            action: actionType,
+            userId: req.body.userId || null,
+            metadata: {
+              activityId: activity.id,
+              description,
+              timestamp: new Date().toISOString()
+            }
+          };
+          
+          // Записываем в блокчейн
+          const transactionHash = await recordToBlockchain(blockchainData);
+          
+          // Обновляем активность с хешем блокчейна
+          await storage.updateActivity(activity.id, {
+            blockchainHash: transactionHash
+          });
+          
+          // Возвращаем результат с хешем блокчейна
+          return res.status(201).json({
+            success: true,
+            activity,
+            blockchainHash: transactionHash
+          });
+        } catch (blockchainError) {
+          console.error("Ошибка при записи в блокчейн:", blockchainError);
+          // Продолжаем выполнение - ошибка в блокчейне не должна останавливать основную функциональность
+        }
+      }
+      
+      // Возвращаем результат без записи в блокчейн
+      res.status(201).json({ success: true, activity });
+    } catch (error) {
+      console.error('Ошибка при создании активности:', error);
+      res.status(500).json({ error: 'Не удалось создать активность', message: error.message });
+    }
+  });
+  
+  // Маршрут для прямой записи в блокчейн (используется для записи перемещений карточек)
+  app.post('/api/citizen-requests/:id/blockchain', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    try {
+      const { action, entityType, entityId, metadata, userId } = req.body;
+      
+      if (!action || !entityType) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Подготавливаем данные для блокчейна
+      const blockchainData = {
+        entityId: entityId || id,
+        entityType,
+        action,
+        userId: userId || null,
+        metadata: metadata || {}
+      };
+      
+      // Записываем в блокчейн
+      const transactionHash = await recordToBlockchain(blockchainData);
+      
+      // Возвращаем результат с хешем блокчейна
+      res.status(201).json({
+        success: true,
+        blockchainHash: transactionHash
+      });
+    } catch (error) {
+      console.error('Ошибка при записи в блокчейн:', error);
+      res.status(500).json({ error: 'Не удалось записать в блокчейн', message: error.message });
+    }
+  });
 
   // Organization structure and task rules API
   // Task Rules routes

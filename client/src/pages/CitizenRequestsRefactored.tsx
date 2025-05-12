@@ -400,12 +400,58 @@ const CitizenRequests = () => {
       newStatus = 'in_progress';
     }
     
+    // Находим старый и новый статус для записи в историю
+    const oldStatusLabel = getColumnLabel(source.droppableId);
+    const newStatusLabel = getColumnLabel(destination.droppableId);
+    
+    // Получаем обращение для записи в историю
+    const request = citizenRequests.find(r => r.id === requestId);
+    
+    if (request) {
+      // Создаем активность о перемещении карточки для истории
+      fetch(`/api/citizen-requests/${requestId}/activities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          actionType: 'status_change',
+          description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
+          relatedId: requestId,
+          relatedType: 'citizen_request'
+        })
+      }).catch(err => {
+        console.error('Ошибка при записи активности:', err);
+      });
+      
+      // После добавления активности записываем в блокчейн
+      fetch(`/api/citizen-requests/${requestId}/blockchain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'status_change',
+          entityType: 'citizen_request',
+          entityId: requestId,
+          metadata: {
+            oldStatus: source.droppableId,
+            newStatus: destination.droppableId,
+            movedBy: 'operator', // или user.name если есть авторизация
+            timestamp: new Date().toISOString()
+          }
+        })
+      }).catch(err => {
+        console.error('Ошибка при записи в блокчейн:', err);
+      });
+    }
+    
+    // Обновляем статус обращения
     updateRequestMutation.mutate({ id: requestId, status: newStatus });
     
     // Если включена ИИ обработка и есть выбранный агент, автоматически обрабатываем обращение при перемещении в колонку "inProgress"
     if (agentSettings.enabled && agentSettings.defaultAgent && destination.droppableId === 'inProgress') {
       // Находим обращение по ID
-      const request = citizenRequests.find(r => r.id === requestId);
       if (request) {
         // Автоматически запускаем обработку перемещенного обращения выбранным агентом
         if (agentSettings.requestProcessingMode === 'auto' || agentSettings.requestProcessingMode === 'simple') {
@@ -416,6 +462,17 @@ const CitizenRequests = () => {
           });
         }
       }
+    }
+  };
+  
+  // Функция для получения человекочитаемого названия колонки
+  const getColumnLabel = (columnId: string): string => {
+    switch (columnId) {
+      case 'new': return 'Новые';
+      case 'inProgress': return 'В обработке';
+      case 'completed': return 'Завершенные';
+      case 'rejected': return 'Отклоненные';
+      default: return columnId;
     }
   };
 
