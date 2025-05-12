@@ -228,39 +228,39 @@ export class SystemSettings {
       fs.mkdirSync(dir, { recursive: true });
     }
   }
-}
-
-// Добавим методы для работы с настройками интеграций
-public static getIntegrationSettings(type: string): IntegrationSettings | undefined {
-  const settings = SystemSettings.getSettings();
-  return settings.integrationSettings.find(c => c.type === type);
-}
-
-public static updateIntegrationSettings(config: IntegrationSettings): void {
-  const instance = SystemSettings.getInstance();
-  const settings = instance.settings;
   
-  const existingIndex = settings.integrationSettings.findIndex(c => c.type === config.type);
-  
-  if (existingIndex >= 0) {
-    settings.integrationSettings[existingIndex] = config;
-  } else {
-    settings.integrationSettings.push(config);
+  // Методы для работы с настройками интеграций
+  public static getIntegrationSettings(type: string): IntegrationSettings | undefined {
+    const settings = SystemSettings.getSettings();
+    return settings.integrationSettings.find(c => c.type === type);
   }
-  
-  instance.saveSettings(settings);
-  
-  // Логирование активности
-  logActivity({
-    action: 'update',
-    entityType: 'system_settings',
-    description: `Обновлены настройки интеграции "${config.type}"`,
-    metadata: {
-      settingType: 'integrationSettings',
-      integrationType: config.type,
-      enabled: config.enabled
+
+  public static updateIntegrationSettings(config: IntegrationSettings): void {
+    const instance = SystemSettings.getInstance();
+    const settings = instance.settings;
+    
+    const existingIndex = settings.integrationSettings.findIndex(c => c.type === config.type);
+    
+    if (existingIndex >= 0) {
+      settings.integrationSettings[existingIndex] = config;
+    } else {
+      settings.integrationSettings.push(config);
     }
-  }).catch(err => console.error('Error logging activity:', err));
+    
+    instance.saveSettings(settings);
+    
+    // Логирование активности
+    logActivity({
+      action: 'update',
+      entityType: 'system_settings',
+      description: `Обновлены настройки интеграции "${config.type}"`,
+      metadata: {
+        settingType: 'integrationSettings',
+        integrationType: config.type,
+        enabled: config.enabled
+      }
+    }).catch(err => console.error('Error logging activity:', err));
+  }
 }
 
 // Значения настроек по умолчанию

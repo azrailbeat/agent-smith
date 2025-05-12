@@ -25,6 +25,7 @@ interface WidgetSettings {
   enabled: boolean;
   settings: {
     title: string;
+    subtitle?: string;
     primaryColor: string;
     theme: 'light' | 'dark';
     formFields: WidgetField[];
@@ -71,7 +72,7 @@ export function WidgetSettings({ refreshTab }: WidgetSettingsProps) {
   const { data: widgetSettings, isLoading: isLoadingSettings } = useQuery<WidgetSettings>({
     queryKey: ['/api/system/integration-settings', 'widget'],
     queryFn: async () => {
-      const response = await apiRequest('/api/system/integration-settings?type=widget', {
+      const response = await fetch('/api/system/integration-settings?type=widget', {
         method: 'GET'
       });
       return response.json();
@@ -94,7 +95,7 @@ export function WidgetSettings({ refreshTab }: WidgetSettingsProps) {
   // Мутация для сохранения настроек виджета
   const saveSettingsMutation = useMutation({
     mutationFn: async (updatedSettings: WidgetSettings) => {
-      const response = await apiRequest('/api/system/integration-settings', {
+      const response = await fetch('/api/system/integration-settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -29,7 +29,8 @@ import {
   HelpCircle,
   Cpu,
   Database,
-  BookOpen
+  BookOpen,
+  Globe
 } from "lucide-react";
 import { 
   Tooltip, 
@@ -138,6 +139,11 @@ const Sidebar = ({
           name: "Настройки",
           path: "/settings",
           icon: <Settings size={20} />
+        },
+        {
+          name: "Интеграции",
+          path: "/integration-settings",
+          icon: <Globe size={20} />
         },
         {
           name: "Переводчик",

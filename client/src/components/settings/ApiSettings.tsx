@@ -54,7 +54,7 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
   const { data: apiSettings, isLoading: isLoadingSettings } = useQuery<ApiSettings>({
     queryKey: ['/api/system/integration-settings', 'api'],
     queryFn: async () => {
-      const response = await apiRequest('/api/system/integration-settings?type=api', {
+      const response = await fetch('/api/system/integration-settings?type=api', {
         method: 'GET'
       });
       return response.json();
@@ -72,7 +72,7 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
   // Мутация для сохранения настроек API
   const saveSettingsMutation = useMutation({
     mutationFn: async (updatedSettings: ApiSettings) => {
-      const response = await apiRequest('/api/system/integration-settings', {
+      const response = await fetch('/api/system/integration-settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -102,7 +102,7 @@ export function ApiSettings({ refreshTab }: ApiSettingsProps) {
   // Мутация для генерации нового API ключа
   const generateApiKeyMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('/api/system/generate-api-key', {
+      const response = await fetch('/api/system/generate-api-key', {
         method: 'POST'
       });
       return response.json();
