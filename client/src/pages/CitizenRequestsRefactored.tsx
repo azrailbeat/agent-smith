@@ -169,6 +169,8 @@ const CitizenRequests: React.FC = () => {
   const autoProcessDialogRef = useRef<AutoProcessDialogRef>(null);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('kanban');
+  const [integrationTab, setIntegrationTab] = useState<string>('api');
   const [agentSettings, setAgentSettings] = useState<AgentSettings>({
     enabled: false,
     autoProcess: false,
