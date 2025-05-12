@@ -39,60 +39,6 @@ import {
   getDepartments,
   getDepartmentById,
   saveDepartment,
-
-// eОтиниш integration endpoint
-app.post('/api/eotinish/requests', async (req, res) => {
-  try {
-    const { requestData, metadata } = req.body;
-    
-    // Validate eОтиниш request
-    if (!requestData || !metadata?.eotinishId) {
-      return res.status(400).json({ error: 'Invalid eОтиниш request data' });
-    }
-
-    // Create citizen request with eОтиниш metadata
-    const request = await storage.createCitizenRequest({
-      ...requestData,
-      source: 'eotinish',
-      status: 'new',
-      metadata: {
-        ...metadata,
-        eotinishId: metadata.eotinishId,
-        isEotinish: true
-      }
-    });
-
-    // Log the integration
-    await logActivity({
-      action: 'eotinish_request_received',
-      entityType: 'citizen_request',
-      entityId: request.id,
-      details: `Получено обращение из eОтиниш #${metadata.eotinishId}`,
-      metadata: { eotinishId: metadata.eotinishId }
-    });
-
-    // Record to blockchain
-    const blockchainResult = await recordToBlockchain({
-      type: 'citizen_request',
-      title: `eОтиниш request #${metadata.eotinishId}`,
-      content: requestData.description,
-      metadata: {
-        eotinishId: metadata.eotinishId,
-        requestId: request.id
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      requestId: request.id,
-      blockchainHash: blockchainResult.transactionHash
-    });
-  } catch (error) {
-    console.error('Error processing eОтиниш request:', error);
-    res.status(500).json({ error: 'Failed to process eОтиниш request' });
-  }
-});
-
   getPositions,
   getPositionById,
   savePosition,
