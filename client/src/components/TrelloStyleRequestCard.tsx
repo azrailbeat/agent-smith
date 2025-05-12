@@ -58,6 +58,7 @@ interface TrelloStyleRequestCardProps {
   dragHandleProps: any;
   innerRef: React.Ref<HTMLDivElement>;
   isDragging: boolean;
+  onAutoProcess?: (request: CitizenRequest) => void;
 }
 
 const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
@@ -68,7 +69,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   draggableProps,
   dragHandleProps,
   innerRef,
-  isDragging
+  isDragging,
+  onAutoProcess
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();

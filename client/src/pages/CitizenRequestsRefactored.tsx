@@ -790,6 +790,15 @@ const CitizenRequests = () => {
                                   dragHandleProps={provided.dragHandleProps}
                                   innerRef={provided.innerRef}
                                   isDragging={snapshot.isDragging}
+                                  onAutoProcess={(request) => {
+                                    setIsAutoProcessDialogOpen(true);
+                                    // Можно установить какой-то контекст для автоматической обработки
+                                    setAutoProcessSettings(prev => ({
+                                      ...prev,
+                                      aiEnabled: true,
+                                      selectedAgent: agentSettings.defaultAgent
+                                    }));
+                                  }}
                                 />
                               )}
                             </Draggable>
@@ -1177,14 +1186,121 @@ const CitizenRequests = () => {
         onOpenChange={setIsAutoProcessDialogOpen}
         agents={availableAgents}
         onStartProcessing={(settings) => {
-          // Логика запуска автоматической обработки
+          if (!settings.aiEnabled || !settings.selectedAgent) {
+            toast({
+              variant: "destructive",
+              title: "Ошибка",
+              description: "Необходимо включить ИИ и выбрать агента",
+            });
+            return;
+          }
+          
+          // Получаем список запросов для обработки
+          const requestsToProcess = board.columns['new'].requestIds
+            .map(id => getRequestById(id))
+            .filter(request => {
+              // Проверяем условия для обработки
+              if (!request) return false;
+              // Не обрабатываем уже обработанные запросы, если не включена опция повторной обработки
+              if (request.aiProcessed && !settings.reprocessAI) return false;
+              return true;
+            });
+          
+          if (requestsToProcess.length === 0) {
+            toast({
+              title: "Информация",
+              description: "Не найдено запросов для обработки",
+            });
+            return;
+          }
+          
+          // Массовая обработка запросов
           toast({
             title: "Автоматическая обработка",
-            description: `Запущена автоматическая обработка ${settings.autoClassification ? 'с классификацией' : 'без классификации'}`,
+            description: `Запущена обработка ${requestsToProcess.length} запросов ${settings.autoClassification ? 'с классификацией' : 'без классификации'}`,
           });
           
-          // Здесь будет логика массовой обработки запросов
-          console.log('Auto processing settings:', settings);
+          // Симулируем последовательную обработку
+          let processed = 0;
+          setProcessingState({
+            isProcessing: true,
+            currentStep: `Подготовка к обработке (0/${requestsToProcess.length})`,
+            progress: 0,
+            results: []
+          });
+          
+          // Открываем диалог обработки
+          setIsProcessingDialogOpen(true);
+          
+          // Симулируем последовательную обработку запросов
+          const processNextRequest = () => {
+            if (processed < requestsToProcess.length) {
+              const request = requestsToProcess[processed];
+              if (!request) return;
+              
+              // Обновляем состояние обработки
+              setProcessingState(prev => ({
+                ...prev,
+                currentStep: `Обработка запроса ${processed + 1}/${requestsToProcess.length}`,
+                progress: Math.round((processed / requestsToProcess.length) * 100),
+                results: [
+                  ...prev.results,
+                  { 
+                    step: `Запрос #${request.id}: ${request.subject || 'Без темы'}`, 
+                    result: 'Обрабатывается...' 
+                  }
+                ]
+              }));
+              
+              // Вызываем API для обработки
+              apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { 
+                agentId: settings.selectedAgent, 
+                action: 'full' 
+              }).then(() => {
+                // Обновляем статус в результатах
+                setProcessingState(prev => ({
+                  ...prev,
+                  results: prev.results.map((result, i) => 
+                    i === prev.results.length - 1 
+                      ? { ...result, result: 'Успешно обработано' } 
+                      : result
+                  )
+                }));
+                
+                // Переходим к следующему запросу
+                processed++;
+                setTimeout(processNextRequest, 1000);
+              }).catch(error => {
+                // Обрабатываем ошибку
+                setProcessingState(prev => ({
+                  ...prev,
+                  results: prev.results.map((result, i) => 
+                    i === prev.results.length - 1 
+                      ? { ...result, result: `Ошибка: ${error.message || 'Неизвестная ошибка'}` } 
+                      : result
+                  )
+                }));
+                
+                // Переходим к следующему запросу
+                processed++;
+                setTimeout(processNextRequest, 1000);
+              });
+            } else {
+              // Завершаем обработку
+              setProcessingState(prev => ({
+                ...prev,
+                isProcessing: false,
+                currentStep: `Обработка завершена (${processed}/${requestsToProcess.length})`,
+                progress: 100
+              }));
+              
+              // Обновляем список запросов
+              queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+            }
+          };
+          
+          // Запускаем обработку
+          processNextRequest();
         }}
       />
     </div>
