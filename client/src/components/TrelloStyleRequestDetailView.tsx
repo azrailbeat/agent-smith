@@ -18,7 +18,7 @@ import {
   Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, 
   RefreshCw, ChevronDown, MessageSquare, FileText, Clock, Edit, 
   CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2, Mail, 
-  Building, Users, LayoutGrid, CheckSquare 
+  Building, Users, LayoutGrid, CheckSquare, BrainCircuit
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -475,7 +475,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 {request.aiSuggestion && (
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
-                      <Lightbulb className="h-3.5 w-3.5" /> Рекомендация ИИ
+                      <BrainCircuit className="h-3.5 w-3.5" /> Рекомендация ИИ
                     </label>
                     <div className="bg-gray-50 p-3 rounded-md text-sm">
                       {request.aiSuggestion}

@@ -48,6 +48,7 @@ import {
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
+import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView';
 import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog';
 import {
   ChevronDown,
@@ -918,236 +919,41 @@ const CitizenRequests = () => {
         </DialogContent>
       </Dialog>
 
+
       {/* Диалог просмотра деталей обращения */}
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
         {selectedRequest && (
-          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl">
-                {selectedRequest.subject || selectedRequest.title || "Обращение №" + selectedRequest.id}
-              </DialogTitle>
-              <DialogDescription>
-                От {selectedRequest.fullName}, {new Date(selectedRequest.createdAt).toLocaleDateString()}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="border-t border-b py-2 mb-4">
-              <Tabs defaultValue="details" onValueChange={(value) => setViewMode(value as any)}>
-                <TabsList className="w-full justify-start border-b rounded-none bg-transparent">
-                  <TabsTrigger 
-                    value="details"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-white data-[state=active]:shadow-none rounded-none h-12 px-6"
-                  >
-                    Информация
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="ai"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-white data-[state=active]:shadow-none rounded-none h-12 px-6 relative"
-                  >
-                    ИИ обработка
-                    {selectedRequest.aiProcessed && (
-                      <div className="w-2 h-2 rounded-full bg-green-500 absolute top-3 right-3"></div>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-            
-            {/* Содержимое вкладки "Информация" */}
-            {viewMode === 'details' && (
-              <div className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-base font-medium mb-3">Информация об обращении</h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        <div>
-                          <div className="text-sm text-gray-500">Тип обращения</div>
-                          <div className="font-medium">{selectedRequest.requestType || "Обращение"}</div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm text-gray-500">Приоритет</div>
-                          <div>
-                            <Badge className={`${priorityColors[selectedRequest.priority]}`}>
-                              {selectedRequest.priority}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm text-gray-500">Статус</div>
-                          <div className="font-medium">
-                            {selectedRequest.status === 'new' && 'Новое'}
-                            {selectedRequest.status === 'inProgress' && 'В работе'}
-                            {selectedRequest.status === 'waiting' && 'Ожидание'}
-                            {selectedRequest.status === 'completed' && 'Выполнено'}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm text-gray-500">ID</div>
-                          <div className="font-medium">#{selectedRequest.id}</div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="text-sm text-gray-500">Описание</div>
-                        <div className="mt-1 whitespace-pre-wrap">{selectedRequest.description}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-base font-medium mb-3">Информация о заявителе</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="text-sm text-gray-500">ФИО</div>
-                        <div className="font-medium">{selectedRequest.fullName}</div>
-                      </div>
-                      
-                      <div>
-                        <div className="text-sm text-gray-500">Контактная информация</div>
-                        <div className="font-medium">{selectedRequest.contactInfo}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Содержимое вкладки "ИИ обработка" */}
-            {viewMode === 'ai' && (
-              <div className="p-4">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-base font-medium">Обработка с помощью ИИ</h3>
-                      <Badge variant="outline" className={selectedRequest.aiProcessed ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"}>
-                        {selectedRequest.aiProcessed ? "Обработано" : "Не обработано"}
-                      </Badge>
-                    </div>
-                    
-                    {selectedRequest && !selectedRequest.aiProcessed ? (
-                      <div className="space-y-4">
-                        <div className="p-4 border rounded-md bg-blue-50/30">
-                          <div className="flex items-start space-x-3">
-                            <Bot className="w-5 h-5 mt-1 text-blue-600" />
-                            <div>
-                              <h4 className="font-medium">Автоматическая обработка обращения</h4>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Выберите агента для анализа текста обращения. Искусственный интеллект классифицирует обращение и предложит рекомендации.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {availableAgents.map(agent => (
-                            <div key={agent.id} className="border rounded-md p-3 hover:border-primary hover:bg-blue-50/10 cursor-pointer transition-colors"
-                              onClick={() => {
-                                if (selectedRequest) {
-                                  // Определяем тип действия в зависимости от типа агента
-                                  const actionType = agent.type === 'citizen_requests' ? "full" : 
-                                                    agent.type === 'blockchain' ? "blockchain" : "full";
-                                                    
-                                  processRequestWithAgent(selectedRequest, agent.id, actionType);
-                                }
-                              }}
-                            >
-                              <div className="flex items-center">
-                                <div className="p-2 rounded-md bg-blue-100 text-blue-600 mr-3">
-                                  <Bot className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <div className="font-medium">{agent.name}</div>
-                                  <div className="text-xs text-gray-500">{agent.type}</div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {selectedRequest.aiClassification && (
-                          <div className="p-4 border rounded-md">
-                            <h4 className="font-medium flex items-center mb-2">
-                              <Tag className="mr-2 h-5 w-5 text-blue-600" />
-                              Классификация
-                            </h4>
-                            <p>{selectedRequest.aiClassification}</p>
-                          </div>
-                        )}
-                        
-                        {selectedRequest.aiSuggestion && (
-                          <div className="p-4 border rounded-md">
-                            <h4 className="font-medium flex items-center mb-2">
-                              <Bot className="mr-2 h-5 w-5 text-purple-600" />
-                              Рекомендации ИИ
-                            </h4>
-                            <p className="whitespace-pre-wrap">{selectedRequest.aiSuggestion}</p>
-                          </div>
-                        )}
-                        
-                        {selectedRequest.blockchainHash && (
-                          <div className="p-4 border rounded-md">
-                            <h4 className="font-medium flex items-center mb-2">
-                              <Database className="mr-2 h-5 w-5 text-blue-600" />
-                              Запись в блокчейне
-                            </h4>
-                            <p className="text-xs font-mono bg-gray-100 p-2 rounded overflow-x-auto">
-                              {selectedRequest.blockchainHash}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>
-                Закрыть
-              </Button>
-              
-              {!selectedRequest.aiProcessed && availableAgents.length > 0 && (
-                <>
-                  <Button 
-                    onClick={() => {
-                      if (selectedRequest && availableAgents.length > 0) {
-                        processRequestWithAgent(selectedRequest, availableAgents[0].id);
+          <DialogContent className="sm:max-w-[1100px] max-h-[90vh] p-0">
+            <TrelloStyleRequestDetailView 
+              request={selectedRequest}
+              onClose={() => setIsViewDetailsOpen(false)}
+              onStatusChange={(id, status) => {
+                updateRequestStatusMutation.mutate({ id, status });
+              }}
+              onRequestUpdate={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+              }}
+              onProcess={(requestId, actionType) => {
+                return new Promise((resolve, reject) => {
+                  // Используем мутацию для обработки обращения
+                  processRequestMutation.mutate(
+                    { requestId, actionType },
+                    {
+                      onSuccess: (data) => {
+                        resolve(data);
+                      },
+                      onError: (error) => {
+                        reject(error);
                       }
-                    }}
-                    className="bg-blue-600"
-                  >
-                    <Bot className="mr-2 h-4 w-4" />
-                    Обработать ИИ
-                  </Button>
-                  
-                  {/* Кнопка для автоматической обработки */}
-                  <Button
-                    onClick={() => {
-                      if (selectedRequest && availableAgents.length > 0) {
-                        // Запускаем автоматическую обработку
-                        processRequestWithAgent(selectedRequest, availableAgents[0].id, "auto");
-                      }
-                    }}
-                    className="bg-indigo-600 ml-2"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Авто-обработка
-                  </Button>
-                </>
-              )}
-            </DialogFooter>
+                    }
+                  );
+                });
+              }}
+              priorityColors={priorityColors}
+            />
           </DialogContent>
         )}
-      </Dialog>
-
-      {/* Диалоговое окно процесса обработки */}
+      </Dialog>      {/* Диалоговое окно процесса обработки */}
       <Dialog open={isProcessingDialogOpen} onOpenChange={setIsProcessingDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
