@@ -190,8 +190,9 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       ref={innerRef}
       {...draggableProps}
       {...dragHandleProps}
-      className={`mb-2 bg-white rounded-md border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200`}
+      className={`mb-2 bg-white rounded-md border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200 max-w-full overflow-hidden`}
       onClick={onClick}
+      style={{ maxHeight: '350px' }}
     >
       <div className="p-3">
         {/* Заголовок и меню */}
@@ -314,7 +315,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Отображение результатов AI обработки - в стиле Trello */}
         {(request.aiProcessed || request.aiClassification || request.aiSuggestion) && (
-          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400">
+          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400 max-h-28 overflow-hidden">
             <div className="font-semibold mb-1 flex items-center gap-1">
               <Bot className="h-3 w-3" /> 
               Результат обработки:
