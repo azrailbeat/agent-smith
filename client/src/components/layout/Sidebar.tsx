@@ -75,7 +75,7 @@ const Sidebar = ({
       title: "Основное",
       items: [
         {
-          name: "Дашборд",
+          name: "Аналитика и мониторинг",
           path: "/",
           icon: <LayoutDashboard size={20} />
         },
@@ -135,19 +135,14 @@ const Sidebar = ({
           icon: <History size={20} />
         },
         {
-          name: "Аналитика",
-          path: "/analytics",
-          icon: <BarChart2 size={20} />
+          name: "Настройки",
+          path: "/settings",
+          icon: <Settings size={20} />
         },
         {
           name: "Переводчик",
           path: "/translate",
           icon: <Mic size={20} />
-        },
-        {
-          name: "Настройки",
-          path: "/settings",
-          icon: <Settings size={20} />
         }
       ]
     }
