@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Card } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, MessageSquare, FileText, Clock, Edit, CreditCard } from 'lucide-react';
+import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, RefreshCw, ChevronDown,
+         MessageSquare, FileText, Clock, Edit, CreditCard, Flag, Info, Plus, Tag, UserCheck } from 'lucide-react';
 
 interface Activity {
   id: number;
@@ -92,8 +93,75 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
   onAutoProcess
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activitiesOpen, setActivitiesOpen] = useState(false);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Функция форматирования даты для активностей
+  const formatActivityDate = (date: Date) => {
+    const activityDate = new Date(date);
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60));
+    
+    if (diffMinutes < 1) {
+      return 'только что';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} мин. назад`;
+    } else if (diffMinutes < 24 * 60) {
+      const hours = Math.floor(diffMinutes / 60);
+      return `${hours} ч. назад`;
+    } else {
+      return activityDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+    }
+  };
+
+  // Получение иконки для типа действия
+  const getActionIcon = (actionType: string) => {
+    switch (actionType) {
+      case 'status_change':
+        return <RefreshCw className="h-3 w-3 mr-1" />;
+      case 'comment_add':
+        return <MessageSquare className="h-3 w-3 mr-1" />;
+      case 'request_create':
+        return <Plus className="h-3 w-3 mr-1" />;
+      case 'ai_processing':
+        return <Bot className="h-3 w-3 mr-1" />;
+      case 'blockchain_record':
+        return <Database className="h-3 w-3 mr-1" />;
+      case 'priority_change':
+        return <Flag className="h-3 w-3 mr-1" />;
+      case 'assign':
+        return <UserCheck className="h-3 w-3 mr-1" />;
+      case 'tag_add':
+        return <Tag className="h-3 w-3 mr-1" />;
+      default:
+        return <Info className="h-3 w-3 mr-1" />;
+    }
+  };
+  
+  // Загрузка активностей при открытии раздела
+  useEffect(() => {
+    if (activitiesOpen && !activities.length) {
+      setActivitiesLoading(true);
+      apiRequest('GET', `/api/citizen-requests/${request.id}/activities`)
+        .then((data) => {
+          setActivities(data);
+        })
+        .catch((error) => {
+          console.error('Error loading activities:', error);
+          toast({
+            title: "Ошибка загрузки активностей",
+            description: "Не удалось загрузить историю действий",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setActivitiesLoading(false);
+        });
+    }
+  }, [activitiesOpen, request.id, activities.length, toast]);
 
   // Загружаем список агентов для обработки обращений
   const { data: agents = [] } = useQuery<Agent[]>({
@@ -413,6 +481,66 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             </Button>
           </div>
         )}
+        
+        {/* Секция активностей - в стиле Trello */}
+        <Collapsible
+          open={activitiesOpen}
+          onOpenChange={setActivitiesOpen}
+          className="mt-2 pt-2 border-t border-gray-100"
+        >
+          <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between text-xs text-gray-500 cursor-pointer hover:bg-gray-50 rounded px-1">
+              <span>Действия</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${activitiesOpen ? 'transform rotate-180' : ''}`} />
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 text-xs text-gray-700">
+            {activitiesLoading ? (
+              <div className="text-center py-2">
+                <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
+              </div>
+            ) : activities && activities.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {activities.slice(0, 5).map((activity: Activity) => (
+                  <div key={activity.id} className="flex items-start">
+                    <Avatar className="h-5 w-5 mr-2 flex-shrink-0">
+                      <AvatarFallback className="text-[8px] bg-gray-100">
+                        {activity.userName?.substring(0, 2).toUpperCase() || 'СИ'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center">
+                        <strong className="font-medium truncate max-w-[70px]">{activity.userName || 'Система'}</strong>
+                        <span className="ml-1 text-gray-400 text-[9px]">{formatActivityDate(activity.createdAt)}</span>
+                      </div>
+                      <div className="flex items-start mt-1">
+                        <div className="flex-shrink-0 mt-0.5">{getActionIcon(activity.actionType)}</div>
+                        <span className="line-clamp-2 text-[10px]">{activity.description}</span>
+                      </div>
+                      {activity.blockchainHash && (
+                        <div className="mt-1 flex items-center text-[9px] text-purple-600">
+                          <Database className="h-2.5 w-2.5 mr-1 flex-shrink-0" />
+                          <span className="truncate">
+                            Блокчейн: {activity.blockchainHash.substring(0, 8)}...
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {activities.length > 5 && (
+                  <div className="text-center text-[10px] text-blue-500 italic">
+                    + еще {activities.length - 5} действий
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-2 text-gray-400 text-[10px]">
+                Нет записей активности
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
         
         {/* Футер карточки */}
         <div className="flex justify-between items-center text-[10px] text-gray-500 mt-3 pt-2 border-t border-gray-100">
