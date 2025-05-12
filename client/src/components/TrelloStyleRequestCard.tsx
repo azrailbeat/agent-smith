@@ -269,16 +269,16 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       {...dragHandleProps}
       className={`mb-2 bg-white rounded-md border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "shadow-lg rotate-1" : "shadow-sm"} hover:shadow-md transition-all duration-200 max-w-full overflow-hidden`}
       onClick={onClick}
-      style={{ maxHeight: '350px' }}
+      style={{ maxHeight: '350px', minHeight: '100px' }}
     >
-      <div className="p-3">
+      <div className="p-3 flex flex-col overflow-hidden">
         {/* Заголовок и метки */}
         <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 w-full">
             <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4 mr-0.5 flex-shrink-0`} variant="outline">
               {request.priority || 'medium'}
             </Badge>
-            <h4 className="font-medium text-sm line-clamp-1 w-full overflow-hidden text-ellipsis">
+            <h4 className="font-medium text-sm line-clamp-1 overflow-hidden text-ellipsis w-full">
               {request.subject || request.title || "Без темы"}
             </h4>
           </div>
@@ -361,8 +361,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Краткое описание */}
-        <div className="mb-3">
-          <p className="text-xs text-gray-600 line-clamp-2 min-h-[2.4rem]">
+        <div className="mb-3 overflow-hidden">
+          <p className="text-xs text-gray-600 line-clamp-2 min-h-[2.4rem] max-h-[2.4rem]">
             {request.description || request.content || "Без описания"}
           </p>
         </div>
@@ -394,12 +394,12 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Результаты ИИ обработки */}
         {request.aiProcessed && request.aiSuggestion && (
-          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400">
+          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400 overflow-hidden">
             <div className="font-medium mb-1 flex items-center">
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="line-clamp-2 max-h-[2.6rem] overflow-hidden">
+            <div className="line-clamp-2 overflow-hidden">
               {request.aiSuggestion}
             </div>
           </div>
