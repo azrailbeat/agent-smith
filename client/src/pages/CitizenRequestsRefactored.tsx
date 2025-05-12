@@ -236,15 +236,38 @@ const CitizenRequests = () => {
     mutationFn: ({ requestId, agentId, action = "full" }: { requestId: number; agentId: number; action?: string }) => {
       return apiRequest('POST', `/api/citizen-requests/${requestId}/process-with-agent`, { agentId, action });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+      
+      // Добавляем финальный результат в список результатов
+      setProcessingState(prev => ({
+        ...prev,
+        isProcessing: false,
+        progress: 100,
+        results: [...prev.results, { 
+          step: 'Результат обработки', 
+          result: 'Обращение успешно обработано ИИ-агентом. Результаты доступны в карточке обращения.'
+        }]
+      }));
+      
       toast({
         title: "Обращение обработано",
-        description: "Обращение передано на обработку ИИ агенту",
+        description: "Обращение успешно обработано ИИ агентом",
       });
     },
     onError: (error) => {
       console.error("Error processing request with agent:", error);
+      
+      // Добавляем информацию об ошибке в список результатов
+      setProcessingState(prev => ({
+        ...prev,
+        isProcessing: false,
+        results: [...prev.results, { 
+          step: 'Ошибка обработки', 
+          result: 'Не удалось обработать обращение. Пожалуйста, попробуйте еще раз или обратитесь к администратору системы.'
+        }]
+      }));
+      
       toast({
         title: "Ошибка",
         description: "Не удалось обработать обращение",
@@ -253,6 +276,22 @@ const CitizenRequests = () => {
     },
   });
 
+  // Состояние для диалога обработки и отображения прогресса
+  const [processingState, setProcessingState] = useState<{
+    isProcessing: boolean;
+    currentStep: string;
+    progress: number;
+    results: Array<{step: string, result: string}>;
+  }>({
+    isProcessing: false,
+    currentStep: '',
+    progress: 0,
+    results: []
+  });
+  
+  // Состояние для диалога обработки
+  const [isProcessingDialogOpen, setIsProcessingDialogOpen] = useState(false);
+  
   // Состояние для канбан-доски
   const [board, setBoard] = useState<RequestsKanbanBoard>({
     columns: {
@@ -380,15 +419,67 @@ const CitizenRequests = () => {
 
   // Обработка обращения с помощью агента
   const processRequestWithAgent = (request: CitizenRequest, agentId: number, action: string = "full") => {
+    // Сбрасываем состояние обработки
+    setProcessingState({
+      isProcessing: true,
+      currentStep: 'Подготовка запроса',
+      progress: 10,
+      results: []
+    });
+    
+    // Открываем диалоговое окно с процессом обработки
+    setIsProcessingDialogOpen(true);
+    
+    // Имитируем шаги обработки (это будет заменено реальным API)
+    const processingSteps = [
+      { step: 'Анализ обращения', delay: 1000, progress: 30 },
+      { step: 'Классификация темы', delay: 1500, progress: 50 },
+      { step: 'Подготовка ответа', delay: 2000, progress: 70 },
+      { step: 'Финальная проверка', delay: 1000, progress: 90 },
+      { step: 'Сохранение результатов', delay: 500, progress: 100 }
+    ];
+    
+    // Функция для последовательного выполнения шагов
+    const runSteps = (stepIndex = 0) => {
+      if (stepIndex >= processingSteps.length) {
+        // Все шаги выполнены, отправляем запрос на сервер
+        processWithAgentMutation.mutate({ 
+          requestId: request.id, 
+          agentId, 
+          action 
+        });
+        return;
+      }
+      
+      const currentStep = processingSteps[stepIndex];
+      setProcessingState(prev => ({
+        ...prev,
+        currentStep: currentStep.step,
+        progress: currentStep.progress
+      }));
+      
+      // Имитация задержки обработки
+      setTimeout(() => {
+        // Добавляем результат шага (в реальном API будут настоящие результаты)
+        setProcessingState(prev => ({
+          ...prev,
+          results: [...prev.results, { 
+            step: currentStep.step, 
+            result: `Успешно выполнен шаг: ${currentStep.step}`
+          }]
+        }));
+        
+        // Переходим к следующему шагу
+        runSteps(stepIndex + 1);
+      }, currentStep.delay);
+    };
+    
+    // Запускаем процесс обработки
+    runSteps();
+    
     toast({
       title: "Отправка на обработку",
       description: "Обращение отправлено на обработку ИИ",
-    });
-    
-    processWithAgentMutation.mutate({ 
-      requestId: request.id, 
-      agentId, 
-      action 
     });
   };
 
@@ -972,21 +1063,89 @@ const CitizenRequests = () => {
               </Button>
               
               {!selectedRequest.aiProcessed && availableAgents.length > 0 && (
-                <Button 
-                  onClick={() => {
-                    if (selectedRequest && availableAgents.length > 0) {
-                      processRequestWithAgent(selectedRequest, availableAgents[0].id);
-                    }
-                  }}
-                  className="bg-blue-600"
-                >
-                  <Bot className="mr-2 h-4 w-4" />
-                  Обработать ИИ
-                </Button>
+                <>
+                  <Button 
+                    onClick={() => {
+                      if (selectedRequest && availableAgents.length > 0) {
+                        processRequestWithAgent(selectedRequest, availableAgents[0].id);
+                      }
+                    }}
+                    className="bg-blue-600"
+                  >
+                    <Bot className="mr-2 h-4 w-4" />
+                    Обработать ИИ
+                  </Button>
+                  
+                  {/* Кнопка для автоматической обработки */}
+                  <Button
+                    onClick={() => {
+                      if (selectedRequest && availableAgents.length > 0) {
+                        // Запускаем автоматическую обработку
+                        processRequestWithAgent(selectedRequest, availableAgents[0].id, "auto");
+                      }
+                    }}
+                    className="bg-indigo-600 ml-2"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Авто-обработка
+                  </Button>
+                </>
               )}
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Диалоговое окно процесса обработки */}
+      <Dialog open={isProcessingDialogOpen} onOpenChange={setIsProcessingDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Процесс обработки ИИ</DialogTitle>
+            <DialogDescription>
+              Анализ обращения с использованием искусственного интеллекта
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="mb-4">
+              <div className="flex justify-between mb-1">
+                <p className="text-sm font-medium">{processingState.currentStep}</p>
+                <p className="text-sm font-medium">{processingState.progress}%</p>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full" 
+                  style={{ width: `${processingState.progress}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            <div className="mt-4 border rounded-md">
+              <div className="font-medium p-3 bg-gray-100 border-b">
+                Результаты обработки
+              </div>
+              <div className="divide-y">
+                {processingState.results.map((result, index) => (
+                  <div key={index} className="p-3">
+                    <div className="font-medium text-sm">{result.step}</div>
+                    <div className="text-sm text-gray-600 mt-1">{result.result}</div>
+                  </div>
+                ))}
+                {processingState.results.length === 0 && (
+                  <div className="p-3 text-gray-500 text-center">
+                    Ожидание результатов обработки...
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProcessingDialogOpen(false)}>
+              Закрыть
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );
