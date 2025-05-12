@@ -180,10 +180,13 @@ const CitizenRequests = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Фильтруем агентов для обработки обращений граждан
-  const availableAgents = agents.filter(agent => 
-    agent.type === "citizen_requests" && (agent.isActive !== false) // Считаем агента активным, если isActive не false или undefined
-  );
+  // Фильтруем агентов для обработки обращений граждан и убираем дубликаты по имени
+  const availableAgents = agents
+    .filter(agent => agent.type === "citizen_requests" && (agent.isActive !== false)) // Считаем агента активным, если isActive не false или undefined
+    .filter((agent, index, self) => 
+      // Оставляем только первое вхождение каждого имени агента
+      index === self.findIndex(a => a.name === agent.name)
+    );
 
   // Мутация для создания обращения
   const createRequestMutation = useMutation({
