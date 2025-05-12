@@ -1,375 +1,391 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Smith - Форма обращения</title>
-    <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Форма обращений граждан | Agent Smith</title>
+  <style>
+    /* Сброс стилей и основные стили */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body {
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
+        "Helvetica Neue", Arial, sans-serif;
+      background-color: transparent;
+    }
+    
+    /* Контейнер формы */
+    .form-container {
+      max-width: 100%;
+      height: 100%;
+      padding: 0;
+      overflow: auto;
+    }
+    
+    /* Основные стили формы */
+    .citizen-request-form {
+      background-color: var(--bg-color, #ffffff);
+      color: var(--text-color, #000000);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      height: 100%;
+    }
+    
+    /* Шапка формы */
+    .form-header {
+      background-color: var(--primary-color, #1c64f2);
+      color: #ffffff;
+      padding: 1rem;
+    }
+    
+    .form-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .form-subtitle {
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+      opacity: 0.9;
+    }
+    
+    /* Тело формы */
+    .form-body {
+      padding: 1.5rem;
+    }
+    
+    /* Стили полей формы */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .required-mark {
+      color: #e11d48;
+    }
+    
+    .form-control {
+      display: block;
+      width: 100%;
+      padding: 0.625rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      background-color: var(--input-bg, #ffffff);
+      color: var(--input-text, #000000);
+      border: 1px solid var(--border-color, #d1d5db);
+      border-radius: 0.375rem;
+      transition: border-color 0.15s ease;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-color, #1c64f2);
+      box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb, 28, 100, 242), 0.25);
+    }
+    
+    textarea.form-control {
+      resize: vertical;
+      min-height: 6rem;
+    }
+    
+    /* Кнопка отправки */
+    .submit-button {
+      display: block;
+      width: 100%;
+      padding: 0.625rem;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #ffffff;
+      background-color: var(--primary-color, #1c64f2);
+      border: none;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+    
+    .submit-button:hover {
+      background-color: var(--primary-hover, #1a56db);
+    }
+    
+    /* Сообщения об ошибках */
+    .error-message {
+      margin-top: 0.5rem;
+      color: #e11d48;
+      font-size: 0.75rem;
+    }
+    
+    /* Индикатор загрузки */
+    .loading-spinner {
+      display: none;
+      width: 1rem;
+      height: 1rem;
+      margin-right: 0.5rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #ffffff;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Успешное отправление */
+    .success-message {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .success-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: var(--success-color, #10b981);
+    }
+    
+    .success-title {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .success-text {
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary, #6b7280);
+    }
+    
+    /* Темная тема */
+    .dark-theme {
+      --bg-color: #1f2937;
+      --text-color: #ffffff;
+      --input-bg: #374151;
+      --input-text: #ffffff;
+      --border-color: #4b5563;
+      --text-secondary: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <form id="citizen-request-form" class="citizen-request-form">
+      <div class="form-header">
+        <h2 class="form-title">Форма обращения</h2>
+        <p class="form-subtitle">Пожалуйста, заполните форму обращения</p>
+      </div>
+      
+      <div class="form-body">
+        <!-- Сообщение об ошибке -->
+        <div id="form-error" class="error-message" style="display: none;"></div>
+        
+        <!-- Поля формы -->
+        <div class="form-group">
+          <label for="fullName" class="form-label">ФИО <span class="required-mark">*</span></label>
+          <input type="text" id="fullName" name="fullName" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="email" class="form-label">Email <span class="required-mark">*</span></label>
+          <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="requestType" class="form-label">Тип обращения <span class="required-mark">*</span></label>
+          <select id="requestType" name="requestType" class="form-control" required>
+            <option value="">Выберите тип обращения</option>
+            <option value="Вопрос">Вопрос</option>
+            <option value="Обращение">Обращение</option>
+            <option value="Жалоба">Жалоба</option>
+            <option value="Предложение">Предложение</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="description" class="form-label">Текст обращения <span class="required-mark">*</span></label>
+          <textarea id="description" name="description" class="form-control" rows="4" required></textarea>
+        </div>
+        
+        <button type="submit" class="submit-button">
+          <span id="loading-spinner" class="loading-spinner"></span>
+          <span id="submit-text">Отправить</span>
+        </button>
+      </div>
+      
+      <!-- Сообщение об успешной отправке -->
+      <div id="success-message" class="success-message">
+        <div class="success-icon">✓</div>
+        <h3 class="success-title">Спасибо за ваше обращение!</h3>
+        <p class="success-text">Ваше обращение успешно отправлено и будет обработано в ближайшее время.</p>
+        <button type="button" id="new-request-button" class="submit-button">Отправить новое обращение</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    (function() {
+      // Получаем параметры из URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const apiKey = urlParams.get('api_key') || '';
+      const primaryColor = urlParams.get('color') || '#1c64f2';
+      const theme = urlParams.get('theme') || 'light';
+      const title = urlParams.get('title') || 'Форма обращения';
+      const subtitle = urlParams.get('subtitle') || 'Пожалуйста, заполните форму обращения';
+      
+      // Базовый URL API
+      const API_URL = 'https://agent-smith.replit.app';
+      
+      // Устанавливаем тему и цвета
+      document.documentElement.style.setProperty('--primary-color', primaryColor);
+      document.documentElement.style.setProperty('--primary-hover', adjustColorBrightness(primaryColor, -10));
+      document.documentElement.style.setProperty('--primary-color-rgb', hexToRgb(primaryColor));
+      
+      if (theme === 'dark') {
+        document.querySelector('.citizen-request-form').classList.add('dark-theme');
+      }
+      
+      // Устанавливаем заголовок и подзаголовок
+      document.querySelector('.form-title').textContent = title;
+      document.querySelector('.form-subtitle').textContent = subtitle;
+      
+      // Обработчик отправки формы
+      document.getElementById('citizen-request-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        submitForm();
+      });
+      
+      // Кнопка для отправки нового обращения
+      document.getElementById('new-request-button').addEventListener('click', function() {
+        // Сбрасываем форму и показываем ее снова
+        document.getElementById('citizen-request-form').reset();
+        document.getElementById('success-message').style.display = 'none';
+        document.querySelector('.form-body').style.display = 'block';
+      });
+      
+      // Функция отправки формы
+      function submitForm() {
+        // Получаем данные формы
+        const fullName = document.getElementById('fullName').value;
+        const email = document.getElementById('email').value;
+        const requestType = document.getElementById('requestType').value;
+        const description = document.getElementById('description').value;
+        
+        // Проверяем обязательные поля
+        if (!fullName || !email || !requestType || !description) {
+          showError('Пожалуйста, заполните все обязательные поля');
+          return;
         }
         
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9fafb;
-            color: #111827;
-            line-height: 1.5;
-        }
-
-        .container {
-            max-width: 100%;
-            padding: 1rem;
-        }
-
-        .card {
-            background-color: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .card-header {
-            background-color: #1e40af;
-            color: white;
-            padding: 1rem;
-        }
-
-        .card-title {
-            margin: 0;
-            font-weight: 600;
-            font-size: 1.25rem;
-        }
-
-        .card-subtitle {
-            margin-top: 0.25rem;
-            margin-bottom: 0;
-            font-size: 0.875rem;
-            opacity: 0.9;
-        }
-
-        .card-body {
-            padding: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            font-size: 0.875rem;
-        }
-
-        .form-control {
-            display: block;
-            width: 100%;
-            padding: 0.625rem;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            color: #374151;
-            background-color: #fff;
-            background-clip: padding-box;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            transition: border-color 0.15s ease-in-out;
-        }
-
-        .form-control:focus {
-            border-color: #3b82f6;
-            outline: 0;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
-        }
-
-        textarea.form-control {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .form-select {
-            display: block;
-            width: 100%;
-            padding: 0.625rem;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            color: #374151;
-            background-color: #fff;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 16px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-        }
-
-        .form-select:focus {
-            border-color: #3b82f6;
-            outline: 0;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
-        }
-
-        .required {
-            color: #ef4444;
-            margin-left: 0.25rem;
-        }
-
-        .btn {
-            display: inline-block;
-            font-weight: 500;
-            text-align: center;
-            white-space: nowrap;
-            vertical-align: middle;
-            user-select: none;
-            border: 1px solid transparent;
-            padding: 0.625rem 1.25rem;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            border-radius: 0.375rem;
-            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            color: #fff;
-            background-color: #1e40af;
-            border-color: #1e40af;
-        }
-
-        .btn-primary:hover {
-            background-color: #1e3a8a;
-            border-color: #1e3a8a;
-        }
-
-        .btn-block {
-            display: block;
-            width: 100%;
-        }
-
-        .message {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 0.375rem;
-        }
-
-        .message-success {
-            background-color: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-
-        .message-error {
-            background-color: #fee2e2;
-            color: #b91c1c;
-            border: 1px solid #fecaca;
-        }
-
-        .success-container {
-            text-align: center;
-            padding: 2rem 1rem;
-        }
-
-        .success-icon {
-            font-size: 3rem;
-            color: #10b981;
-            margin-bottom: 1rem;
-        }
-
-        .success-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .success-message {
-            color: #374151;
-            margin-bottom: 1.5rem;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            body.dark-theme {
-                background-color: #111827;
-                color: #f9fafb;
-            }
-
-            .dark-theme .card {
-                background-color: #1f2937;
-            }
-
-            .dark-theme .form-control,
-            .dark-theme .form-select {
-                background-color: #374151;
-                border-color: #4b5563;
-                color: #f9fafb;
-            }
-
-            .dark-theme .form-label {
-                color: #e5e7eb;
-            }
-
-            .dark-theme .message-success {
-                background-color: #064e3b;
-                color: #d1fae5;
-                border-color: #065f46;
-            }
-
-            .dark-theme .message-error {
-                background-color: #7f1d1d;
-                color: #fee2e2;
-                border-color: #b91c1c;
-            }
-        }
-    </style>
-</head>
-<body id="body">
-    <div class="container">
-        <div class="card">
-            <div class="card-header" id="card-header">
-                <h2 class="card-title" id="form-title">Форма обращения</h2>
-                <p class="card-subtitle" id="form-subtitle">Пожалуйста, заполните форму обращения</p>
-            </div>
-            <div class="card-body">
-                <div id="error-message" style="display: none;" class="message message-error"></div>
-                <form id="request-form">
-                    <div class="form-group">
-                        <label class="form-label" for="fullName">ФИО <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="fullName" name="fullName" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="email">Email <span class="required">*</span></label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="phone">Телефон</label>
-                        <input type="tel" class="form-control" id="phone" name="phone">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="requestType">Тип обращения <span class="required">*</span></label>
-                        <select class="form-select" id="requestType" name="requestType" required>
-                            <option value="">Выберите тип обращения</option>
-                            <option value="Вопрос">Вопрос</option>
-                            <option value="Обращение">Обращение</option>
-                            <option value="Жалоба">Жалоба</option>
-                            <option value="Предложение">Предложение</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="subject">Тема <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="subject" name="subject" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="description">Текст обращения <span class="required">*</span></label>
-                        <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block" id="submit-btn">Отправить обращение</button>
-                </form>
-                <div id="success-message" class="success-container" style="display: none;">
-                    <div class="success-icon">✓</div>
-                    <h3 class="success-title">Спасибо за ваше обращение!</h3>
-                    <p class="success-message">Ваше обращение успешно отправлено и будет обработано в ближайшее время.</p>
-                    <button class="btn btn-primary" id="new-request-btn">Отправить новое обращение</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Настройки формы
-        const config = {
-            apiUrl: 'https://agent-smith.replit.app',
-            theme: 'light', // 'light' или 'dark'
-            primaryColor: '#1e40af',
-            title: 'Форма обращения',
-            subtitle: 'Пожалуйста, заполните форму обращения'
+        // Показываем индикатор загрузки
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const submitText = document.getElementById('submit-text');
+        const submitButton = document.querySelector('.submit-button');
+        
+        loadingSpinner.style.display = 'inline-block';
+        submitText.textContent = 'Отправка...';
+        submitButton.disabled = true;
+        
+        // Подготавливаем данные для отправки
+        const requestData = {
+          fullName,
+          contactInfo: email,
+          requestType,
+          description,
+          source: 'embedded-form',
+          sourceUrl: document.referrer || window.location.href
         };
-
-        // Получаем параметры из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('theme')) {
-            config.theme = urlParams.get('theme');
-        }
-        if (urlParams.has('color')) {
-            config.primaryColor = urlParams.get('color');
-        }
-        if (urlParams.has('title')) {
-            config.title = decodeURIComponent(urlParams.get('title'));
-        }
-        if (urlParams.has('subtitle')) {
-            config.subtitle = decodeURIComponent(urlParams.get('subtitle'));
-        }
-
-        // Применяем настройки
-        document.getElementById('form-title').textContent = config.title;
-        document.getElementById('form-subtitle').textContent = config.subtitle;
-        document.getElementById('card-header').style.backgroundColor = config.primaryColor;
-        document.getElementById('submit-btn').style.backgroundColor = config.primaryColor;
-        document.getElementById('submit-btn').style.borderColor = config.primaryColor;
-        document.getElementById('new-request-btn').style.backgroundColor = config.primaryColor;
-        document.getElementById('new-request-btn').style.borderColor = config.primaryColor;
-
-        if (config.theme === 'dark') {
-            document.getElementById('body').classList.add('dark-theme');
-        }
-
-        // Обработка отправки формы
-        document.getElementById('request-form').addEventListener('submit', function(event) {
-            event.preventDefault();
+        
+        // Отправляем запрос на API
+        fetch(`${API_URL}/api/external/citizen-requests`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey
+          },
+          body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Скрываем индикатор загрузки
+          loadingSpinner.style.display = 'none';
+          submitText.textContent = 'Отправить';
+          submitButton.disabled = false;
+          
+          if (data.success) {
+            // Показываем сообщение об успехе
+            document.querySelector('.form-body').style.display = 'none';
+            document.getElementById('success-message').style.display = 'block';
             
-            const formData = {
-                fullName: document.getElementById('fullName').value,
-                contactInfo: `Email: ${document.getElementById('email').value}, Телефон: ${document.getElementById('phone').value}`,
-                requestType: document.getElementById('requestType').value,
-                subject: document.getElementById('subject').value,
-                description: document.getElementById('description').value,
-                source: 'iframe_embed',
-                status: 'new'
-            };
-            
-            // Отправка данных на сервер
-            fetch(`${config.apiUrl}/api/external/citizen-requests`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('request-form').style.display = 'none';
-                    document.getElementById('success-message').style.display = 'block';
-                } else {
-                    showError(data.error || 'Произошла ошибка при отправке обращения');
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка отправки формы:', error);
-                showError('Не удалось отправить обращение. Пожалуйста, попробуйте позже.');
-            });
+            // Отправляем сообщение родительскому окну
+            if (window.parent) {
+              window.parent.postMessage({
+                type: 'agent-smith-form-submitted',
+                success: true,
+                requestId: data.id
+              }, '*');
+            }
+          } else {
+            showError(data.error || 'Произошла ошибка при отправке обращения');
+          }
+        })
+        .catch(error => {
+          console.error('Ошибка отправки формы:', error);
+          showError('Не удалось отправить обращение. Пожалуйста, попробуйте позже.');
+          
+          // Скрываем индикатор загрузки
+          loadingSpinner.style.display = 'none';
+          submitText.textContent = 'Отправить';
+          submitButton.disabled = false;
         });
-
-        // Кнопка отправки нового обращения
-        document.getElementById('new-request-btn').addEventListener('click', function() {
-            document.getElementById('request-form').reset();
-            document.getElementById('request-form').style.display = 'block';
-            document.getElementById('success-message').style.display = 'none';
-            document.getElementById('error-message').style.display = 'none';
-        });
-
-        // Функция отображения ошибки
-        function showError(message) {
-            const errorElement = document.getElementById('error-message');
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            
-            // Скроллим к сообщению об ошибке
-            errorElement.scrollIntoView({ behavior: 'smooth' });
-        }
-    </script>
+      }
+      
+      // Функция для отображения ошибок
+      function showError(message) {
+        const errorElement = document.getElementById('form-error');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        
+        // Скрываем ошибку через 5 секунд
+        setTimeout(() => {
+          errorElement.style.display = 'none';
+        }, 5000);
+      }
+      
+      // Функция для изменения яркости цвета (для hover)
+      function adjustColorBrightness(hex, percent) {
+        // Преобразуем hex в rgb
+        let r = parseInt(hex.substring(1, 3), 16);
+        let g = parseInt(hex.substring(3, 5), 16);
+        let b = parseInt(hex.substring(5, 7), 16);
+        
+        // Изменяем яркость
+        r = Math.max(0, Math.min(255, r + percent));
+        g = Math.max(0, Math.min(255, g + percent));
+        b = Math.max(0, Math.min(255, b + percent));
+        
+        // Преобразуем обратно в hex
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      }
+      
+      // Функция для преобразования hex в rgb
+      function hexToRgb(hex) {
+        const r = parseInt(hex.substring(1, 3), 16);
+        const g = parseInt(hex.substring(3, 5), 16);
+        const b = parseInt(hex.substring(5, 7), 16);
+        return `${r}, ${g}, ${b}`;
+      }
+    })();
+  </script>
 </body>
 </html>
