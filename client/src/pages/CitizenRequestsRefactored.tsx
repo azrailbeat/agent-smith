@@ -132,7 +132,7 @@ const CitizenRequests = () => {
   // Состояние для настроек агентов
   const [agentSettings, setAgentSettings] = useState<{
     enabled: boolean;
-    requestProcessingMode: 'manual' | 'auto' | 'smart';
+    requestProcessingMode: 'manual' | 'auto' | 'simple';
     defaultAgent: number | null;
   }>({
     enabled: false,
@@ -398,7 +398,7 @@ const CitizenRequests = () => {
       const request = citizenRequests.find(r => r.id === requestId);
       if (request) {
         // Автоматически запускаем обработку перемещенного обращения выбранным агентом
-        if (agentSettings.requestProcessingMode === 'auto' || agentSettings.requestProcessingMode === 'smart') {
+        if (agentSettings.requestProcessingMode === 'auto' || agentSettings.requestProcessingMode === 'simple') {
           processRequestWithAgent(request, agentSettings.defaultAgent, "full");
           toast({
             title: "Автоматическая обработка",
@@ -687,7 +687,7 @@ const CitizenRequests = () => {
                 </Label>
                 <Select 
                   value={agentSettings.requestProcessingMode} 
-                  onValueChange={(value: 'manual' | 'auto' | 'smart') => setAgentSettings(prev => ({ ...prev, requestProcessingMode: value }))}
+                  onValueChange={(value: 'manual' | 'auto' | 'simple') => setAgentSettings(prev => ({ ...prev, requestProcessingMode: value }))}
                 >
                   <SelectTrigger id="processing-mode" className="w-[140px]">
                     <SelectValue />
@@ -695,7 +695,7 @@ const CitizenRequests = () => {
                   <SelectContent>
                     <SelectItem value="manual">Ручной</SelectItem>
                     <SelectItem value="auto">Автоматический</SelectItem>
-                    <SelectItem value="smart">Умный</SelectItem>
+                    <SelectItem value="simple">Базовый</SelectItem>
                   </SelectContent>
                 </Select>
               </>

@@ -47,7 +47,7 @@ const AutoProcessingDialog: React.FC<AutoProcessingDialogProps> = ({
   const [settings, setSettings] = useState<AutoProcessSettings>({
     aiEnabled: false,
     selectedAgent: null,
-    autoClassification: true,
+    autoClassification: false,
     responseGeneration: false,
     reprocessAI: false
   });
