@@ -147,6 +147,7 @@ const Meetings = () => {
   const [selectedParticipant, setSelectedParticipant] = useState("");
   const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false);
   const [viewProtocolDialogOpen, setViewProtocolDialogOpen] = useState(false);
+  const [isProtocolAudioTranscribeOpen, setIsProtocolAudioTranscribeOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [newTask, setNewTask] = useState<Partial<MeetingTask>>({
     description: "",
@@ -632,6 +633,30 @@ const Meetings = () => {
   const openAudioTranscribeDialog = (meeting: Meeting) => {
     setSelectedMeeting(meeting);
     setIsAudioTranscribeOpen(true);
+  };
+  
+  // Функция для открытия диалога транскрибации в форме редактирования протокола
+  const openProtocolAudioTranscribe = () => {
+    setIsProtocolAudioTranscribeOpen(true);
+  };
+  
+  // Обработка результата транскрибации для протокола
+  const handleProtocolTranscription = (transcript: string, processedText?: string) => {
+    const transcriptionText = processedText || transcript;
+    const currentDesc = currentMeeting.description || '';
+    
+    // Добавляем транскрипцию к существующему описанию
+    const newDescription = currentDesc 
+      ? `${currentDesc}\n\n--- Транскрипция аудио ---\n${transcriptionText}` 
+      : `--- Транскрипция аудио ---\n${transcriptionText}`;
+    
+    setCurrentMeeting({...currentMeeting, description: newDescription});
+    
+    toast({
+      title: "Аудио транскрибировано",
+      description: "Текст транскрипции добавлен в описание протокола",
+      variant: "default",
+    });
   };
   
   // Обработчик результатов транскрибации
@@ -1245,7 +1270,7 @@ const Meetings = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <Label htmlFor="meetingDescription">Описание встречи</Label>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-2">
                         {isRecording ? (
                           <div className="flex items-center">
                             <div className="animate-pulse mr-2 h-2 w-2 rounded-full bg-red-500"></div>
@@ -1270,6 +1295,15 @@ const Meetings = () => {
                             Запись
                           </Button>
                         )}
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={openProtocolAudioTranscribe}
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Загрузить аудио
+                        </Button>
                       </div>
                     </div>
                     <Textarea 
