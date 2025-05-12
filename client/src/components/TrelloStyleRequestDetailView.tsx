@@ -153,6 +153,8 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedAction, setSelectedAction] = useState<string>("classification");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -374,7 +376,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   };
 
   return (
-    <div>
+    <div className="max-h-[90vh] overflow-hidden">
       {/* Скрытый заголовок для доступности */}
       <DialogHeader className="sr-only">
         <DialogTitle>Детали обращения №{request.id}</DialogTitle>
@@ -385,30 +387,30 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       
       <div className="flex h-full">
         {/* Основная секция */}
-        <div className="flex-1 pl-4 pb-4 pr-8 pt-4">
+        <div className="flex-1 pl-6 pb-6 pr-10 pt-6 overflow-y-auto max-h-[85vh]">
           {/* Заголовок обращения */}
-          <div className="border-b pb-2 mb-4">
-            <h2 className="text-lg font-medium">Обращение через виджет</h2>
-            <div className="flex items-center text-sm text-gray-600 mt-1">
+          <div className="border-b pb-4 mb-6">
+            <h2 className="text-xl font-medium mb-2">Обращение через виджет</h2>
+            <div className="flex items-center text-sm text-gray-600">
               <div className="flex items-center">
-                <span className="mr-1">в списке</span>
-                <Badge variant="outline" className="rounded-sm font-normal text-xs mr-4">
+                <span className="mr-2">в списке</span>
+                <Badge variant="outline" className="rounded-sm font-normal text-xs mr-6">
                   {request.status === 'new' ? 'Новые' : 
                   request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
                   request.status === 'waiting' ? 'Ожидание' : 
                   request.status === 'completed' ? 'Завершенные' : 'Другое'}
                 </Badge>
               </div>
-              <div>
+              <div className="font-medium">
                 в обработке
               </div>
             </div>
           </div>
 
           {/* Табы */}
-          <div className="border-b mb-6">
+          <div className="border-b mb-8">
             <div className="flex">
-              <div className={`py-2 px-4 border-b-2 ${activeTab === 'main' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
+              <div className={`py-2 px-5 border-b-2 ${activeTab === 'main' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
                 <button 
                   className="text-sm" 
                   onClick={() => setActiveTab('main')}
@@ -416,13 +418,13 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   Информация
                 </button>
               </div>
-              <div className={`py-2 px-4 border-b-2 ${activeTab === 'ai' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
+              <div className={`py-2 px-5 border-b-2 ${activeTab === 'ai' ? 'border-green-600 font-medium' : 'border-transparent'}`}>
                 <button 
                   className="text-sm flex items-center" 
                   onClick={() => setActiveTab('ai')}
                 >
                   ИИ обработка
-                  {request.aiProcessed && <div className="ml-1 h-2 w-2 rounded-full bg-green-500"></div>}
+                  {request.aiProcessed && <div className="ml-1.5 h-2 w-2 rounded-full bg-green-500"></div>}
                 </button>
               </div>
             </div>
@@ -431,14 +433,19 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           {/* Контент в зависимости от активной вкладки */}
           {activeTab === 'main' && (
             <div>
-              <div className="grid grid-cols-2 gap-x-16 gap-y-6 mb-6">
+              <div className="grid grid-cols-2 gap-x-20 gap-y-8 mb-8">
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">Тип обращения</div>
-                  <div className="font-medium">{request.requestType || "Не указан"}</div>
+                  <div className="text-sm text-gray-500 mb-2">Тип обращения</div>
+                  <div className="font-medium text-base">{request.requestType || "Жалоба"}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">Приоритет</div>
-                  <Badge className={`bg-amber-100 text-amber-800 border-0`}>
+                  <div className="text-sm text-gray-500 mb-2">Приоритет</div>
+                  <Badge className={`text-sm py-1 px-3 ${
+                    request.priority === 'low' ? 'bg-blue-100 text-blue-800 border-0' : 
+                    request.priority === 'medium' ? 'bg-amber-100 text-amber-800 border-0' : 
+                    request.priority === 'high' ? 'bg-orange-100 text-orange-800 border-0' : 
+                    request.priority === 'urgent' ? 'bg-red-100 text-red-800 border-0' : 'bg-gray-100 text-gray-800 border-0'
+                  }`}>
                     {request.priority === 'low' ? 'Низкий' : 
                     request.priority === 'medium' ? 'Средний' : 
                     request.priority === 'high' ? 'Высокий' : 
@@ -446,39 +453,47 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">Статус</div>
-                  <div className="font-medium">
-                    {request.status === 'new' ? 'Новое' : 
-                    request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
-                    request.status === 'waiting' ? 'Ожидание' : 
-                    request.status === 'completed' ? 'Выполнено' : 'Другое'}
+                  <div className="text-sm text-gray-500 mb-2">Статус</div>
+                  <div className="font-medium flex items-center">
+                    <div className={`h-2.5 w-2.5 rounded-full mr-2 ${
+                      request.status === 'new' ? 'bg-blue-500' : 
+                      request.status === 'in_progress' || request.status === 'inProgress' ? 'bg-amber-500' : 
+                      request.status === 'waiting' ? 'bg-purple-500' : 
+                      request.status === 'completed' ? 'bg-green-500' : 'bg-gray-500'
+                    }`}></div>
+                    <span>
+                      {request.status === 'new' ? 'Новое' : 
+                      request.status === 'in_progress' || request.status === 'inProgress' ? 'В обработке' : 
+                      request.status === 'waiting' ? 'Ожидание' : 
+                      request.status === 'completed' ? 'Выполнено' : 'Другое'}
+                    </span>
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">ID</div>
-                  <div className="font-medium">#{request.id}</div>
+                  <div className="text-sm text-gray-500 mb-2">ID</div>
+                  <div className="font-medium text-base">#{request.id}</div>
                 </div>
               </div>
               
-              <div className="mb-6">
-                <div className="text-sm text-gray-500 mb-1">Описание</div>
-                <div className="whitespace-pre-wrap">
+              <div className="mb-8">
+                <div className="text-sm text-gray-500 mb-2">Описание</div>
+                <div className="whitespace-pre-wrap bg-white p-4 border rounded-md">
                   {request.description || request.content || "Описание отсутствует"}
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-2 gap-8 mb-8">
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">Создано</div>
+                  <div className="text-sm text-gray-500 mb-2">Создано</div>
                   <div className="flex items-center">
-                    <Calendar className="h-4 w-4 text-gray-500 mr-1" />
+                    <Calendar className="h-4 w-4 text-gray-500 mr-2" />
                     {new Date(request.createdAt).toLocaleDateString('ru-RU')} в {new Date(request.createdAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">Обновлено</div>
+                  <div className="text-sm text-gray-500 mb-2">Обновлено</div>
                   <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                    <Clock className="h-4 w-4 text-gray-500 mr-2" />
                     {new Date(request.updatedAt).toLocaleDateString('ru-RU')} в {new Date(request.updatedAt).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}
                   </div>
                 </div>
@@ -489,14 +504,14 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           {activeTab === 'ai' && (
             <div>
               {request.aiProcessed ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {request.aiClassification && (
                     <div>
-                      <div className="flex items-center mb-2">
-                        <Tag className="h-4 w-4 mr-2 text-blue-600" />
-                        <div className="font-medium">Классификация</div>
+                      <div className="flex items-center mb-3">
+                        <Tag className="h-5 w-5 mr-2 text-blue-600" />
+                        <div className="font-medium text-base">Классификация</div>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-md">
+                      <div className="bg-white p-5 rounded-md border">
                         {request.aiClassification}
                       </div>
                     </div>
@@ -504,28 +519,29 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   
                   {request.aiSuggestion && (
                     <div>
-                      <div className="flex items-center mb-2">
-                        <BrainCircuit className="h-4 w-4 mr-2 text-purple-600" />
-                        <div className="font-medium">Рекомендации ИИ</div>
+                      <div className="flex items-center mb-3">
+                        <BrainCircuit className="h-5 w-5 mr-2 text-purple-600" />
+                        <div className="font-medium text-base">Рекомендации ИИ</div>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap">
+                      <div className="bg-white p-5 rounded-md border whitespace-pre-wrap">
                         {request.aiSuggestion}
                       </div>
                     </div>
                   )}
                   
-                  <div className="mt-4 flex justify-end">
-                    <Button variant="outline" size="sm" className="mr-2">
+                  <div className="mt-6 flex justify-end">
+                    <Button variant="outline" size="sm" className="mr-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100">
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
                       Обработано
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-center py-6">
-                    <Bot className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                    <div className="font-medium text-lg mb-2">Обращение не обработано ИИ</div>
-                    <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 mb-6">
+                    <Bot className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <div className="font-medium text-lg mb-3">Обращение не обработано ИИ</div>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
                       Для анализа обращения и получения рекомендаций используйте ИИ-обработку
                     </p>
                     
@@ -533,16 +549,16 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                       <Button
                         onClick={handleProcessWithAgent}
                         disabled={isProcessing}
-                        className="px-6"
+                        className="px-6 py-2"
                       >
                         {isProcessing ? (
                           <>
-                            <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                            <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
                             Обработка...
                           </>
                         ) : (
                           <>
-                            <Bot className="h-4 w-4 mr-2" />
+                            <Bot className="h-5 w-5 mr-2" />
                             Обработать с помощью ИИ
                           </>
                         )}
@@ -555,24 +571,24 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           )}
 
           {/* Комментарии */}
-          <div className="mt-8">
-            <div className="flex items-center mb-3">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              <h3 className="font-medium">Комментарии</h3>
+          <div className="mt-10 border-t pt-6">
+            <div className="flex items-center mb-4">
+              <MessageSquare className="h-5 w-5 mr-2" />
+              <h3 className="font-medium text-base">Комментарии</h3>
             </div>
             
-            <div className="mb-4">
+            <div className="mb-6">
               <Textarea
                 placeholder="Напишите комментарий..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="min-h-[80px] text-sm mb-2"
+                className="min-h-[100px] text-sm mb-3 border-gray-300"
               />
               <div className="flex justify-end">
                 <Button 
-                  size="sm" 
                   onClick={handleAddComment}
                   disabled={!comment.trim()}
+                  className="bg-green-600 hover:bg-green-700"
                 >
                   Добавить комментарий
                 </Button>
@@ -581,28 +597,28 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           </div>
           
           {/* История активностей */}
-          <div className="mt-6">
-            <h3 className="font-medium mb-4">История активностей</h3>
+          <div className="mt-10 border-t pt-6">
+            <h3 className="font-medium text-base mb-4">История активностей</h3>
             
             {activitiesLoading ? (
-              <div className="text-center py-4">
-                <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent mx-auto"></div>
-                <p className="text-sm text-gray-500 mt-2">Загрузка активностей...</p>
+              <div className="text-center py-8">
+                <div className="animate-spin h-6 w-6 border-2 border-primary rounded-full border-t-transparent mx-auto"></div>
+                <p className="text-sm text-gray-500 mt-3">Загрузка активностей...</p>
               </div>
             ) : activities.length > 0 ? (
-              <div>
+              <div className="space-y-1">
                 {activities.map((activity) => (
-                  <div key={activity.id} className="py-2 border-b">
-                    <div className="flex items-start gap-2">
-                      <div className="p-1.5 rounded-full bg-gray-100">
+                  <div key={activity.id} className="py-3 border-b">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-full bg-gray-100">
                         {getActionIcon(activity.actionType || activity.action || '')}
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium">
+                        <div className="font-medium text-base">
                           {activity.userName || 'Система'}
                         </div>
-                        <div className="text-sm text-gray-600">{activity.description}</div>
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className="text-sm text-gray-600 mt-1">{activity.description}</div>
+                        <div className="text-xs text-gray-400 mt-2">
                           {formatActivityDate(activity.timestamp || activity.createdAt)}
                         </div>
                       </div>
@@ -611,87 +627,118 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-500">
-                Нет активностей для этого обращения
+              <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-gray-500">
+                  Нет активностей для этого обращения
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Правая панель с действиями */}
-        <div className="w-64 border-l p-4 bg-gray-50">
-          <div className="mb-6">
-            <h3 className="text-sm font-medium mb-3">Действия</h3>
-            <div className="space-y-1">
+        <div className="w-72 border-l p-6 bg-gray-50">
+          <div className="mb-8">
+            <h3 className="text-sm font-medium mb-4">Действия</h3>
+            <div className="space-y-2">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full justify-start text-sm"
+                className="w-full justify-start text-sm h-10"
               >
-                <LayoutGrid className="h-4 w-4 mr-2" />
+                <LayoutGrid className="h-5 w-5 mr-3" />
                 Переместить
               </Button>
               
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full justify-start text-sm"
+                className="w-full justify-start text-sm h-10"
               >
-                <CheckSquare className="h-4 w-4 mr-2" />
+                <CheckSquare className="h-5 w-5 mr-3" />
                 Копировать
               </Button>
               
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full justify-start text-sm"
+                className="w-full justify-start text-sm h-10"
                 onClick={() => handleProcessWithAgent()}
                 disabled={isProcessing}
               >
-                <Bot className="h-4 w-4 mr-2" />
+                <Bot className="h-5 w-5 mr-3" />
                 Обработка ИИ
               </Button>
               
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full justify-start text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="w-full justify-start text-sm h-10 text-green-600 hover:bg-green-50 hover:text-green-700"
+              >
+                <Mail className="h-5 w-5 mr-3" />
+                Ответить
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start text-sm text-red-600 hover:bg-red-50 hover:text-red-700 h-10"
                 onClick={() => setDeleteDialogOpen(true)}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="h-5 w-5 mr-3" />
                 Удалить
               </Button>
             </div>
           </div>
           
           {/* Блок статуса */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium mb-3">Статус</h3>
+          <div className="mb-8">
+            <h3 className="text-sm font-medium mb-4">Статус</h3>
             <Select
               defaultValue={request.status}
               onValueChange={(value) => {
                 onStatusChange(request.id, value);
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-10">
                 <SelectValue placeholder="Выберите статус" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="new">Новое</SelectItem>
-                <SelectItem value="in_progress">В обработке</SelectItem>
-                <SelectItem value="waiting">Ожидание</SelectItem>
-                <SelectItem value="completed">Выполнено</SelectItem>
+                <SelectItem value="new">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 mr-2"></div>
+                    Новое
+                  </div>
+                </SelectItem>
+                <SelectItem value="in_progress">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-amber-500 mr-2"></div>
+                    В обработке
+                  </div>
+                </SelectItem>
+                <SelectItem value="waiting">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-purple-500 mr-2"></div>
+                    Ожидание
+                  </div>
+                </SelectItem>
+                <SelectItem value="completed">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                    Выполнено
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           
           {/* Блок с информацией о заявителе */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium mb-3">Заявитель</h3>
-            <div className="border bg-white p-3 rounded-md">
-              <div className="font-medium mb-1">{request.fullName}</div>
+          <div className="mb-8">
+            <h3 className="text-sm font-medium mb-4">Заявитель</h3>
+            <div className="border bg-white p-4 rounded-md shadow-sm">
+              <div className="font-medium mb-2">{request.fullName}</div>
               <div className="text-sm text-gray-500 flex items-center">
-                <Mail className="h-3.5 w-3.5 mr-1.5" />
+                <Mail className="h-4 w-4 mr-2" />
                 {request.contactInfo}
               </div>
             </div>
@@ -699,38 +746,38 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           
           {/* Организационная структура и ответственные */}
           <div>
-            <h3 className="text-sm font-medium mb-3">Ответственные</h3>
-            <div className="space-y-2">
-              <div className="border bg-white p-3 rounded-md">
+            <h3 className="text-sm font-medium mb-4">Ответственные</h3>
+            <div className="space-y-3">
+              <div className="border bg-white p-4 rounded-md shadow-sm">
                 <div className="text-xs text-gray-500 mb-1">Министерство</div>
                 <div className="text-sm leading-tight">
                   Министерство цифрового развития, инноваций и аэрокосмической промышленности
                 </div>
               </div>
               
-              <div className="border bg-white p-3 rounded-md">
+              <div className="border bg-white p-4 rounded-md shadow-sm">
                 <div className="text-xs text-gray-500 mb-1">Департамент</div>
                 <div className="text-sm leading-tight">
                   Департамент цифровизации и развития государственных услуг
                 </div>
               </div>
               
-              <div className="border bg-white p-3 rounded-md">
+              <div className="border bg-white p-4 rounded-md shadow-sm">
                 <div className="text-xs text-gray-500 mb-1">Отдел</div>
                 <div className="text-sm leading-tight">
                   Отдел по работе с обращениями граждан
                 </div>
               </div>
               
-              <div className="border bg-white p-3 rounded-md">
+              <div className="border bg-white p-4 rounded-md shadow-sm">
                 <div className="text-xs text-gray-500 mb-1">Ответственный</div>
                 <div className="text-sm flex items-center">
-                  <User className="h-3.5 w-3.5 mr-1.5" />
+                  <User className="h-4 w-4 mr-2" />
                   Оператор системы
                 </div>
               </div>
             </div>
-            <div className="text-xs text-center mt-2 text-gray-500">
+            <div className="text-xs text-center mt-3 text-gray-500">
               * Данные организационной структуры будут автоматически подгружаться после её настройки
             </div>
           </div>

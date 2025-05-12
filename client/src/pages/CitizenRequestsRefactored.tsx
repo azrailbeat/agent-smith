@@ -390,7 +390,13 @@ const CitizenRequests = () => {
 
     // Обновляем статус обращения на сервере
     const requestId = parseInt(draggableId);
-    const newStatus = destination.droppableId;
+    let newStatus = destination.droppableId;
+    
+    // Приводим статус к формату, который ожидает сервер
+    if (newStatus === 'inProgress') {
+      newStatus = 'in_progress';
+    }
+    
     updateRequestMutation.mutate({ id: requestId, status: newStatus });
     
     // Если включена ИИ обработка и есть выбранный агент, автоматически обрабатываем обращение при перемещении в колонку "inProgress"
