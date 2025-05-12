@@ -28,6 +28,7 @@ import { registerSystemRoutes } from "./system-api";
 import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
 import { registerLLMMonitoringRoutes } from "./monitoring/llm-monitoring";
+import { registerKnowledgeRoutes } from "./vector-storage/knowledge-api";
 import { registerMeetingRoutes } from "./meeting-api";
 import { registerAudioRoutes } from "./audio-api";
 import {
@@ -110,6 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerLLMMonitoringRoutes(app);
   registerMeetingRoutes(app);
   registerAudioRoutes(app);
+  registerKnowledgeRoutes(app);
   // CORS middleware для API маршрутов, используемых внешними виджетами и bolt.new
   app.use(['/widget.js', '/api/citizen-requests', '/api/bolt-templates', '/api/widget-integration', '/api/bolt', '/api/transcribe', '/api/process-text', '/api/process-audio'], (req, res, next) => {
     // Разрешить запросы с bolt.new и всех его поддоменов

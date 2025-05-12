@@ -1880,11 +1880,10 @@ export class MemStorage implements IStorage {
     return this.agentKnowledgeBases.find(kb => kb.id === id);
   }
 
-  async getAgentKnowledgeBases(agentId: number): Promise<AgentKnowledgeBase[]> {
-    return this.agentKnowledgeBases.filter(kb => kb.agentId === agentId);
-  }
-
-  async getAllAgentKnowledgeBases(): Promise<AgentKnowledgeBase[]> {
+  async getAgentKnowledgeBases(agentId?: number): Promise<AgentKnowledgeBase[]> {
+    if (agentId) {
+      return this.agentKnowledgeBases.filter(kb => kb.agentId === agentId);
+    }
     return [...this.agentKnowledgeBases];
   }
 

@@ -27,7 +27,9 @@ import {
   XCircle,
   FileStack,
   HelpCircle,
-  Cpu
+  Cpu,
+  Database,
+  BookOpen
 } from "lucide-react";
 import { 
   Tooltip, 
@@ -106,6 +108,11 @@ const Sidebar = ({
           name: "ИИ агенты",
           path: "/ai-agents",
           icon: <Bot size={20} />
+        },
+        {
+          name: "Базы знаний",
+          path: "/knowledge",
+          icon: <BookOpen size={20} />
         },
         {
           name: "Документы",
