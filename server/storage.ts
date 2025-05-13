@@ -21,9 +21,13 @@ import { DatabaseStorage } from "./db-storage";
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
+  getUserById(id: number): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Task operations
   getTasks(): Promise<Task[]>;
@@ -1093,8 +1097,18 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
+  // Алиас для getUser для совместимости с интерфейсом
+  async getUserById(id: number): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
   async getUsers(): Promise<User[]> {
     return Array.from(this.users.values());
+  }
+
+  // Алиас для getUsers для совместимости с интерфейсом
+  async getAllUsers(): Promise<User[]> {
+    return this.getUsers();
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -1105,9 +1119,42 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
+    const now = new Date();
+    const user: User = { 
+      ...insertUser, 
+      id,
+      createdAt: now,
+      updatedAt: now 
+    };
     this.users.set(id, user);
     return user;
+  }
+  
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
+    const existingUser = await this.getUser(id);
+    
+    if (!existingUser) {
+      throw new Error(`Пользователь с ID ${id} не найден`);
+    }
+    
+    const updatedUser: User = {
+      ...existingUser,
+      ...userData,
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    const exists = this.users.has(id);
+    
+    if (!exists) {
+      return false;
+    }
+    
+    return this.users.delete(id);
   }
 
   // Task methods

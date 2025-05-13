@@ -24,6 +24,7 @@ import UserProfile from "@/pages/UserProfile";
 import KnowledgeManagement from "@/pages/KnowledgeManagement";
 import EmbedForm from "@/pages/EmbedForm";
 import IntegrationSettings from "@/pages/IntegrationSettings";
+import Users from "@/pages/Users";
 import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
 
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/knowledge" component={KnowledgeManagement} />
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />
+      <Route path="/users" component={Users} />
       <Route path="/integration-settings">
         {() => {
           // Перенаправление на страницу настроек с вкладкой интеграций

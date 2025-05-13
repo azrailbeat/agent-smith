@@ -240,29 +240,56 @@ export function IntegrationsSettings() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ad_domain">Домен</Label>
-                  <Input id="ad_domain" placeholder="example.com" />
+                  <Input id="ad_domain" placeholder="example.com" defaultValue="iac.gov.kz" />
                 </div>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="ad_base_dn">Base DN</Label>
-                <Input id="ad_base_dn" placeholder="DC=example,DC=com" />
+                <Input id="ad_base_dn" placeholder="DC=example,DC=com" defaultValue="DC=iac,DC=gov,DC=kz" />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="ad_username">Имя пользователя</Label>
-                  <Input id="ad_username" placeholder="admin@example.com" />
+                  <Input id="ad_username" placeholder="admin@example.com" defaultValue="ad.admin@iac.gov.kz" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ad_password">Пароль</Label>
-                  <Input id="ad_password" type="password" placeholder="Пароль" />
+                  <Input id="ad_password" type="password" placeholder="Пароль" defaultValue="••••••••••••" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ad_search_filter">Фильтр поиска</Label>
+                  <Input id="ad_search_filter" placeholder="(&(objectClass=user)(sAMAccountName=*))" defaultValue="(&(objectClass=user)(sAMAccountName=*))" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ad_sync_interval">Интервал синхронизации (мин)</Label>
+                  <Input id="ad_sync_interval" placeholder="60" defaultValue="30" type="number" min="5" max="1440" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ad_group_filter">Группы для импорта</Label>
+                  <Input id="ad_group_filter" placeholder="Agent Smith Users" defaultValue="Agent Smith Users, Citizen Request Operators" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ad_user_attr">Атрибуты пользователя</Label>
+                  <Input id="ad_user_attr" placeholder="sAMAccountName,mail,displayName" defaultValue="sAMAccountName,mail,displayName,department,title,telephoneNumber" />
                 </div>
               </div>
               
               <div className="flex items-center space-x-2">
-                <Switch id="ad_use_tls" />
+                <Switch id="ad_use_tls" defaultChecked />
                 <Label htmlFor="ad_use_tls">Использовать TLS</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch id="ad_auto_sync" defaultChecked />
+                <Label htmlFor="ad_auto_sync">Автоматическая синхронизация</Label>
               </div>
               
               <Button onClick={saveADSettings} className="mt-4">Сохранить настройки</Button>

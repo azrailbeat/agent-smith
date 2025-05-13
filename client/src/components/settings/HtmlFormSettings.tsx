@@ -231,6 +231,663 @@ export function HtmlFormSettings({ refreshTab }: HtmlFormSettingsProps) {
     }
   }, [formSettings]);
 
+  // Генерация HTML кода формы
+  const generateFormHtml = () => {
+    // Генерируем HTML для полей формы
+    let fieldsHtml = '';
+    settings.fields.forEach(field => {
+      const requiredAttr = field.required ? 'required' : '';
+      const placeholderAttr = field.placeholder ? `placeholder="${field.placeholder}"` : '';
+      
+      switch (field.type) {
+        case 'text':
+        case 'email':
+        case 'tel':
+          fieldsHtml += `
+            <div class="citizen-request-form-field">
+              <label for="${field.id}">${field.label}${field.required ? ' *' : ''}</label>
+              <input type="${field.type}" id="${field.id}" name="${field.id}" ${requiredAttr} ${placeholderAttr}>
+            </div>`;
+          break;
+        case 'textarea':
+          fieldsHtml += `
+            <div class="citizen-request-form-field">
+              <label for="${field.id}">${field.label}${field.required ? ' *' : ''}</label>
+              <textarea id="${field.id}" name="${field.id}" rows="4" ${requiredAttr} ${placeholderAttr}></textarea>
+            </div>`;
+          break;
+        case 'select':
+          const options = field.options?.map(option => `<option value="${option}">${option}</option>`).join('') || '';
+          fieldsHtml += `
+            <div class="citizen-request-form-field">
+              <label for="${field.id}">${field.label}${field.required ? ' *' : ''}</label>
+              <select id="${field.id}" name="${field.id}" ${requiredAttr}>
+                <option value="" disabled selected>Выберите...</option>
+                ${options}
+              </select>
+            </div>`;
+          break;
+        case 'radio':
+          fieldsHtml += `
+            <div class="citizen-request-form-field">
+              <label>${field.label}${field.required ? ' *' : ''}</label>
+              <div class="citizen-request-form-radio-group">`;
+          
+          field.options?.forEach((option, i) => {
+            fieldsHtml += `
+                <div class="citizen-request-form-radio">
+                  <input type="radio" id="${field.id}_${i}" name="${field.id}" value="${option}" ${i === 0 && field.required ? 'required' : ''}>
+                  <label for="${field.id}_${i}">${option}</label>
+                </div>`;
+          });
+          
+          fieldsHtml += `
+              </div>
+            </div>`;
+          break;
+      }
+    });
+    
+    // CSS стили для формы
+    const css = `
+      .citizen-request-form {
+        font-family: 'Arial', sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: var(--form-bg, ${settings.theme === 'light' ? 'white' : '#1f2937'});
+        color: var(--form-text, ${settings.theme === 'light' ? '#111827' : '#e5e7eb'});
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      
+      .citizen-request-form-header {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      
+      .citizen-request-form-header h2 {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      
+      .citizen-request-form-header p {
+        font-size: 16px;
+        opacity: 0.8;
+      }
+      
+      .citizen-request-form-body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      
+      .citizen-request-form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      
+      .citizen-request-form-field label {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      
+      .citizen-request-form-field input,
+      .citizen-request-form-field textarea,
+      .citizen-request-form-field select {
+        padding: 10px 12px;
+        border-radius: 4px;
+        border: 1px solid ${settings.theme === 'light' ? '#d1d5db' : '#4b5563'};
+        background: ${settings.theme === 'light' ? 'white' : '#374151'};
+        color: ${settings.theme === 'light' ? '#111827' : '#e5e7eb'};
+        font-size: 14px;
+      }
+      
+      .citizen-request-form-radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .citizen-request-form-radio {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .citizen-request-form-footer {
+        margin-top: 24px;
+        display: flex;
+        justify-content: center;
+      }
+      
+      .citizen-request-form-footer button {
+        padding: 10px 20px;
+        background-color: var(--form-color, ${settings.primaryColor});
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      
+      .citizen-request-form-footer button:hover {
+        opacity: 0.9;
+      }
+      
+      .citizen-request-form-success {
+        background-color: #10b981;
+        color: white;
+        padding: 16px;
+        border-radius: 4px;
+        text-align: center;
+        margin-top: 16px;
+        display: none;
+      }
+    `;
+    
+    // JavaScript для формы
+    const javascript = `
+      document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('.citizen-request-form form');
+        const successMessage = document.querySelector('.citizen-request-form-success');
+        
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // В реальном приложении здесь будет отправка формы на сервер
+          // Имитация задержки отправки
+          setTimeout(function() {
+            form.style.display = 'none';
+            successMessage.style.display = 'block';
+          }, 1000);
+        });
+      });
+    `;
+    
+    // Генерируем HTML код формы
+    const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${settings.title}</title>
+  <style>
+${css}
+  </style>
+</head>
+<body>
+  <div class="citizen-request-form">
+    <div class="citizen-request-form-header">
+      <h2>${settings.title}</h2>
+      <p>${settings.subtitle}</p>
+    </div>
+    
+    <div class="citizen-request-form-body">
+      <form>
+${fieldsHtml}
+        <div class="citizen-request-form-footer">
+          <button type="submit">${settings.submitButtonText}</button>
+        </div>
+      </form>
+      
+      <div class="citizen-request-form-success">
+        ${settings.successMessage}
+      </div>
+    </div>
+  </div>
+
+  <script>
+${javascript}
+  </script>
+</body>
+</html>`;
+
+    setHtmlCode(html);
+    
+    // Создаем предпросмотр в iframe
+    const previewHtml = `
+      <div class="citizen-request-form">
+        <div class="citizen-request-form-header">
+          <h2>${settings.title}</h2>
+          <p>${settings.subtitle}</p>
+        </div>
+        
+        <div class="citizen-request-form-body">
+          <form>
+${fieldsHtml}
+            <div class="citizen-request-form-footer">
+              <button type="button">${settings.submitButtonText}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    setHtmlPreview(previewHtml);
+  };
+  
+  // Генерация HTML кода лендинга
+  const generateLandingHtml = () => {
+    // Здесь код для генерации лендинга
+    const sectionsHtml = landingSettings.sections.map(section => {
+      switch (section.type) {
+        case 'text':
+          return `
+            <section class="content-section">
+              <div class="container">
+                <h2>${section.title}</h2>
+                <div class="text-content">
+                  <p>${section.content}</p>
+                </div>
+              </div>
+            </section>`;
+        case 'services':
+          const items = section.items?.map(item => `
+            <div class="service-card">
+              <h3>${item.title}</h3>
+              <p>${item.description}</p>
+            </div>
+          `).join('') || '';
+          
+          return `
+            <section class="services-section">
+              <div class="container">
+                <h2>${section.title}</h2>
+                <p class="section-intro">${section.content}</p>
+                <div class="services-grid">
+                  ${items}
+                </div>
+              </div>
+            </section>`;
+        case 'contacts':
+          return `
+            <section class="contacts-section">
+              <div class="container">
+                <h2>${section.title}</h2>
+                <div class="contacts-grid">
+                  <div class="contact-info">
+                    <h3>Контактная информация</h3>
+                    <p><strong>Адрес:</strong> ${landingSettings.address}</p>
+                    <p><strong>Телефон:</strong> ${landingSettings.phone}</p>
+                    <p><strong>Email:</strong> ${landingSettings.email}</p>
+                  </div>
+                  <div class="contact-form">
+                    <h3>Форма обращения</h3>
+                    <div class="embedded-form">
+                      <!-- Здесь будет форма обращения -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>`;
+        default:
+          return '';
+      }
+    }).join('');
+    
+    // CSS для лендинга
+    const landingCss = `
+      :root {
+        --primary-color: ${landingSettings.primaryColor};
+        --text-color: #333;
+        --bg-color: #fff;
+        --header-bg: #f9f9f9;
+        --footer-bg: #2c3e50;
+        --footer-text: #ecf0f1;
+      }
+      
+      body {
+        font-family: 'Arial', sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        margin: 0;
+        padding: 0;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      
+      header {
+        background-color: var(--header-bg);
+        padding: 20px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
+      .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--primary-color);
+        text-decoration: none;
+      }
+      
+      .nav-menu {
+        display: flex;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .nav-menu li {
+        margin-left: 20px;
+      }
+      
+      .nav-menu a {
+        color: var(--text-color);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+      }
+      
+      .nav-menu a:hover {
+        color: var(--primary-color);
+      }
+      
+      .hero {
+        background: linear-gradient(to right, var(--primary-color), #6c5ce7);
+        color: white;
+        padding: 100px 0;
+        text-align: center;
+      }
+      
+      .hero h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+      
+      .hero p {
+        font-size: 20px;
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      
+      .content-section {
+        padding: 80px 0;
+      }
+      
+      .content-section h2 {
+        text-align: center;
+        margin-bottom: 40px;
+        color: var(--primary-color);
+      }
+      
+      .text-content {
+        max-width: 800px;
+        margin: 0 auto;
+        font-size: 16px;
+      }
+      
+      .services-section {
+        padding: 80px 0;
+        background-color: #f5f7fa;
+      }
+      
+      .services-section h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+      }
+      
+      .section-intro {
+        text-align: center;
+        max-width: 700px;
+        margin: 0 auto 40px;
+      }
+      
+      .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 30px;
+      }
+      
+      .service-card {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+      }
+      
+      .service-card:hover {
+        transform: translateY(-5px);
+      }
+      
+      .service-card h3 {
+        margin-top: 0;
+        color: var(--primary-color);
+      }
+      
+      .contacts-section {
+        padding: 80px 0;
+      }
+      
+      .contacts-section h2 {
+        text-align: center;
+        margin-bottom: 40px;
+        color: var(--primary-color);
+      }
+      
+      .contacts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+      }
+      
+      .contact-info, .contact-form {
+        padding: 30px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      
+      footer {
+        background-color: var(--footer-bg);
+        color: var(--footer-text);
+        padding: 50px 0 20px;
+      }
+      
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+      
+      .footer-col h3 {
+        color: white;
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+      
+      .footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      
+      .footer-links li {
+        margin-bottom: 10px;
+      }
+      
+      .footer-links a {
+        color: var(--footer-text);
+        text-decoration: none;
+        transition: color 0.3s;
+      }
+      
+      .footer-links a:hover {
+        color: var(--primary-color);
+      }
+      
+      .social-links {
+        display: flex;
+        gap: 15px;
+      }
+      
+      .social-links a {
+        color: white;
+        font-size: 20px;
+      }
+      
+      .footer-bottom {
+        text-align: center;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+      }
+      
+      @media (max-width: 768px) {
+        .contacts-grid, .footer-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .hero h1 {
+          font-size: 36px;
+        }
+        
+        .hero p {
+          font-size: 18px;
+        }
+      }
+    `;
+    
+    // Генерируем HTML лендинга
+    const headerLinks = landingSettings.headerLinks.map(link => `<li><a href="#">${link}</a></li>`).join('');
+    const footerLinks = landingSettings.footerLinks.map(link => `<li><a href="#">${link}</a></li>`).join('');
+    
+    const landingHtml = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${landingSettings.seoTitle || `${landingSettings.organizationName} - Официальный сайт`}</title>
+  <meta name="description" content="${landingSettings.seoDescription || `Официальный интернет-ресурс ${landingSettings.organizationName}`}">
+  <meta name="keywords" content="${landingSettings.seoKeywords || ''}">
+  <style>
+${landingCss}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-container">
+      <a href="#" class="logo">${landingSettings.organizationName}</a>
+      <nav>
+        <ul class="nav-menu">
+          ${headerLinks}
+        </ul>
+      </nav>
+    </div>
+  </header>
+  
+  <div class="hero">
+    <div class="container">
+      <h1>${landingSettings.heroTitle}</h1>
+      <p>${landingSettings.heroSubtitle}</p>
+    </div>
+  </div>
+  
+  ${sectionsHtml}
+  
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h3>О нас</h3>
+          <p>${landingSettings.organizationDescription}</p>
+        </div>
+        <div class="footer-col">
+          <h3>Контакты</h3>
+          <p>Адрес: ${landingSettings.address}</p>
+          <p>Телефон: ${landingSettings.phone}</p>
+          <p>Email: ${landingSettings.email}</p>
+        </div>
+        <div class="footer-col">
+          <h3>Информация</h3>
+          <ul class="footer-links">
+            ${footerLinks}
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h3>Мы в соцсетях</h3>
+          ${landingSettings.showSocialLinks ? `
+          <div class="social-links">
+            <a href="#"><span>Facebook</span></a>
+            <a href="#"><span>Twitter</span></a>
+            <a href="#"><span>Instagram</span></a>
+          </div>` : ''}
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; ${new Date().getFullYear()} ${landingSettings.organizationName}. Все права защищены.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`;
+
+    setHtmlCode(landingHtml);
+    
+    // Создаем упрощенный предпросмотр
+    const previewHtml = `
+      <div style="max-width:100%; overflow:auto;">
+        <header style="background-color:#f9f9f9; padding:15px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:bold; color:${landingSettings.primaryColor};">${landingSettings.organizationName}</div>
+            <div>
+              <ul style="display:flex; list-style:none; gap:15px; margin:0;">
+                ${landingSettings.headerLinks.slice(0, 3).map(link => `<li>${link}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </header>
+        
+        <div style="background:linear-gradient(to right, ${landingSettings.primaryColor}, #6c5ce7); color:white; padding:40px 20px; text-align:center; margin-bottom:20px;">
+          <h1 style="margin-top:0;">${landingSettings.heroTitle}</h1>
+          <p>${landingSettings.heroSubtitle}</p>
+        </div>
+        
+        <div style="padding:20px; margin-bottom:20px;">
+          <h2 style="color:${landingSettings.primaryColor};">${landingSettings.sections[0]?.title || 'Информация'}</h2>
+          <p>${landingSettings.sections[0]?.content || landingSettings.organizationDescription}</p>
+        </div>
+        
+        <div style="background:#f5f7fa; padding:20px; margin-bottom:20px;">
+          <h2 style="color:${landingSettings.primaryColor}; text-align:center;">Форма обращения</h2>
+          <div style="max-width:400px; margin:0 auto; background:white; padding:20px; border-radius:8px;">
+            <div style="font-weight:bold; margin-bottom:10px;">${settings.title}</div>
+            <div style="color:#666; margin-bottom:20px;">${settings.subtitle}</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <label>ФИО *</label>
+                <input type="text" style="padding:8px; border:1px solid #ddd; border-radius:4px;" />
+              </div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <label>Email *</label>
+                <input type="email" style="padding:8px; border:1px solid #ddd; border-radius:4px;" />
+              </div>
+              <div style="display:flex; justify-content:center; margin-top:15px;">
+                <button style="background-color:${landingSettings.primaryColor}; color:white; border:none; padding:8px 16px; border-radius:4px;">${settings.submitButtonText}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    setHtmlPreview(previewHtml);
+  };
+  
   // Генерация HTML кода при изменении настроек
   useEffect(() => {
     if (activeTab === 'form' || activeTab === 'editor') {
@@ -949,12 +1606,89 @@ ${fieldsHtml}
                     
                     {/* Дополнительные опции для выпадающего списка и радио */}
                     {(field.type === 'select' || field.type === 'radio') && (
-                      <Input 
-                        value={field.options?.join(', ')} 
-                        onChange={(e) => updateFieldOptions(field.id, e.target.value)}
-                        className="h-8 mt-2"
-                        placeholder="Варианты, через запятую"
-                      />
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center">
+                          <Input 
+                            value={field.options?.join(', ')} 
+                            onChange={(e) => updateFieldOptions(field.id, e.target.value)}
+                            className="h-8"
+                            placeholder="Варианты, через запятую"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              // Добавление предустановленного списка значений для соответствующего типа поля
+                              const fieldName = field.label.toLowerCase();
+                              
+                              let newOptions: string[] = [];
+                              
+                              if (fieldName.includes('тип') && fieldName.includes('обращ')) {
+                                newOptions = ['Жалоба', 'Предложение', 'Вопрос', 'Благодарность', 'Запрос информации'];
+                              } else if (fieldName.includes('регион') || fieldName.includes('област')) {
+                                newOptions = ['г. Алматы', 'г. Астана', 'Акмолинская область', 'Актюбинская область', 
+                                  'Алматинская область', 'Атырауская область', 'Восточно-Казахстанская область', 
+                                  'Жамбылская область', 'Западно-Казахстанская область', 'Карагандинская область', 
+                                  'Костанайская область', 'Кызылординская область', 'Мангистауская область', 
+                                  'Павлодарская область', 'Северо-Казахстанская область', 'Туркестанская область'];
+                              } else if (fieldName.includes('тематик') || fieldName.includes('категор')) {
+                                newOptions = ['Жилищный вопрос', 'Коммунальные услуги', 'Социальная поддержка', 
+                                  'Образование', 'Здравоохранение', 'Транспорт и дороги', 'Экология', 
+                                  'Трудоустройство', 'Предпринимательство', 'Налоги и финансы', 'Безопасность', 
+                                  'Государственные услуги'];
+                              } else if (fieldName.includes('пол')) {
+                                newOptions = ['Мужской', 'Женский'];
+                              } else if (fieldName.includes('документ') || fieldName.includes('удостоверен')) {
+                                newOptions = ['Удостоверение личности', 'Паспорт', 'Свидетельство о рождении', 'ИИН'];
+                              }
+                              
+                              if (newOptions.length > 0) {
+                                const updatedField = { ...field, options: newOptions };
+                                setSettings(prev => ({
+                                  ...prev,
+                                  fields: prev.fields.map(f => f.id === field.id ? updatedField : f)
+                                }));
+                              } else {
+                                toast({
+                                  title: "Подсказка",
+                                  description: "Для этого поля нет стандартных значений. Добавьте значения вручную через запятую.",
+                                  variant: "default"
+                                });
+                              }
+                            }}
+                            className="ml-2 h-8 w-8"
+                            title="Добавить стандартные значения"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {field.options && field.options.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {field.options.map((option, i) => (
+                              <div 
+                                key={i} 
+                                className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary flex items-center gap-1"
+                              >
+                                <span>{option}</span>
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    const updatedOptions = [...field.options!].filter((_, idx) => idx !== i);
+                                    const updatedField = { ...field, options: updatedOptions };
+                                    setSettings(prev => ({
+                                      ...prev,
+                                      fields: prev.fields.map(f => f.id === field.id ? updatedField : f)
+                                    }));
+                                  }}
+                                  className="text-primary hover:text-primary/80"
+                                >
+                                  <Trash className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   

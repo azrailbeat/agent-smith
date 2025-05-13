@@ -241,7 +241,10 @@ const CitizenRequests = () => {
   // Мутация для обработки обращения агентом
   const processWithAgentMutation = useMutation({
     mutationFn: ({ requestId, agentId, action = "full" }: { requestId: number; agentId: number; action?: string }) => {
-      return apiRequest('POST', `/api/citizen-requests/${requestId}/process-with-agent`, { agentId, action });
+      return apiRequest('POST', `/api/citizen-requests/${requestId}/process-with-agent`, { 
+        agentId, 
+        actionType: action // Исправление: используем actionType вместо action
+      });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });

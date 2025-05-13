@@ -3,6 +3,73 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Роли пользователей в системе
+export enum UserRole {
+  OPERATOR = "operator",
+  MANAGER = "manager",
+  ADMIN = "admin"
+}
+
+// Разрешения для пользователей
+export interface Permission {
+  name: string;
+  description: string;
+  key: string;
+}
+
+// Карта разрешений по ролям
+export const RolePermissions: Record<UserRole, string[]> = {
+  [UserRole.OPERATOR]: [
+    "citizen_requests.view",
+    "citizen_requests.reply",
+    "tasks.view",
+    "tasks.create",
+    "documents.view",
+    "documents.upload",
+  ],
+  [UserRole.MANAGER]: [
+    // Все разрешения оператора
+    "citizen_requests.view",
+    "citizen_requests.reply",
+    "citizen_requests.assign",
+    "citizen_requests.approve",
+    "tasks.view",
+    "tasks.create",
+    "tasks.assign",
+    "documents.view",
+    "documents.upload",
+    "reports.view",
+    "departments.view",
+    "users.view",
+  ],
+  [UserRole.ADMIN]: [
+    // Все разрешения включая административные
+    "citizen_requests.view",
+    "citizen_requests.reply",
+    "citizen_requests.assign",
+    "citizen_requests.approve",
+    "citizen_requests.delete",
+    "tasks.view",
+    "tasks.create",
+    "tasks.assign",
+    "tasks.delete",
+    "documents.view",
+    "documents.upload",
+    "documents.delete",
+    "reports.view",
+    "reports.create",
+    "departments.view",
+    "departments.manage",
+    "users.view",
+    "users.manage",
+    "settings.view",
+    "settings.manage",
+    "system.manage",
+    "agents.view",
+    "agents.manage",
+  ]
+};
+
 // Department schema
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
@@ -51,7 +118,7 @@ export const users = pgTable("users", {
   department: text("department"),
   departmentId: integer("department_id").references(() => departments.id),
   positionId: integer("position_id").references(() => positions.id),
-  role: text("role").default("user"),
+  role: text("role").default("operator"),
   email: text("email"),
   phone: text("phone"),
   isActive: boolean("is_active").default(true),
@@ -63,8 +130,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
   fullName: true,
   avatarUrl: true,
   department: true,
+  departmentId: true,
+  positionId: true, 
   role: true,
+  email: true,
+  phone: true,
+  isActive: true,
 });
+
+// Валидация роли
+export const userRoleSchema = z.enum([
+  UserRole.OPERATOR, 
+  UserRole.MANAGER, 
+  UserRole.ADMIN
+]);
 
 // Tasks schema
 export const tasks = pgTable("tasks", {
