@@ -1,40 +1,79 @@
-import { Request, Response, NextFunction } from "express";
-import { User, UserRole, RolePermissions } from "@shared/schema";
+import { Request, Response, NextFunction } from 'express';
+import { UserRole, RolePermissions } from '@shared/schema';
+import { storage } from '../storage';
 
-// Расширение типа Request для включения пользователя
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-      isAuthenticated(): boolean;
+// Проверяет, аутентифицирован ли пользователь и имеет ли роль с достаточными правами
+export const authMiddleware = (requiredRole: UserRole = UserRole.OPERATOR) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // В реальном приложении здесь будет проверка JWT или данных сессии
+      // Для тестирования используем заголовок или параметр запроса
+      const userId = req.headers['x-auth-user-id'] || req.query.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Требуется аутентификация' 
+        });
+      }
+
+      const user = await storage.getUser(Number(userId));
+      
+      if (!user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Пользователь не найден' 
+        });
+      }
+      
+      if (!user.isActive) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Учётная запись деактивирована' 
+        });
+      }
+
+      // Проверяем, имеет ли пользователь требуемую роль или выше
+      if (!hasRequiredRole(user.role as UserRole, requiredRole)) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Недостаточно прав доступа' 
+        });
+      }
+
+      // Добавляем пользователя к запросу для дальнейшего использования
+      (req as any).user = user;
+      
+      next();
+    } catch (error) {
+      console.error('Ошибка аутентификации:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Ошибка аутентификации' 
+      });
     }
-  }
-}
-
-// Middleware для аутентификации пользователя
-export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  // Проверка, что пользователь авторизован
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
-    return res.status(401).json({ success: false, message: "Требуется авторизация" });
-  }
-  
-  next();
+  };
 };
 
-// Middleware для проверки роли
-export const requireRole = (roles: UserRole[]) => {
+// Проверяет, имеет ли пользователь определенное разрешение
+export const checkPermission = (permission: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Сначала проверяем аутентификацию
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({ success: false, message: "Требуется авторизация" });
-    }
+    const user = (req as any).user;
     
-    // Проверяем, что пользователь имеет одну из требуемых ролей
-    const userRole = req.user?.role as UserRole;
-    if (!userRole || !roles.includes(userRole as UserRole)) {
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Требуется аутентификация' 
+      });
+    }
+
+    const userRole = user.role as UserRole;
+    const permissions = RolePermissions[userRole] || [];
+    
+    if (!permissions.includes(permission)) {
       return res.status(403).json({ 
         success: false, 
-        message: "Недостаточно прав для доступа к данному ресурсу" 
+        message: `Недостаточно прав для операции: ${permission}` 
       });
     }
     
@@ -42,64 +81,18 @@ export const requireRole = (roles: UserRole[]) => {
   };
 };
 
-// Middleware для проверки конкретных разрешений
-export const requirePermission = (permissions: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Сначала проверяем аутентификацию
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({ success: false, message: "Требуется авторизация" });
-    }
-    
-    // Получаем роль пользователя
-    const userRole = req.user?.role as UserRole;
-    if (!userRole) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Роль пользователя не определена" 
-      });
-    }
-    
-    // Получаем разрешения для роли пользователя
-    const userPermissions = RolePermissions[userRole] || [];
-    
-    // Проверяем, что у пользователя есть все необходимые разрешения
-    const hasAllPermissions = permissions.every(permission => 
-      userPermissions.includes(permission)
-    );
-    
-    if (!hasAllPermissions) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Недостаточно прав для выполнения данного действия",
-        requiredPermissions: permissions,
-        userPermissions: userPermissions
-      });
-    }
-    
-    next();
+// Проверяет, имеет ли пользователь требуемую роль или выше
+export const hasRequiredRole = (userRole: UserRole, requiredRole: UserRole): boolean => {
+  const roleValues = {
+    [UserRole.OPERATOR]: 1,
+    [UserRole.MANAGER]: 2,
+    [UserRole.ADMIN]: 3
   };
+  
+  return roleValues[userRole] >= roleValues[requiredRole];
 };
 
-// Вспомогательная функция для проверки прав в коде
-export const hasPermission = (user: User, permission: string): boolean => {
-  if (!user || !user.role) return false;
-  
-  const userRole = user.role as UserRole;
-  const userPermissions = RolePermissions[userRole] || [];
-  
-  return userPermissions.includes(permission);
-};
-
-// Хелпер для создания объекта с разрешениями для фронтенда
-export const getUserPermissions = (user: User): Record<string, boolean> => {
-  if (!user || !user.role) return {};
-  
-  const userRole = user.role as UserRole;
-  const userPermissions = RolePermissions[userRole] || [];
-  
-  // Создаем объект, где ключи - это имена разрешений, а значения - true
-  return userPermissions.reduce((acc, permission) => {
-    acc[permission] = true;
-    return acc;
-  }, {} as Record<string, boolean>);
-};
+// Экспортируем middleware для каждой роли для удобства
+export const requireOperator = authMiddleware(UserRole.OPERATOR);
+export const requireManager = authMiddleware(UserRole.MANAGER);
+export const requireAdmin = authMiddleware(UserRole.ADMIN);

@@ -106,6 +106,11 @@ const Sidebar = ({
           icon: <Building2 size={20} />
         },
         {
+          name: "Пользователи",
+          path: "/users",
+          icon: <Users size={20} />
+        },
+        {
           name: "ИИ агенты",
           path: "/ai-agents",
           icon: <Bot size={20} />

@@ -1,10 +1,9 @@
-import { Router } from "express";
-import { storage } from "../storage";
-import { requireAuth, requirePermission } from "../middleware/auth";
-import { UserRole, insertUserSchema, userRoleSchema } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import bcrypt from "bcrypt";
-import { ZodError } from "zod";
+import { Router } from 'express';
+import { storage } from '../storage';
+import { z } from 'zod';
+import { insertUserSchema, userRoleSchema, UserRole, RolePermissions } from '@shared/schema';
+import { requireAdmin, requireManager, checkPermission } from '../middleware/auth';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
@@ -13,305 +12,375 @@ const router = Router();
  * @desc Получение списка всех пользователей
  * @access Только для администраторов и руководителей
  */
-router.get(
-  "/users",
-  requireAuth,
-  requirePermission(["users.view"]),
-  async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      
-      // Не возвращаем хеши паролей
-      const sanitizedUsers = users.map(user => {
-        const { password, ...rest } = user;
-        return rest;
-      });
-      
-      res.json({ success: true, data: sanitizedUsers });
-    } catch (error) {
-      console.error("Ошибка при получении списка пользователей:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Ошибка при получении списка пользователей" 
-      });
-    }
+router.get('/users', requireManager, checkPermission('users.view'), async (req, res) => {
+  try {
+    const users = await storage.getUsers();
+    
+    // Удаляем хеши паролей из ответа
+    const safeUsers = users.map(user => {
+      const { password, ...safeUser } = user;
+      return safeUser;
+    });
+    
+    return res.json({ 
+      success: true, 
+      data: safeUsers 
+    });
+  } catch (error) {
+    console.error('Ошибка при получении списка пользователей:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка при получении списка пользователей' 
+    });
   }
-);
+});
 
 /**
  * @route GET /api/users/:id
  * @desc Получение информации о пользователе по ID
  * @access Только для администраторов и руководителей, или самого пользователя
  */
-router.get(
-  "/users/:id",
-  requireAuth,
-  async (req, res) => {
-    try {
-      const userId = parseInt(req.params.id);
-      
-      // Пользователь может смотреть свой профиль
-      const isSelfProfile = req.user?.id === userId;
-      
-      // Если не свой профиль, проверяем разрешение
-      if (!isSelfProfile) {
-        const hasViewPermission = await checkPermission(req, ["users.view"]);
-        if (!hasViewPermission) {
-          return res.status(403).json({ 
-            success: false, 
-            message: "Недостаточно прав для просмотра информации о пользователе" 
-          });
-        }
-      }
-      
-      const user = await storage.getUserById(userId);
-      
-      if (!user) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Пользователь не найден" 
-        });
-      }
-      
-      // Не возвращаем хеш пароля
-      const { password, ...sanitizedUser } = user;
-      
-      res.json({ success: true, data: sanitizedUser });
-    } catch (error) {
-      console.error("Ошибка при получении информации о пользователе:", error);
-      res.status(500).json({ 
+router.get('/users/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    
+    if (isNaN(userId)) {
+      return res.status(400).json({ 
         success: false, 
-        message: "Ошибка при получении информации о пользователе" 
+        message: 'Некорректный ID пользователя' 
       });
     }
+    
+    // Проверяем права доступа - пользователь может просматривать только свои данные,
+    // если он не админ/руководитель
+    const currentUser = (req as any).user;
+    
+    if (!currentUser) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Требуется аутентификация' 
+      });
+    }
+    
+    const canView = 
+      currentUser.id === userId || 
+      currentUser.role === UserRole.ADMIN || 
+      currentUser.role === UserRole.MANAGER;
+      
+    if (!canView) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Недостаточно прав для просмотра данных пользователя' 
+      });
+    }
+    
+    const user = await storage.getUser(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      });
+    }
+    
+    // Удаляем хеш пароля из ответа
+    const { password, ...safeUser } = user;
+    
+    return res.json({ 
+      success: true, 
+      data: safeUser 
+    });
+  } catch (error) {
+    console.error('Ошибка при получении информации о пользователе:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка при получении информации о пользователе' 
+    });
   }
-);
+});
 
 /**
  * @route POST /api/users
  * @desc Создание нового пользователя
  * @access Только для администраторов
  */
-router.post(
-  "/users",
-  requireAuth,
-  requirePermission(["users.manage"]),
-  async (req, res) => {
-    try {
-      // Валидация входных данных
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Валидация роли
-      const role = userRoleSchema.parse(userData.role);
-      
-      // Хешируем пароль
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
-      
-      // Создаем пользователя
-      const newUser = await storage.createUser({
-        ...userData,
-        password: hashedPassword,
-        role: role
-      });
-      
-      // Не возвращаем хеш пароля
-      const { password, ...sanitizedUser } = newUser;
-      
-      res.status(201).json({ 
-        success: true, 
-        message: "Пользователь успешно создан", 
-        data: sanitizedUser 
-      });
-    } catch (error) {
-      console.error("Ошибка при создании пользователя:", error);
-      
-      if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Некорректные данные пользователя", 
-          errors: error.errors 
-        });
-      }
-      
-      res.status(500).json({ 
+router.post('/users', requireAdmin, checkPermission('users.manage'), async (req, res) => {
+  try {
+    // Создаем schema с валидацией для создания пользователя
+    const createUserSchema = insertUserSchema.extend({
+      username: z.string().min(3, 'Имя пользователя должно быть не менее 3 символов'),
+      password: z.string().min(6, 'Пароль должен быть не менее 6 символов'),
+      fullName: z.string().min(3, 'ФИО должно быть не менее 3 символов'),
+      role: userRoleSchema.default(UserRole.OPERATOR),
+      email: z.string().email('Некорректный email').nullable().optional(),
+      isActive: z.boolean().default(true),
+    });
+
+    // Валидируем данные
+    const userData = createUserSchema.parse(req.body);
+    
+    // Проверяем, не занят ли username
+    const existingUser = await storage.getUserByUsername(userData.username);
+    if (existingUser) {
+      return res.status(400).json({ 
         success: false, 
-        message: "Ошибка при создании пользователя" 
+        message: 'Пользователь с таким именем уже существует' 
       });
     }
+    
+    // Хешируем пароль
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+    
+    // Создаем пользователя с хешированным паролем
+    const newUser = await storage.createUser({
+      ...userData,
+      password: hashedPassword,
+    });
+    
+    // Удаляем хеш пароля из ответа
+    const { password, ...safeUser } = newUser;
+    
+    return res.status(201).json({ 
+      success: true, 
+      message: 'Пользователь успешно создан',
+      data: safeUser
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Ошибка валидации данных', 
+        errors: error.errors 
+      });
+    }
+    
+    console.error('Ошибка при создании пользователя:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка при создании пользователя' 
+    });
   }
-);
+});
 
 /**
  * @route PUT /api/users/:id
  * @desc Обновление информации о пользователе
  * @access Администраторы или сам пользователь (с ограничениями)
  */
-router.put(
-  "/users/:id",
-  requireAuth,
-  async (req, res) => {
-    try {
-      const userId = parseInt(req.params.id);
-      const userData = req.body;
-      
-      // Проверяем существование пользователя
-      const existingUser = await storage.getUserById(userId);
-      
-      if (!existingUser) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Пользователь не найден" 
-        });
-      }
-      
-      // Определяем, является ли запрашивающий администратором
-      const isAdmin = req.user?.role === UserRole.ADMIN;
-      
-      // Определяем, обновляет ли пользователь свой профиль
-      const isSelfUpdate = req.user?.id === userId;
-      
-      // Если не администратор и не свой профиль - отказываем
-      if (!isAdmin && !isSelfUpdate) {
-        return res.status(403).json({ 
-          success: false, 
-          message: "У вас нет прав для обновления данного пользователя" 
-        });
-      }
-      
-      // Проверяем, пытается ли обычный пользователь изменить свою роль
-      if (isSelfUpdate && !isAdmin && userData.role && userData.role !== existingUser.role) {
-        return res.status(403).json({ 
-          success: false, 
-          message: "Вы не можете изменить свою роль" 
-        });
-      }
-      
-      // Если меняется пароль, хешируем его
-      let hashedPassword;
-      if (userData.password) {
-        const saltRounds = 10;
-        hashedPassword = await bcrypt.hash(userData.password, saltRounds);
-      }
-      
-      // Обновляем пользователя
-      const updatedUser = await storage.updateUser(userId, {
-        ...userData,
-        ...(hashedPassword && { password: hashedPassword }),
-      });
-      
-      // Не возвращаем хеш пароля
-      const { password, ...sanitizedUser } = updatedUser;
-      
-      res.json({ 
-        success: true, 
-        message: "Информация о пользователе успешно обновлена", 
-        data: sanitizedUser 
-      });
-    } catch (error) {
-      console.error("Ошибка при обновлении пользователя:", error);
-      
-      if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Некорректные данные пользователя", 
-          errors: error.errors 
-        });
-      }
-      
-      res.status(500).json({ 
+router.put('/users/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    
+    if (isNaN(userId)) {
+      return res.status(400).json({ 
         success: false, 
-        message: "Ошибка при обновлении пользователя" 
+        message: 'Некорректный ID пользователя' 
       });
     }
+    
+    // Проверяем права доступа - пользователь может обновлять только свои данные,
+    // если он не админ
+    const currentUser = (req as any).user;
+    
+    if (!currentUser) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Требуется аутентификация' 
+      });
+    }
+    
+    const isAdmin = currentUser.role === UserRole.ADMIN;
+    const isSelf = currentUser.id === userId;
+    
+    if (!isAdmin && !isSelf) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Недостаточно прав для обновления данных пользователя' 
+      });
+    }
+    
+    const user = await storage.getUser(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      });
+    }
+    
+    // Определяем, какие поля могут быть обновлены
+    // Обычные пользователи могут обновлять только свои личные данные
+    let allowedFields = ['fullName', 'email', 'phone', 'avatarUrl'];
+    
+    // Администраторы могут обновлять все поля, включая роль и статус
+    if (isAdmin) {
+      allowedFields = [...allowedFields, 'username', 'role', 'department', 'departmentId', 'positionId', 'isActive'];
+    }
+    
+    // Создаем schema с валидацией для обновления пользователя
+    const updateUserSchema = z.object({
+      username: z.string().min(3).optional(),
+      password: z.string().min(6).optional(),
+      fullName: z.string().min(3).optional(),
+      avatarUrl: z.string().optional().nullable(),
+      department: z.string().optional().nullable(),
+      departmentId: z.number().optional().nullable(),
+      positionId: z.number().optional().nullable(),
+      role: userRoleSchema.optional(),
+      email: z.string().email().optional().nullable(),
+      phone: z.string().optional().nullable(),
+      isActive: z.boolean().optional(),
+    });
+    
+    // Валидируем данные
+    const updateData = updateUserSchema.parse(req.body);
+    
+    // Фильтруем только разрешенные поля для обновления
+    const filteredData: Record<string, any> = {};
+    Object.keys(updateData).forEach(key => {
+      if (allowedFields.includes(key) && updateData[key as keyof typeof updateData] !== undefined) {
+        filteredData[key] = updateData[key as keyof typeof updateData];
+      }
+    });
+    
+    // Если пароль нужно обновить, хешируем его
+    if (updateData.password) {
+      // Только администраторы или сам пользователь могут менять пароль
+      if (!isAdmin && !isSelf) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Недостаточно прав для смены пароля' 
+        });
+      }
+      
+      const saltRounds = 10;
+      filteredData.password = await bcrypt.hash(updateData.password, saltRounds);
+    }
+    
+    // Обновляем данные пользователя
+    const updatedUser = await storage.updateUser(userId, filteredData);
+    
+    // Удаляем хеш пароля из ответа
+    const { password, ...safeUser } = updatedUser;
+    
+    return res.json({ 
+      success: true, 
+      message: 'Данные пользователя успешно обновлены',
+      data: safeUser
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Ошибка валидации данных', 
+        errors: error.errors 
+      });
+    }
+    
+    console.error('Ошибка при обновлении пользователя:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка при обновлении пользователя' 
+    });
   }
-);
+});
 
 /**
  * @route DELETE /api/users/:id
  * @desc Удаление пользователя
  * @access Только для администраторов
  */
-router.delete(
-  "/users/:id",
-  requireAuth,
-  requirePermission(["users.manage"]),
-  async (req, res) => {
-    try {
-      const userId = parseInt(req.params.id);
-      
-      // Запрещаем удалять самого себя
-      if (req.user?.id === userId) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Вы не можете удалить свою учетную запись" 
-        });
-      }
-      
-      // Проверяем существование пользователя
-      const user = await storage.getUserById(userId);
-      
-      if (!user) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Пользователь не найден" 
-        });
-      }
-      
-      // Удаляем пользователя
-      await storage.deleteUser(userId);
-      
-      res.json({ 
-        success: true, 
-        message: "Пользователь успешно удален" 
-      });
-    } catch (error) {
-      console.error("Ошибка при удалении пользователя:", error);
-      res.status(500).json({ 
+router.delete('/users/:id', requireAdmin, checkPermission('users.manage'), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    
+    if (isNaN(userId)) {
+      return res.status(400).json({ 
         success: false, 
-        message: "Ошибка при удалении пользователя" 
+        message: 'Некорректный ID пользователя' 
       });
     }
+    
+    const user = await storage.getUser(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      });
+    }
+    
+    // Проверка, не удаляет ли пользователь сам себя
+    const currentUser = (req as any).user;
+    if (currentUser.id === userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Вы не можете удалить свой собственный аккаунт' 
+      });
+    }
+    
+    await storage.deleteUser(userId);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Пользователь успешно удален'
+    });
+  } catch (error) {
+    console.error('Ошибка при удалении пользователя:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка при удалении пользователя' 
+    });
   }
-);
+});
 
 /**
  * @route GET /api/users/me
  * @desc Получение информации о текущем пользователе
  * @access Для авторизованных пользователей
  */
-router.get(
-  "/users/me",
-  requireAuth,
-  async (req, res) => {
-    try {
-      // Не возвращаем хеш пароля
-      const { password, ...sanitizedUser } = req.user!;
-      
-      res.json({ 
-        success: true, 
-        data: sanitizedUser 
-      });
-    } catch (error) {
-      console.error("Ошибка при получении информации о текущем пользователе:", error);
-      res.status(500).json({ 
+router.get('/users/me', async (req, res) => {
+  try {
+    const currentUser = (req as any).user;
+    
+    if (!currentUser) {
+      return res.status(401).json({ 
         success: false, 
-        message: "Ошибка при получении информации о текущем пользователе" 
+        message: 'Требуется аутентификация' 
       });
     }
+    
+    // Получаем свежие данные пользователя из БД
+    const user = await storage.getUser(currentUser.id);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      });
+    }
+    
+    // Удаляем хеш пароля из ответа
+    const { password, ...safeUser } = user;
+    
+    // Добавляем список разрешений для пользователя
+    const permissions = RolePermissions[user.role as UserRole] || [];
+    
+    return res.json({ 
+      success: true, 
+      data: {
+        ...safeUser,
+        permissions
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка при получении информации о текущем пользователе:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка при получении информации о текущем пользователе' 
+    });
   }
-);
-
-// Вспомогательная функция для проверки прав пользователя
-async function checkPermission(req: any, permissions: string[]): Promise<boolean> {
-  const userRole = req.user?.role as UserRole;
-  
-  if (!userRole) return false;
-  
-  const userPermissions = RolePermissions[userRole] || [];
-  
-  // Проверяем, что у пользователя есть все необходимые разрешения
-  return permissions.every(permission => userPermissions.includes(permission));
-}
+});
 
 export default router;

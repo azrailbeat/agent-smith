@@ -231,8 +231,8 @@ export function HtmlFormSettings({ refreshTab }: HtmlFormSettingsProps) {
     }
   }, [formSettings]);
 
-  // Генерация HTML кода формы
-  const generateFormHtml = () => {
+  // Генерация HTML кода для простой формы
+  const generateSimpleFormHtml = () => {
     // Генерируем HTML для полей формы
     let fieldsHtml = '';
     settings.fields.forEach(field => {
@@ -891,7 +891,7 @@ ${landingCss}
   // Генерация HTML кода при изменении настроек
   useEffect(() => {
     if (activeTab === 'form' || activeTab === 'editor') {
-      generateFormHtml();
+      generateSimpleFormHtml();
     } else if (activeTab === 'landing' || activeTab === 'prompt') {
       generateLandingHtml();
     }
@@ -1013,8 +1013,8 @@ ${landingCss}
     }
   };
 
-  // Генерация HTML кода для простой формы
-  const generateFormHtml = () => {
+  // Генерация HTML кода для полной формы
+  const generateFullFormHtml = () => {
     let fieldsHtml = '';
     
     settings.fields.forEach(field => {
