@@ -1148,9 +1148,7 @@ export class MemStorage implements IStorage {
   }
   
   async deleteUser(id: number): Promise<boolean> {
-    const exists = this.users.has(id);
-    
-    if (!exists) {
+    if (!this.users.has(id)) {
       return false;
     }
     
