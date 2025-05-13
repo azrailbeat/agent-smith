@@ -536,8 +536,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                         </div>
                         <div className="text-[10px] text-gray-600 flex-1 overflow-hidden">
                           <div className="flex justify-between items-start w-full">
-                            <span className="font-medium truncate max-w-[75%] overflow-hidden text-ellipsis">
-                              {activity?.description || 'Действие с запросом'}
+                            <span className="font-medium truncate max-w-[65%] overflow-hidden text-ellipsis" style={{ display: 'inline-block' }}>
+                              {(activity?.description || 'Действие с запросом').substring(0, 80)}
                             </span>
                             <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px] flex-shrink-0">
                               {activity?.createdAt || activity?.timestamp 
