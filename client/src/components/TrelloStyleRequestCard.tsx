@@ -413,9 +413,15 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Краткое описание */}
-        <div className="mb-3 overflow-hidden" style={{ maxHeight: '4em' }}>
-          <p className="text-xs text-gray-600 overflow-hidden text-ellipsis line-clamp-2 h-auto" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-            {request.description || request.content || "Без описания"}
+        <div className="mb-3 overflow-hidden" style={{ maxHeight: '3em' }}>
+          <p className="text-xs text-gray-600 line-clamp-2 h-auto overflow-hidden" style={{ 
+            display: '-webkit-box', 
+            WebkitLineClamp: 2, 
+            WebkitBoxOrient: 'vertical',
+            wordBreak: 'break-word',
+            textOverflow: 'ellipsis'
+          }}>
+            {(request.description || request.content || "Без описания").substring(0, 150)}
           </p>
         </div>
         
@@ -451,8 +457,15 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', maxHeight: '2.6em' }}>
-              {request.aiSuggestion}
+            <div className="overflow-hidden line-clamp-2" style={{ 
+              display: '-webkit-box', 
+              WebkitLineClamp: 2, 
+              WebkitBoxOrient: 'vertical', 
+              maxHeight: '2.6em',
+              wordBreak: 'break-word',
+              textOverflow: 'ellipsis'
+            }}>
+              {request.aiSuggestion.substring(0, 120)}
             </div>
           </div>
         )}
