@@ -17,7 +17,8 @@ import {
   Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, 
   RefreshCw, ChevronDown, MessageSquare, FileText, Clock, Edit, 
   CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2, Mail, 
-  Building, Users, LayoutGrid, CheckSquare, BrainCircuit
+  Building, Users, LayoutGrid, CheckSquare, BrainCircuit, History,
+  Loader2, Trash, Cpu, Zap
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -437,37 +438,41 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                     </div>
                   )}
                   
-                  <div className="mt-2 flex justify-end">
+                  <div className="mt-6 flex justify-end">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="flex items-center text-xs"
+                      className="flex items-center text-sm gap-2 px-4 py-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
                       onClick={saveToBlockchain}
                     >
-                      <Database className="h-3.5 w-3.5 mr-1.5" />
+                      <Database className="h-4 w-4 text-purple-500" />
                       Сохранить в блокчейн
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center p-4 bg-gray-50 rounded-md">
-                  <div className="flex flex-col items-center gap-2">
-                    <Bot className="h-8 w-8 text-gray-300" />
-                    <p className="text-gray-500">Нет данных об обработке ИИ</p>
+                <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="flex flex-col items-center gap-3">
+                    <Bot className="h-10 w-10 text-gray-300" />
+                    <p className="text-gray-500 font-medium">Нет данных об обработке ИИ</p>
+                    <p className="text-gray-400 text-sm">Используйте кнопки ниже для запуска обработки</p>
                   </div>
                 </div>
               )}
             </div>
             
             {/* Обработать с помощью ИИ */}
-            <div className="border-t pt-4 mt-4">
-              <h4 className="text-sm font-medium mb-3">Обработать с помощью ИИ</h4>
-              <div className="flex space-x-2">
+            <div className="border-t pt-6 mt-6">
+              <h4 className="text-base font-semibold mb-4 flex items-center">
+                <BrainCircuit className="h-5 w-5 text-purple-500 mr-2" />
+                Обработать с помощью ИИ
+              </h4>
+              <div className="flex flex-wrap gap-3">
                 <Select 
                   value={processingAgent?.toString() || ""} 
                   onValueChange={(value) => setProcessingAgent(parseInt(value))}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full min-w-[250px]">
                     <SelectValue placeholder="Выберите агента" />
                   </SelectTrigger>
                   <SelectContent>
@@ -480,13 +485,33 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 </Select>
                 
                 <Button 
-                  className="w-auto whitespace-nowrap"
+                  className="whitespace-nowrap px-4 py-2 bg-purple-600 hover:bg-purple-700 transition-colors"
                   onClick={handleProcessWithAgent}
                   disabled={isProcessing || !processingAgent}
                 >
-                  {isProcessing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Bot className="h-4 w-4 mr-2" />}
-                  Обработать ИИ
+                  {isProcessing ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Обработка...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4" /> Обработать ИИ
+                    </div>
+                  )}
                 </Button>
+                
+                {onAutoProcess && (
+                  <Button 
+                    variant="outline" 
+                    onClick={onAutoProcess} 
+                    disabled={isProcessing}
+                    className="whitespace-nowrap px-4 py-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-purple-500" /> Автообработка
+                    </div>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
