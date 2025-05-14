@@ -414,14 +414,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Краткое описание */}
         <div className="mb-3">
-          <p className="text-xs text-gray-600" style={{ 
-            display: '-webkit-box',
-            WebkitBoxOrient: 'vertical',
-            WebkitLineClamp: 3,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {(request.description || request.content || "Без описания").substring(0, 150)}
+          <p className="text-xs text-gray-600 line-clamp-3 break-words">
+            {(request.description || request.content || "Без описания").substring(0, 250)}
           </p>
         </div>
         
