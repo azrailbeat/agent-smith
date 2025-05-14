@@ -1,864 +1,834 @@
 /**
- * Agent Smith Platform - Сервис AI-агентов
+ * Сервис для работы с ИИ-агентами и управления задачами
  * 
- * Центральный сервис для управления и координации всех AI-агентов в системе государственных услуг Казахстана.
- * Обеспечивает обработку обращений граждан, анализ протоколов заседаний, обработку документов
- * и другие интеллектуальные функции с сохранением результатов в блокчейн для обеспечения прозрачности.
+ * Обеспечивает координацию между различными моделями ИИ и взаимодействие
+ * с системами обработки естественного языка, блокчейном и базой знаний (RAG)
  */
 
 import { storage } from '../storage';
-import { logActivity } from '../activity-logger';
-import { recordToBlockchain, BlockchainRecordType } from './blockchain';
-import { Agent, Integration } from '@shared/schema';
-import { 
-  summarizeDocument, 
-  analyzeTranscription, 
-  processUserMessage, 
-  detectLanguage 
-} from './openai';
-import { KnowledgeService } from '../vector-storage/knowledge-service';
+import { logActivity, ActivityType } from '../activity-logger';
+import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
+import { Agent, TaskResult } from '@shared/types';
+import { fetchModelResponse } from './llm-service';
+import { searchVectorStore } from './vector-store';
 
-// Типы для обработки запросов агентами
-export enum AgentTaskType {
-  CLASSIFICATION = 'classification',
-  RESPONSE_GENERATION = 'response_generation',
-  SUMMARIZATION = 'summarization',
-  TRANSCRIPTION = 'transcription',
-  TRANSLATION = 'translation',
-  VALIDATION = 'validation',
-  DATA_ANALYSIS = 'data_analysis',
-  DOCUMENT_ANALYSIS = 'document_analysis'
+// Типы задач для агентов
+export enum TaskType {
+  CLASSIFICATION = 'classification',   // Классификация текста
+  SUMMARIZATION = 'summarization',     // Суммаризация текста
+  RESPONSE = 'response',               // Генерация ответа
+  ANALYTICS = 'analytics',             // Аналитика данных
+  TRANSLATION = 'translation',         // Перевод
+  VALIDATION = 'validation',           // Валидация данных
+  CITIZEN_REQUEST = 'citizen_request', // Обработка обращений граждан
+  DOCUMENT = 'document',               // Обработка документов
+  PROTOCOL = 'protocol',               // Обработка протоколов
+  RAG = 'rag'                          // Поиск в базе знаний
 }
 
-// Типы сущностей, с которыми работают агенты
-export enum AgentEntityType {
+// Типы сущностей системы
+export enum EntityType {
   CITIZEN_REQUEST = 'citizen_request',
+  DOCUMENT = 'document',
   PROTOCOL = 'protocol',
   TASK = 'task',
-  DOCUMENT = 'document',
-  DAO_PROPOSAL = 'dao_proposal',
-  BLOCKCHAIN_RECORD = 'blockchain_record'
+  MEETING = 'meeting'
 }
 
-// Интерфейс для входных данных агента
-export interface AgentInput {
-  taskType: AgentTaskType;
-  entityType: AgentEntityType;
-  entityId?: number;
+// Интерфейс для задачи агенту
+export interface AgentTask {
+  taskType: string;
+  entityType: string;
+  entityId: number;
+  agentId: number;
   content: string;
   metadata?: Record<string, any>;
-  userId?: number;
-  urgent?: boolean;
-  language?: string;
+  priority?: string;
 }
 
-// Интерфейс для результата работы агента
-export interface AgentResult {
+// Интерфейс для результата выполнения задачи
+export interface AgentTaskResult {
   success: boolean;
-  output?: string;
-  classification?: string;
-  summary?: string;
-  analysis?: Record<string, any>;
-  metadata?: Record<string, any>;
-  transactionHash?: string;
+  taskId: number;
+  agentId: number;
+  result?: any;
   error?: string;
+  blockchainHash?: string;
 }
 
 /**
- * Главный класс для координации работы агентов
+ * Класс для работы с агентами
  */
-export class AgentService {
-  // Кэш агентов для быстрого доступа
-  private agentCache: Map<string, Agent> = new Map();
-  private integrationCache: Map<string, Integration> = new Map();
-  
+class AgentService {
   /**
-   * Инициализация сервиса агентов
+   * Получает доступные агенты системы
+   * @returns Список агентов
    */
-  async initialize() {
-    try {
-      // Проверяем существуют ли интеграции
-      const integrations = await storage.getIntegrations();
-      
-      // Если интеграций нет, создаем их
-      if (!integrations || integrations.length === 0) {
-        console.log("No integrations found, creating default integrations...");
-        
-        // Создаем интеграцию с OpenAI
-        await storage.createIntegration({
-          name: "OpenAI GPT-4o",
-          type: "openai",
-          apiKey: process.env.OPENAI_API_KEY || "",
-          apiUrl: "https://api.openai.com/v1",
-          isActive: true,
-          config: {
-            defaultModel: "gpt-4o",
-            maxTokens: 4000,
-            defaultTemp: 0.7
-          }
-        });
-        
-        // Создаем интеграцию с Moralis
-        await storage.createIntegration({
-          name: "Moralis API",
-          type: "moralis",
-          apiKey: process.env.MORALIS_API_KEY || "",
-          apiUrl: "https://deep-index.moralis.io/api/v2",
-          isActive: true,
-          config: {
-            chain: "eth",
-            network: "testnet"
-          }
-        });
-      }
-      
-      // Получаем обновленный список интеграций
-      const updatedIntegrations = await storage.getIntegrations();
-      
-      // Находим ID интеграций для использования в агентах
-      const openaiIntegration = updatedIntegrations.find(i => i.type === 'openai');
-      if (!openaiIntegration) {
-        throw new Error('OpenAI integration not found!');
-      }
-      
-      const moralisIntegration = updatedIntegrations.find(i => i.type === 'moralis');
-      if (!moralisIntegration) {
-        throw new Error('Moralis integration not found!');
-      }
-      
-      // Получаем существующих агентов и результаты их работы
-      const existingAgents = await storage.getAgents();
-      
-      // Получаем ID агентов, которые используются в результатах (имеют foreign key constraints)
-      const agentResults = await storage.getAllAgentResults();
-      const referencedAgentIds = new Set(agentResults.map(result => result.agentId));
-      
-      // Проверяем, есть ли уже агенты и нужно ли их обновлять
-      if (existingAgents && existingAgents.length > 0) {
-        // Обновляем имена существующих агентов для более понятного использования
-        const agentNameMap = {
-          202: { name: "Обработка обращений граждан" }, // Агент обработки обращений граждан
-          640: { name: "Обработка обращений граждан" }, // Основной агент обработки обращений граждан
-          642: { name: "Запись в блокчейн Hyperledger" }, // Блокчейн-агент
-          842: { name: "Анализ и проверка документов" }, // Агент анализа документов
-          843: { name: "Автопротокол совещаний" }, // Агент для протоколов заседаний
-        };
-        
-        // Сначала удаляем всех агентов, которые не используются в результатах и не являются ключевыми
-        for (const agent of existingAgents) {
-          try {
-            // Пропускаем агентов, которые упоминаются в таблице agent_results или являются ключевыми
-            const isReferenced = referencedAgentIds.has(agent.id);
-            const isBlockchainAgent = agent.type === "blockchain";
-            const isNonDeletable = isBlockchainAgent || 
-              (agent.config && agent.config.moralisApiSettings && agent.config.moralisApiSettings.nonDeletable);
-            const isKeyAgent = [202, 640, 642, 842, 843].includes(agent.id);
-            
-            if (isReferenced || isNonDeletable || isKeyAgent) {
-              console.log(`Skipping agent deletion for ID ${agent.id} (${isNonDeletable ? 'non-deletable agent' : 'referenced in agent_results'})`);
-              continue;
-            }
-            await storage.deleteAgent(agent.id);
-          } catch (error) {
-            console.warn(`Не удалось удалить агента ${agent.id}:`, error);
-          }
-        }
-        
-        // Обновляем существующих агентов вместо создания новых
-        for (const agent of existingAgents) {
-          if (referencedAgentIds.has(agent.id) || [202, 640, 642, 842, 843].includes(agent.id)) {
-            // Обновляем информацию агента без изменения ID
-            try {
-              // Определяем правильное имя агента из карты имен или оставляем текущее
-              const newName = agentNameMap[agent.id]?.name || agent.name;
-              
-              // Обновляем метаданные, имя, системный промпт и описание
-              await storage.updateAgent(agent.id, {
-                name: newName,
-                systemPrompt: agent.systemPrompt, // Обновляем с тем же значением, чтобы исправить проблемы кодировки
-                description: agent.description, // Обновляем с тем же значением, чтобы исправить проблемы кодировки
-                isActive: true
-              });
-              console.log(`Updated existing agent ${newName} (ID: ${agent.id})`);
-            } catch (updateError) {
-              console.error(`Failed to update agent ${agent.id}:`, updateError);
-            }
-          }
-        }
-      }
-
-      console.log("No agents found, creating default agents...");
-      // Создаем только 4 ключевых агентов
-      
-      // 1. Агент для обработки обращений граждан (ID 640)
-      await storage.createAgent({
-        name: "Обработка обращений граждан",
-        type: "citizen_requests",
-        description: "Универсальный агент для обработки обращений граждан в государственные органы Казахстана",
-        systemPrompt: "Вы - специалист гос. службы поддержки Agent Smith. Ваша задача - помогать гражданам Казахстана с их обращениями в государственные органы. Вы должны корректно классифицировать обращения, генерировать информативные ответы, направлять обращения в соответствующие ведомства по правилам организационной структуры, и сопровождать весь жизненный цикл обращений от подачи до завершения. В ваших ответах используйте официальный, вежливый тон, соответствующий государственной коммуникации. Предоставляйте точную информацию согласно действующему законодательству Казахстана.",
-        modelId: openaiIntegration.id,
-        isActive: true,
-        config: {
-          temperature: 0.3,
-          maxTokens: 4096,
-          departmentId: 1,
-          capabilities: ["classification", "summarization", "response_generation"],
-          integrationIds: [openaiIntegration.id],
-          language: "multilingual",
-          contextWindow: "enhanced"
-        }
-      });
-      
-      // 2. Блокчейн агент для записи транзакций (ID 642)
-      await storage.createAgent({
-        name: "Запись в блокчейн Hyperledger",
-        type: "blockchain",
-        description: "Агент для записи данных в блокчейн через Moralis API",
-        systemPrompt: "Вы эксперт по блокчейн технологиям и смарт-контрактам. Ваша задача - обрабатывать запросы на сохранение данных в блокчейне и создавать хеши транзакций.",
-        modelId: openaiIntegration.id,
-        isActive: true,
-        config: {
-          temperature: 0.1,
-          maxTokens: 1000,
-          departmentId: 5,
-          capabilities: ["data_analysis", "validation"],
-          integrationIds: [moralisIntegration.id],
-          moralisApiSettings: {
-            apiUrl: "https://deep-index.moralis.io/api/v2",
-            apiKey: process.env.MORALIS_API_KEY || "",
-            chain: "eth",
-            network: "mainnet",
-            nonDeletable: true,
-            web3Version: "1.0.0",
-            web3Features: ["transactions", "smartcontracts", "events", "balances"],
-            verificationEnabled: true
-          }
-        }
-      });
-
-      // 3. Агент для анализа документов (ID 842)
-      await storage.createAgent({
-        name: "Анализ и проверка документов",
-        type: "document_processing",
-        description: "Интеллектуальная обработка и анализ документов для государственных органов",
-        systemPrompt: "Вы - эксперт по анализу и обработке официальных документов в системе государственного управления Казахстана. Ваша задача - анализировать структуру и юридическую корректность документов, проверять их на соответствие законодательству, извлекать ключевую информацию, обнаруживать противоречия и готовить краткие резюме. При обработке документов следуйте официальному стилю государственной документации Казахстана и используйте соответствующую юридическую терминологию.",
-        modelId: openaiIntegration.id,
-        isActive: true,
-        config: {
-          temperature: 0.1,
-          maxTokens: 3072,
-          departmentId: 3,
-          capabilities: ["document_analysis", "summarization", "validation"],
-          integrationIds: [openaiIntegration.id],
-          language: "multilingual"
-        }
-      });
-
-      // 4. Агент для протоколов совещаний (ID 843)
-      await storage.createAgent({
-        name: "Автопротокол совещаний",
-        type: "meeting_protocols",
-        description: "Анализ и формирование протоколов заседаний и совещаний государственных органов",
-        systemPrompt: "Вы - эксперт по анализу и составлению протоколов совещаний государственных органов Казахстана. Ваша задача - обрабатывать записи совещаний, определять ключевые моменты, решения и задачи, формировать официальные протоколы заседаний в соответствии с регламентом госструктур, создавать планы действий и контролировать их выполнение. При работе используйте официальный деловой стиль, соответствующий нормам государственной документации Казахстана. Учитывайте иерархию и субординацию при назначении задач в зависимости от должностных полномочий участников совещания.",
-        modelId: openaiIntegration.id,
-        isActive: true,
-        config: {
-          temperature: 0.2,
-          maxTokens: 3072,
-          departmentId: 2,
-          capabilities: ["transcription", "summarization", "classification", "data_analysis"],
-          integrationIds: [openaiIntegration.id],
-          language: "multilingual",
-          governmentProtocolFormat: true
-        }
-      });
-      
-      // Получаем созданных агентов
-      const agents = await storage.getAgents();
-      
-      // Кэшируем агентов по типу для быстрого доступа
-      const agentList = await storage.getAgents(); // Получаем агентов непосредственно из хранилища
-      agentList.forEach(agent => {
-        if (agent.isActive) {
-          this.agentCache.set(agent.type, agent);
-        }
-      });
-      
-      // Кэшируем активные интеграции
-      updatedIntegrations.forEach(integration => {
-        if (integration.isActive) {
-          this.integrationCache.set(integration.type, integration);
-        }
-      });
-      
-      console.log(`Agent Service initialized with ${this.agentCache.size} agents and ${this.integrationCache.size} integrations`);
-      return true;
-    } catch (error) {
-      console.error("Failed to initialize Agent Service:", error);
-      return false;
-    }
+  async getAgents(): Promise<Agent[]> {
+    return await storage.getAgents();
   }
-  
+
   /**
-   * Обновление кэша агентов и интеграций
+   * Получает активные агенты заданного типа
+   * @param type Тип агента
+   * @returns Список активных агентов заданного типа
    */
-  async refreshCache() {
-    this.agentCache.clear();
-    this.integrationCache.clear();
-    return this.initialize();
+  async getAgentsByType(type: string): Promise<Agent[]> {
+    const agents = await storage.getAgents();
+    return agents.filter(agent => agent.type === type && agent.isActive);
   }
-  
+
   /**
-   * Обработка запроса агентом
+   * Обрабатывает задачу с использованием подходящего агента
+   * @param task Задача для обработки
+   * @returns Результат выполнения задачи
    */
-  async processRequest(input: AgentInput): Promise<AgentResult> {
+  async processTask(task: AgentTask): Promise<AgentTaskResult> {
     try {
-      // Логируем начало обработки
-      await logActivity({
-        action: 'ai_process_start',
-        entityType: input.entityType,
-        entityId: input.entityId,
-        userId: input.userId,
-        details: `Начало обработки ${this.getEntityTypeName(input.entityType)} AI-агентом`,
-        metadata: {
-          taskType: input.taskType,
-          urgent: input.urgent || false
-        }
-      });
-      
-      // Определяем подходящего агента для задачи
-      const agent = this.findAgentForTask(input.taskType, input.entityType);
+      // Получаем агент из хранилища
+      const agent = await storage.getAgent(task.agentId);
       
       if (!agent) {
-        throw new Error(`Не найден подходящий агент для задачи ${input.taskType} и типа ${input.entityType}`);
+        throw new Error(`Агент с ID ${task.agentId} не найден`);
       }
       
-      // Определяем язык контента, если не указан
-      const language = input.language || await this.detectContentLanguage(input.content);
-      
-      // Обрабатываем запрос в зависимости от типа задачи
-      let result: AgentResult;
-      
-      switch (input.taskType) {
-        case AgentTaskType.CLASSIFICATION:
-          result = await this.performClassification(agent, input, language);
-          break;
-        case AgentTaskType.RESPONSE_GENERATION:
-          result = await this.generateResponse(agent, input, language);
-          break;
-        case AgentTaskType.SUMMARIZATION:
-          result = await this.summarizeContent(agent, input, language);
-          break;
-        case AgentTaskType.DOCUMENT_ANALYSIS:
-          result = await this.analyzeDocument(agent, input, language);
-          break;
-        case AgentTaskType.VALIDATION:
-          result = await this.validateBlockchainRecord(agent, input);
-          break;
-        default:
-          result = {
-            success: false,
-            error: `Неподдерживаемый тип задачи: ${input.taskType}`
-          };
+      if (!agent.isActive) {
+        throw new Error(`Агент с ID ${task.agentId} неактивен`);
       }
       
-      // Запись результата в блокчейн, если обработка успешна
-      if (result.success) {
-        const blockchainResult = await this.recordResultToBlockchain(input, result, agent.id);
-        result.transactionHash = blockchainResult.transactionHash;
-      }
-      
-      // Логируем завершение обработки
-      await logActivity({
-        action: 'ai_process_complete',
-        entityType: input.entityType,
-        entityId: input.entityId,
-        userId: input.userId,
-        details: `Завершение обработки ${this.getEntityTypeName(input.entityType)} AI-агентом ${agent.name}`,
-        metadata: {
-          taskType: input.taskType,
-          success: result.success,
-          transactionHash: result.transactionHash
-        }
+      // Создаем задачу в хранилище
+      const taskRecord = await storage.createAgentTask({
+        agentId: task.agentId,
+        type: task.taskType,
+        entityType: task.entityType,
+        entityId: task.entityId,
+        status: 'processing',
+        priority: task.priority || 'medium',
+        metadata: task.metadata ? JSON.stringify(task.metadata) : null
       });
       
-      return result;
+      // Логируем начало выполнения задачи
+      await logActivity({
+        action: ActivityType.AI_PROCESSING,
+        entityType: task.entityType,
+        entityId: task.entityId,
+        details: `Началась обработка агентом "${agent.name}" (${agent.type})`
+      });
       
+      // Выполняем обработку задачи в зависимости от её типа
+      let result: any;
+      
+      switch (task.taskType) {
+        case TaskType.CLASSIFICATION:
+          result = await this.classifyContent(agent, task.content, task.metadata);
+          break;
+        case TaskType.SUMMARIZATION:
+          result = await this.summarizeContent(agent, task.content, task.metadata);
+          break;
+        case TaskType.RESPONSE:
+          result = await this.generateResponse(agent, task.content, task.metadata);
+          break;
+        case TaskType.ANALYTICS:
+          result = await this.analyzeData(agent, task.content, task.metadata);
+          break;
+        case TaskType.CITIZEN_REQUEST:
+          result = await this.processCitizenRequest(agent, task.content, task.metadata);
+          break;
+        case TaskType.DOCUMENT:
+          result = await this.processDocument(agent, task.content, task.metadata);
+          break;
+        case TaskType.PROTOCOL:
+          result = await this.processProtocol(agent, task.content, task.metadata);
+          break;
+        case TaskType.TRANSLATION:
+          result = await this.translateContent(agent, task.content, task.metadata);
+          break;
+        case TaskType.RAG:
+          result = await this.searchKnowledgeBase(agent, task.content, task.metadata);
+          break;
+        default:
+          throw new Error(`Неизвестный тип задачи: ${task.taskType}`);
+      }
+      
+      // Сохраняем результат обработки
+      const taskResult = await storage.updateAgentTask(taskRecord.id, {
+        status: 'completed',
+        result: JSON.stringify(result),
+        completedAt: new Date()
+      });
+      
+      // Записываем результат в блокчейн для обеспечения неизменности
+      let blockchainHash: string | undefined;
+      
+      try {
+        const blockchainRecord = await recordToBlockchain({
+          entityId: task.entityId,
+          entityType: BlockchainRecordType.AGENT_RESULT,
+          action: `agent_${task.taskType.toLowerCase()}`,
+          metadata: {
+            agentId: agent.id,
+            agentName: agent.name,
+            taskType: task.taskType,
+            taskId: taskRecord.id,
+            result: this.getBlockchainSummary(result),
+            timestamp: new Date().toISOString()
+          }
+        });
+        
+        blockchainHash = blockchainRecord.hash;
+        
+        // Обновляем хеш блокчейна в результате задачи
+        await storage.updateAgentTask(taskRecord.id, { blockchainHash });
+      } catch (blockchainError) {
+        console.error('Ошибка при записи в блокчейн:', blockchainError);
+      }
+      
+      // Логируем завершение задачи
+      await logActivity({
+        action: ActivityType.AI_PROCESSING,
+        entityType: task.entityType,
+        entityId: task.entityId,
+        details: `Завершена обработка агентом "${agent.name}". Результат получен${blockchainHash ? ` и зафиксирован в блокчейне` : ''}`
+      });
+      
+      return {
+        success: true,
+        taskId: taskRecord.id,
+        agentId: agent.id,
+        result,
+        blockchainHash
+      };
     } catch (error) {
-      console.error("Error in agent processing:", error);
+      console.error('Ошибка при обработке задачи агентом:', error);
       
       // Логируем ошибку
       await logActivity({
-        action: 'ai_process_error',
-        entityType: input.entityType,
-        entityId: input.entityId,
-        userId: input.userId,
-        details: `Ошибка обработки ${this.getEntityTypeName(input.entityType)} AI-агентом: ${error.message}`,
-        metadata: {
-          taskType: input.taskType,
-          error: error.message
-        }
+        action: ActivityType.AI_PROCESSING,
+        entityType: task.entityType,
+        entityId: task.entityId,
+        details: `Ошибка при обработке агентом: ${error.message}`
       });
       
       return {
         success: false,
+        taskId: -1,
+        agentId: task.agentId,
         error: error.message
       };
     }
   }
   
   /**
-   * Поиск подходящего агента для задачи
+   * Классифицирует содержимое с помощью агента
+   * @param agent Агент для классификации
+   * @param content Текст для классификации
+   * @param metadata Метаданные запроса
+   * @returns Результат классификации
    */
-  private findAgentForTask(taskType: AgentTaskType, entityType: AgentEntityType): Agent | undefined {
-    // Маппинг типов задач к типам агентов
-    const agentTypeMap: Record<string, string[]> = {
-      [AgentTaskType.CLASSIFICATION]: ['citizen_requests', 'general'],
-      [AgentTaskType.RESPONSE_GENERATION]: ['citizen_requests', 'general'],
-      [AgentTaskType.SUMMARIZATION]: ['summarizer', 'general'],
-      [AgentTaskType.TRANSCRIPTION]: ['meeting_protocols', 'general'],
-      [AgentTaskType.DOCUMENT_ANALYSIS]: ['summarizer', 'document_analyzer', 'general'],
-      [AgentTaskType.VALIDATION]: ['blockchain_validator', 'general']
+  private async classifyContent(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const prompt = this.buildPrompt(agent, 'classification', content, metadata);
+    const subject = metadata?.subject || '';
+    
+    // Включаем контекст из базы знаний, если это необходимо
+    let contextFromRAG = '';
+    if (agent.useRAG) {
+      const ragResults = await searchVectorStore(content + ' ' + subject, 3);
+      if (ragResults && ragResults.length > 0) {
+        contextFromRAG = '\nКонтекст из базы знаний:\n' + ragResults.map(r => `${r.text} (Релевантность: ${r.score.toFixed(2)})`).join('\n\n');
+      }
+    }
+    
+    // Собираем полный запрос к модели
+    const fullPrompt = prompt + (contextFromRAG ? contextFromRAG : '');
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(fullPrompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.2,
+      maxTokens: agent.maxTokens || 1000,
+      responseFormat: { type: 'json_object' }
+    });
+    
+    // Парсим JSON-ответ
+    try {
+      const result = JSON.parse(modelResponse);
+      return {
+        classification: result.category || 'other',
+        confidence: result.confidence || 0.5,
+        priority: result.priority || 'medium',
+        summary: result.summary || '',
+        keywords: result.keywords || [],
+        needsHumanReview: result.needsHumanReview || false
+      };
+    } catch (error) {
+      console.error('Ошибка при парсинге ответа модели:', error);
+      // Возвращаем базовую классификацию при ошибке
+      return {
+        classification: 'other',
+        confidence: 0.3,
+        priority: 'medium',
+        summary: 'Ошибка классификации',
+        keywords: [],
+        needsHumanReview: true
+      };
+    }
+  }
+  
+  /**
+   * Суммаризирует текст с помощью агента
+   * @param agent Агент для суммаризации
+   * @param content Текст для суммаризации
+   * @param metadata Метаданные запроса
+   * @returns Результат суммаризации
+   */
+  private async summarizeContent(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const prompt = this.buildPrompt(agent, 'summarization', content, metadata);
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(prompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.3,
+      maxTokens: agent.maxTokens || 1000
+    });
+    
+    return {
+      summary: modelResponse.trim(),
+      wordCount: modelResponse.trim().split(/\s+/).length
     };
+  }
+  
+  /**
+   * Генерирует ответ на текст с помощью агента
+   * @param agent Агент для генерации ответа
+   * @param content Текст для ответа
+   * @param metadata Метаданные запроса
+   * @returns Сгенерированный ответ
+   */
+  private async generateResponse(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const prompt = this.buildPrompt(agent, 'response', content, metadata);
     
-    // Маппинг типов сущностей к типам агентов
-    const entityTypeMap: Record<string, string[]> = {
-      [AgentEntityType.CITIZEN_REQUEST]: ['citizen_requests', 'general'],
-      [AgentEntityType.PROTOCOL]: ['meeting_protocols', 'general'],
-      [AgentEntityType.DOCUMENT]: ['document_analyzer', 'summarizer', 'general'],
-      [AgentEntityType.DAO_PROPOSAL]: ['dao_agent', 'general'],
-      [AgentEntityType.BLOCKCHAIN_RECORD]: ['blockchain_validator', 'general']
+    // Включаем контекст из базы знаний, если это необходимо
+    let contextFromRAG = '';
+    if (agent.useRAG) {
+      const subject = metadata?.subject || '';
+      const classification = metadata?.classification || '';
+      const query = content + ' ' + subject + ' ' + classification;
+      
+      const ragResults = await searchVectorStore(query, 5);
+      if (ragResults && ragResults.length > 0) {
+        contextFromRAG = '\nИнформация из базы знаний:\n' + ragResults.map(r => `${r.text} (Релевантность: ${r.score.toFixed(2)})`).join('\n\n');
+      }
+    }
+    
+    // Собираем полный запрос к модели
+    const fullPrompt = prompt + (contextFromRAG ? contextFromRAG : '');
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(fullPrompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.7,
+      maxTokens: agent.maxTokens || 2000
+    });
+    
+    return {
+      response: modelResponse.trim(),
+      isAutoGenerated: true,
+      modelName: agent.modelName
     };
+  }
+  
+  /**
+   * Анализирует данные с помощью агента
+   * @param agent Агент для анализа данных
+   * @param content Данные для анализа
+   * @param metadata Метаданные запроса
+   * @returns Результат анализа
+   */
+  private async analyzeData(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const prompt = this.buildPrompt(agent, 'analytics', content, metadata);
     
-    // Получаем списки подходящих типов агентов
-    const taskAgentTypes = agentTypeMap[taskType] || ['general'];
-    const entityAgentTypes = entityTypeMap[entityType] || ['general'];
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(prompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.2,
+      maxTokens: agent.maxTokens || 1500,
+      responseFormat: { type: 'json_object' }
+    });
     
-    // Ищем агента, который подходит и для задачи, и для типа сущности
-    for (const agentType of taskAgentTypes) {
-      if (entityAgentTypes.includes(agentType) && this.agentCache.has(agentType)) {
-        return this.agentCache.get(agentType);
-      }
-    }
-    
-    // Если не нашли точное совпадение, возвращаем первого подходящего агента для задачи
-    for (const agentType of taskAgentTypes) {
-      if (this.agentCache.has(agentType)) {
-        return this.agentCache.get(agentType);
-      }
-    }
-    
-    // Если совсем не нашли, возвращаем общего агента
-    return this.agentCache.get('general');
-  }
-  
-  /**
-   * Определение языка контента
-   */
-  private async detectContentLanguage(content: string): Promise<string> {
+    // Парсим JSON-ответ
     try {
-      const result = await detectLanguage(content);
-      return result || 'ru';
+      return JSON.parse(modelResponse);
     } catch (error) {
-      console.error("Error detecting language:", error);
-      return 'ru'; // По умолчанию русский
-    }
-  }
-  
-  /**
-   * Классификация контента
-   */
-  private async performClassification(agent: Agent, input: AgentInput, language: string): Promise<AgentResult> {
-    try {
-      // Используем системный промпт агента или формируем стандартный
-      const systemPrompt = agent.systemPrompt || 
-        `Вы эксперт по классификации ${this.getEntityTypeName(input.entityType)} на русском и казахском языках. 
-         Пожалуйста, проанализируйте содержимое и определите наиболее подходящую категорию.
-         Возвращайте только название категории без дополнительных объяснений.`;
-      
-      const userPrompt = `Пожалуйста, классифицируйте следующее содержимое:
-      
-      ${input.content}
-      
-      Возможные категории:
-      - Запрос информации
-      - Жалоба на госорган
-      - Жалоба на должностное лицо
-      - Предложение по улучшению
-      - Запрос на получение услуги
-      - Консультация
-      - Иное
-      
-      Пожалуйста, укажите только одну наиболее подходящую категорию.`;
-      
-      const classification = await processUserMessage(systemPrompt, userPrompt);
-      
+      console.error('Ошибка при парсинге ответа модели:', error);
       return {
-        success: true,
-        classification,
-        output: classification,
-        metadata: {
-          agentId: agent.id,
-          agentName: agent.name,
-          language
-        }
-      };
-    } catch (error) {
-      console.error("Classification error:", error);
-      return {
-        success: false,
-        error: `Ошибка классификации: ${error.message}`
+        error: 'Ошибка анализа данных',
+        rawResponse: modelResponse
       };
     }
   }
   
   /**
-   * Генерация ответа
+   * Обрабатывает обращение гражданина с помощью агента
+   * @param agent Агент для обработки обращения
+   * @param content Текст обращения
+   * @param metadata Метаданные обращения
+   * @returns Результат обработки
    */
-  private async generateResponse(agent: Agent, input: AgentInput, language: string): Promise<AgentResult> {
-    try {
-      // Проверяем, есть ли у агента базы знаний
-      let contextFromKB = '';
-      let usedKnowledgeBase = false;
-      
-      if (agent.id) {
-        try {
-          // Получаем базы знаний для агента
-          const knowledgeBases = await storage.getAgentKnowledgeBases(agent.id);
-          
-          if (knowledgeBases && knowledgeBases.length > 0) {
-            // Выбираем первую базу знаний (в будущем можно улучшить логику выбора)
-            const kb = knowledgeBases[0];
-            console.log(`Using knowledge base ${kb.name} for agent ${agent.name}`);
-            
-            // Используем KnowledgeService для получения релевантного контекста
-            const knowledgeService = new KnowledgeService({
-              type: 'openai',
-              modelName: 'text-embedding-ada-002',
-              apiKey: process.env.OPENAI_API_KEY
-            });
-            
-            const ragResults = await knowledgeService.searchDocuments(kb.id, input.content, 3);
-            if (ragResults && ragResults.passages && ragResults.passages.length > 0) {
-              // Формируем контекст из найденных документов
-              contextFromKB = "КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:\n\n" + 
-                ragResults.passages.map(doc => doc.content).join("\n\n") + 
-                "\n\nИспользуй эту информацию при составлении ответа, но не указывай явно, что она из базы знаний.";
-              
-              usedKnowledgeBase = true;
-              console.log(`Retrieved ${ragResults.passages.length} relevant documents from knowledge base`);
-            }
-          }
-        } catch (kbError) {
-          console.error('Error retrieving knowledge base information:', kbError);
-          // Продолжаем без базы знаний
-        }
-      }
-      
-      // Используем системный промпт агента или формируем стандартный
-      const systemPrompt = agent.systemPrompt || 
-        `Вы государственный служащий, эксперт по обработке обращений граждан.
-         Ваша задача - дать четкий, вежливый и полезный ответ на обращение гражданина.
-         Ответ должен быть в соответствии с законодательством Республики Казахстан.
-         Используйте официальный, но дружелюбный тон. Не используйте жаргон или сложную терминологию.
-
-         ВАЖНО: Ответ должен напрямую относиться к сути обращения. Не давайте информацию, не связанную с темой обращения.
-         Например, если гражданин спрашивает о проблеме с ЭЦП, не давайте информацию о справке о несудимости.
-         Ваш ответ должен содержать конкретные шаги или рекомендации по решению проблемы, описанной в обращении.
-         
-         ${contextFromKB}`;
-      
-      const userPrompt = `Пожалуйста, сформируйте ответ на следующее обращение гражданина:
-      
-      Обращение: "${input.content}"
-      
-      ${input.metadata?.classification ? `Классификация обращения: ${input.metadata.classification}` : ''}
-      
-      Ваш ответ должен быть:
-      1. Непосредственно связан с темой обращения
-      2. Содержать конкретные рекомендации по решению проблемы
-      3. Содержать информацию о том, куда может обратиться гражданин за дополнительной помощью
-      
-      Сейчас ваша роль – специалист по обработке обращений граждан, который должен дать полный и информативный ответ, решающий проблему гражданина.
-
-      Сформулируйте ответ в формате официального ответа на обращение гражданина.`;
-      
-      console.log("Generating response to citizen request with prompt:", userPrompt);
-      const response = await processUserMessage(systemPrompt, userPrompt);
-      console.log("Generated response:", response);
-      
-      return {
-        success: true,
-        output: response,
-        metadata: {
-          agentId: agent.id,
-          agentName: agent.name,
-          language,
-          usedKnowledgeBase,
-          ragEnabled: usedKnowledgeBase
-        }
-      };
-    } catch (error) {
-      console.error("Response generation error:", error);
-      return {
-        success: false,
-        error: `Ошибка генерации ответа: ${error.message}`
-      };
-    }
-  }
-  
-  /**
-   * Суммаризация контента
-   */
-  private async summarizeContent(agent: Agent, input: AgentInput, language: string): Promise<AgentResult> {
-    try {
-      const summary = await summarizeDocument(input.content);
-      
-      return {
-        success: true,
-        output: summary,
-        summary,
-        metadata: {
-          agentId: agent.id,
-          agentName: agent.name,
-          language,
-          originalLength: input.content.length,
-          summaryLength: summary.length
-        }
-      };
-    } catch (error) {
-      console.error("Summarization error:", error);
-      return {
-        success: false,
-        error: `Ошибка суммаризации: ${error.message}`
-      };
-    }
-  }
-  
-  /**
-   * Анализ документа
-   */
-  private async analyzeDocument(agent: Agent, input: AgentInput, language: string): Promise<AgentResult> {
-    try {
-      // Используем системный промпт агента или формируем стандартный
-      const systemPrompt = agent.systemPrompt || 
-        `Вы эксперт по анализу документов.
-         Проанализируйте содержимое документа и выделите ключевые моменты, участников, сроки и обязательства.
-         Структурируйте ответ по разделам.`;
-      
-      const userPrompt = `Пожалуйста, проанализируйте следующий документ:
-      
-      ${input.content}
-      
-      Выделите:
-      1. Ключевые факты и выводы
-      2. Участники и их роли
-      3. Сроки и важные даты
-      4. Обязательства и ответственные
-      5. Рекомендации`;
-      
-      const analysis = await processUserMessage(systemPrompt, userPrompt);
-      
-      // Примитивное извлечение структурированных данных из текста анализа
-      const analysisData = this.extractStructuredDataFromText(analysis);
-      
-      return {
-        success: true,
-        output: analysis,
-        analysis: analysisData,
-        metadata: {
-          agentId: agent.id,
-          agentName: agent.name,
-          language
-        }
-      };
-    } catch (error) {
-      console.error("Document analysis error:", error);
-      return {
-        success: false,
-        error: `Ошибка анализа документа: ${error.message}`
-      };
-    }
-  }
-  
-  /**
-   * Валидация записи в блокчейне
-   */
-  private async validateBlockchainRecord(agent: Agent, input: AgentInput): Promise<AgentResult> {
-    try {
-      // Здесь должна быть реальная валидация через Moralis API
-      // На данный момент просто возвращаем успешный результат
-      return {
-        success: true,
-        output: "Запись в блокчейне валидна",
-        metadata: {
-          agentId: agent.id,
-          agentName: agent.name,
-          validationTimestamp: new Date().toISOString()
-        }
-      };
-    } catch (error) {
-      console.error("Blockchain validation error:", error);
-      return {
-        success: false,
-        error: `Ошибка валидации блокчейн-записи: ${error.message}`
-      };
-    }
-  }
-  
-  /**
-   * Запись результата работы агента в блокчейн через Hyperledger Besu
-   */
-  private async recordResultToBlockchain(
-    input: AgentInput, 
-    result: AgentResult, 
-    agentId: number
-  ): Promise<{ transactionHash: string }> {
-    try {
-      // Определяем тип действия на основе типа задачи
-      let action: string;
-      switch (input.taskType) {
-        case AgentTaskType.CLASSIFICATION:
-          action = 'classification';
-          break;
-        case AgentTaskType.RESPONSE_GENERATION:
-          action = 'response_generation';
-          break;
-        case AgentTaskType.SUMMARIZATION:
-          action = 'summarization';
-          break;
-        case AgentTaskType.DOCUMENT_ANALYSIS:
-          action = 'document_analysis';
-          break;
-        case AgentTaskType.VALIDATION:
-          action = 'validation';
-          break;
-        default:
-          action = 'processing';
-      }
-      
-      // Формируем данные для записи в блокчейн
-      const blockchainData = {
-        type: this.mapEntityTypeToBlockchainType(input.entityType),
-        title: `AI processing: ${input.taskType} of ${input.entityType}`,
-        content: result.output || result.summary || JSON.stringify(result.analysis),
-        entityId: input.entityId || 0,
-        entityType: input.entityType,
-        action: action,
-        metadata: {
-          taskType: input.taskType,
-          agentId,
-          timestamp: new Date().toISOString(),
-          userId: input.userId,
-          language: input.language,
-          ...result.metadata
-        }
-      };
-      
-      // Записываем в блокчейн через Hyperledger Besu (через Moralis API)
-      console.log(`Recording agent result to Hyperledger Besu blockchain: ${action} of ${input.entityType}`);
-      const blockchainResult = await recordToBlockchain(blockchainData);
-      
-      // Сохраняем результат в агентских результатах
-      if (input.entityId) {
-        // Преобразуем taskType в actionType для совместимости с API и хранилищем
-        let actionType = action; // Используем переменную action, определенную ранее
+  private async processCitizenRequest(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    // В зависимости от подтипа агента, вызываем соответствующую функцию
+    switch (agent.subtype) {
+      case 'classification':
+        return await this.classifyContent(agent, content, metadata);
+      case 'response':
+        return await this.generateResponse(agent, content, metadata);
+      case 'routing':
+        // Логика маршрутизации обращения
+        const classificationResult = await this.classifyContent(agent, content, metadata);
         
-        await storage.createAgentResult({
-          agentId,
-          entityType: input.entityType,
-          entityId: input.entityId,
-          actionType: actionType, // Используем преобразованный actionType
-          result: result, // Уже является объектом, не нужно преобразовывать в JSON
-          feedback: null
+        // Определение подразделения на основе классификации
+        return {
+          ...classificationResult,
+          routing: {
+            department: this.mapCategoryToDepartment(classificationResult.classification),
+            priority: classificationResult.priority,
+            needsHumanApproval: classificationResult.confidence < 0.7
+          }
+        };
+      default:
+        // Общая обработка обращения
+        const prompt = this.buildPrompt(agent, 'citizen_request', content, metadata);
+        
+        // Получаем ответ от модели
+        const modelResponse = await fetchModelResponse(prompt, {
+          model: agent.modelName,
+          temperature: agent.temperature || 0.4,
+          maxTokens: agent.maxTokens || 1500,
+          responseFormat: { type: 'json_object' }
         });
-      }
+        
+        try {
+          return JSON.parse(modelResponse);
+        } catch (error) {
+          console.error('Ошибка при парсинге ответа модели:', error);
+          return {
+            error: 'Ошибка обработки обращения',
+            rawResponse: modelResponse
+          };
+        }
+    }
+  }
+  
+  /**
+   * Обрабатывает документ с помощью агента
+   * @param agent Агент для обработки документа
+   * @param content Текст документа
+   * @param metadata Метаданные документа
+   * @returns Результат обработки
+   */
+  private async processDocument(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const prompt = this.buildPrompt(agent, 'document', content, metadata);
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(prompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.3,
+      maxTokens: agent.maxTokens || 1500
+    });
+    
+    return {
+      analysis: modelResponse.trim(),
+      documentType: metadata?.documentType || 'general',
+      processedAt: new Date().toISOString()
+    };
+  }
+  
+  /**
+   * Обрабатывает протокол с помощью агента
+   * @param agent Агент для обработки протокола
+   * @param content Текст протокола
+   * @param metadata Метаданные протокола
+   * @returns Результат обработки
+   */
+  private async processProtocol(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const prompt = this.buildPrompt(agent, 'protocol', content, metadata);
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(prompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.2,
+      maxTokens: agent.maxTokens || 2000,
+      responseFormat: { type: 'json_object' }
+    });
+    
+    try {
+      const parsedResponse = JSON.parse(modelResponse);
       
-      return { 
-        transactionHash: blockchainResult.transactionHash
+      // Формируем структурированный результат
+      return {
+        summary: parsedResponse.summary || '',
+        participants: parsedResponse.participants || [],
+        decisions: parsedResponse.decisions || [],
+        tasks: parsedResponse.tasks || [],
+        deadlines: parsedResponse.deadlines || [],
+        mainTopics: parsedResponse.mainTopics || []
       };
     } catch (error) {
-      console.error("Error recording to blockchain:", error);
-      return { 
-        transactionHash: 'error_recording_' + Date.now()
+      console.error('Ошибка при парсинге ответа модели:', error);
+      return {
+        error: 'Ошибка обработки протокола',
+        rawResponse: modelResponse
       };
     }
   }
   
   /**
-   * Преобразование типа сущности в тип блокчейн-записи
+   * Переводит текст с помощью агента
+   * @param agent Агент для перевода
+   * @param content Текст для перевода
+   * @param metadata Метаданные запроса
+   * @returns Результат перевода
    */
-  private mapEntityTypeToBlockchainType(entityType: AgentEntityType): BlockchainRecordType {
-    const mapping: Record<AgentEntityType, BlockchainRecordType> = {
-      [AgentEntityType.CITIZEN_REQUEST]: BlockchainRecordType.CITIZEN_REQUEST,
-      [AgentEntityType.PROTOCOL]: BlockchainRecordType.DOCUMENT,
-      [AgentEntityType.TASK]: BlockchainRecordType.TASK,
-      [AgentEntityType.DOCUMENT]: BlockchainRecordType.DOCUMENT,
-      [AgentEntityType.DAO_PROPOSAL]: BlockchainRecordType.SYSTEM_EVENT,
-      [AgentEntityType.BLOCKCHAIN_RECORD]: BlockchainRecordType.SYSTEM_EVENT,
-    };
+  private async translateContent(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    const sourceLanguage = metadata?.sourceLanguage || 'auto';
+    const targetLanguage = metadata?.targetLanguage || 'ru';
     
-    return mapping[entityType] || BlockchainRecordType.SYSTEM_EVENT;
+    const prompt = this.buildPrompt(agent, 'translation', content, {
+      ...metadata,
+      sourceLanguage,
+      targetLanguage
+    });
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(prompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.3,
+      maxTokens: agent.maxTokens || 2000
+    });
+    
+    return {
+      translatedText: modelResponse.trim(),
+      sourceLanguage,
+      targetLanguage,
+      wordCount: modelResponse.trim().split(/\s+/).length
+    };
   }
   
   /**
-   * Преобразование типа задачи (taskType) в тип действия (actionType)
-   * для совместимости с базой данных и API
+   * Ищет информацию в базе знаний
+   * @param agent Агент для поиска
+   * @param content Запрос для поиска
+   * @param metadata Метаданные запроса
+   * @returns Результат поиска
    */
-  private mapTaskTypeToActionType(taskType: AgentTaskType): string {
-    const mapping: Record<string, string> = {
-      [AgentTaskType.CLASSIFICATION]: 'classification',
-      [AgentTaskType.RESPONSE_GENERATION]: 'response',
-      [AgentTaskType.SUMMARIZATION]: 'summarization',
-      [AgentTaskType.TRANSCRIPTION]: 'transcription',
-      [AgentTaskType.TRANSLATION]: 'translation',
-      [AgentTaskType.VALIDATION]: 'validation',
-      [AgentTaskType.DATA_ANALYSIS]: 'analysis',
-      [AgentTaskType.DOCUMENT_ANALYSIS]: 'document_analysis',
-    };
+  private async searchKnowledgeBase(agent: Agent, content: string, metadata?: Record<string, any>): Promise<any> {
+    // Выполняем поиск в векторном хранилище
+    const limit = metadata?.limit || 5;
+    const ragResults = await searchVectorStore(content, limit);
     
-    return mapping[taskType] || 'processing';
-  }
-  
-  /**
-   * Получение названия типа сущности на русском
-   */
-  private getEntityTypeName(entityType: AgentEntityType): string {
-    const names: Record<AgentEntityType, string> = {
-      [AgentEntityType.CITIZEN_REQUEST]: 'обращения гражданина',
-      [AgentEntityType.PROTOCOL]: 'протокола совещания',
-      [AgentEntityType.TASK]: 'задачи',
-      [AgentEntityType.DOCUMENT]: 'документа',
-      [AgentEntityType.DAO_PROPOSAL]: 'предложения DAO',
-      [AgentEntityType.BLOCKCHAIN_RECORD]: 'блокчейн-записи',
-    };
-    
-    return names[entityType] || entityType;
-  }
-  
-  /**
-   * Извлечение структурированных данных из текста
-   */
-  private extractStructuredDataFromText(text: string): Record<string, any> {
-    const sections: Record<string, string> = {};
-    
-    // Простая эвристика для разбиения на разделы по цифрам с точкой в начале строки
-    const sectionRegex = /^\s*(\d+)\.\s+(.*?)(?=\n\s*\d+\.|$)/gms;
-    let match;
-    
-    while ((match = sectionRegex.exec(text)) !== null) {
-      const [, num, content] = match;
-      sections[`section_${num}`] = content.trim();
+    if (!ragResults || ragResults.length === 0) {
+      return {
+        query: content,
+        results: [],
+        answer: 'Информация не найдена в базе знаний.'
+      };
     }
     
-    return sections;
+    // Формируем вопрос к модели с контекстом из базы знаний
+    const prompt = `
+      Запрос пользователя: ${content}
+      
+      Информация из базы знаний:
+      ${ragResults.map((r, i) => `[${i+1}] ${r.text}`).join('\n\n')}
+      
+      На основе предоставленной информации, пожалуйста, составь точный и информативный ответ на запрос пользователя.
+      Если информации недостаточно, укажи это. Если информация противоречива, отметь это.
+    `;
+    
+    // Получаем ответ от модели
+    const modelResponse = await fetchModelResponse(prompt, {
+      model: agent.modelName,
+      temperature: agent.temperature || 0.3,
+      maxTokens: agent.maxTokens || 1500
+    });
+    
+    return {
+      query: content,
+      results: ragResults.map(r => ({
+        text: r.text,
+        score: r.score,
+        source: r.source || 'база знаний'
+      })),
+      answer: modelResponse.trim()
+    };
+  }
+  
+  /**
+   * Строит промпт для модели в зависимости от типа задачи
+   * @param agent Агент для обработки
+   * @param taskType Тип задачи
+   * @param content Содержимое для обработки
+   * @param metadata Метаданные
+   * @returns Готовый промпт для модели
+   */
+  private buildPrompt(agent: Agent, taskType: string, content: string, metadata?: Record<string, any>): string {
+    // Если у агента есть собственный шаблон, используем его
+    if (agent.promptTemplate) {
+      return this.fillPromptTemplate(agent.promptTemplate, {
+        content,
+        ...metadata
+      });
+    }
+    
+    // Иначе используем стандартные шаблоны в зависимости от типа задачи
+    switch (taskType) {
+      case 'classification':
+        return `
+          Ты экспертный классификатор обращений граждан и документов.
+          
+          Задача: Классифицировать следующее обращение гражданина и определить его приоритет.
+          
+          ${metadata?.subject ? `Тема: ${metadata.subject}\n` : ''}
+          ${metadata?.fullName ? `Заявитель: ${metadata.fullName}\n` : ''}
+          
+          Обращение:
+          ${content}
+          
+          Пожалуйста, проанализируй обращение и верни ответ в формате JSON:
+          {
+            "category": "complaint" | "proposal" | "application" | "information_request" | "appeal" | "gratitude" | "general" | "other",
+            "confidence": <число от 0 до 1, отражающее уверенность в классификации>,
+            "priority": "low" | "medium" | "high" | "urgent",
+            "summary": <краткое изложение сути обращения, не более 100 слов>,
+            "keywords": [<ключевые слова, характеризующие обращение>],
+            "needsHumanReview": <true/false, нужна ли проверка человеком>
+          }
+        `;
+      
+      case 'summarization':
+        return `
+          Ты эксперт по составлению резюме текстов.
+          
+          Задача: Составить краткое и информативное резюме следующего текста, сохраняя все ключевые моменты и существенную информацию.
+          
+          ${metadata?.title ? `Название: ${metadata.title}\n` : ''}
+          ${metadata?.context ? `Контекст: ${metadata.context}\n` : ''}
+          
+          Текст для резюмирования:
+          ${content}
+          
+          Пожалуйста, составь краткое резюме, выделяя главные мысли и ключевые моменты.
+        `;
+      
+      case 'response':
+        return `
+          Ты официальный представитель государственного органа, отвечающий на обращения граждан.
+          
+          Задача: Составить официальный, вежливый и информативный ответ на следующее обращение гражданина.
+          
+          ${metadata?.subject ? `Тема обращения: ${metadata.subject}\n` : ''}
+          ${metadata?.fullName ? `Заявитель: ${metadata.fullName}\n` : ''}
+          ${metadata?.classification ? `Классификация: ${metadata.classification}\n` : ''}
+          ${metadata?.summary ? `Краткое содержание: ${metadata.summary}\n` : ''}
+          
+          Обращение:
+          ${content}
+          
+          Пожалуйста, составь официальный, юридически корректный и вежливый ответ на данное обращение. 
+          Ответ должен быть информативным, направленным на решение проблемы заявителя, и содержать 
+          конкретные шаги или рекомендации, если это применимо.
+        `;
+      
+      case 'analytics':
+        return `
+          Ты аналитик данных и текстовой информации.
+          
+          Задача: Проанализировать следующие данные и предоставить структурированный анализ.
+          
+          ${metadata?.context ? `Контекст: ${metadata.context}\n` : ''}
+          ${metadata?.dataType ? `Тип данных: ${metadata.dataType}\n` : ''}
+          
+          Данные для анализа:
+          ${content}
+          
+          Проведи детальный анализ предоставленных данных и верни результат в формате JSON со следующими ключами:
+          - mainThemes (основные темы)
+          - keyInsights (ключевые выводы)
+          - trends (тренды или закономерности)
+          - recommendations (рекомендации на основе анализа)
+          - dataQuality (оценка качества данных)
+        `;
+      
+      case 'protocol':
+        return `
+          Ты секретарь, обрабатывающий протоколы совещаний и встреч.
+          
+          Задача: Проанализировать протокол совещания и извлечь ключевую информацию.
+          
+          ${metadata?.title ? `Название совещания: ${metadata.title}\n` : ''}
+          ${metadata?.date ? `Дата: ${metadata.date}\n` : ''}
+          ${metadata?.attendees ? `Присутствовали: ${metadata.attendees}\n` : ''}
+          
+          Протокол совещания:
+          ${content}
+          
+          Пожалуйста, проанализируй протокол и верни результат в формате JSON со следующими ключами:
+          - summary (краткое резюме совещания)
+          - participants (список участников с ролями)
+          - decisions (список принятых решений)
+          - tasks (список поставленных задач с исполнителями)
+          - deadlines (сроки выполнения задач)
+          - mainTopics (основные обсуждаемые темы)
+        `;
+      
+      case 'translation':
+        const sourceLanguage = metadata?.sourceLanguage || 'auto';
+        const targetLanguage = metadata?.targetLanguage || 'ru';
+        
+        return `
+          Ты профессиональный переводчик.
+          
+          Задача: Перевести следующий текст ${sourceLanguage !== 'auto' ? `с ${sourceLanguage}` : ''} на ${targetLanguage}.
+          
+          Текст для перевода:
+          ${content}
+          
+          Пожалуйста, выполни качественный перевод, сохраняя стиль и смысл оригинального текста.
+        `;
+      
+      case 'citizen_request':
+        return `
+          Ты специалист по обработке обращений граждан в государственном органе.
+          
+          Задача: Обработать следующее обращение гражданина.
+          
+          ${metadata?.subject ? `Тема обращения: ${metadata.subject}\n` : ''}
+          ${metadata?.fullName ? `Заявитель: ${metadata.fullName}\n` : ''}
+          ${metadata?.contactInfo ? `Контактная информация: ${metadata.contactInfo}\n` : ''}
+          
+          Обращение:
+          ${content}
+          
+          Пожалуйста, проанализируй обращение и верни результат в формате JSON со следующими ключами:
+          - category (категория обращения)
+          - priority (приоритет обращения)
+          - summary (краткое содержание)
+          - suggestedResponse (предлагаемый ответ)
+          - nextSteps (рекомендуемые следующие шаги)
+          - estimatedTimeToResolve (примерное время решения в днях)
+        `;
+      
+      case 'document':
+        return `
+          Ты специалист по обработке официальных документов.
+          
+          Задача: Проанализировать следующий документ и извлечь ключевую информацию.
+          
+          ${metadata?.documentType ? `Тип документа: ${metadata.documentType}\n` : ''}
+          ${metadata?.title ? `Название: ${metadata.title}\n` : ''}
+          ${metadata?.date ? `Дата: ${metadata.date}\n` : ''}
+          
+          Документ:
+          ${content}
+          
+          Пожалуйста, проанализируй документ и предоставь:
+          1. Краткое резюме документа
+          2. Основные положения и требования
+          3. Сроки и условия, если указаны
+          4. Рекомендации по дальнейшей обработке документа
+        `;
+      
+      default:
+        return `
+          Задача: Обработать следующий текст.
+          
+          ${metadata?.context ? `Контекст: ${metadata.context}\n` : ''}
+          
+          Текст:
+          ${content}
+          
+          Пожалуйста, обработай этот текст наилучшим образом, учитывая контекст.
+        `;
+    }
+  }
+  
+  /**
+   * Заполняет шаблон промпта данными
+   * @param template Шаблон промпта
+   * @param data Данные для вставки в шаблон
+   * @returns Заполненный промпт
+   */
+  private fillPromptTemplate(template: string, data: Record<string, any>): string {
+    return template.replace(/\$\{([^}]+)\}/g, (match, key) => {
+      const value = data[key];
+      return value !== undefined ? String(value) : match;
+    });
+  }
+  
+  /**
+   * Определяет подразделение на основе категории обращения
+   * @param category Категория обращения
+   * @returns Название ответственного подразделения
+   */
+  private mapCategoryToDepartment(category: string): string {
+    const mapping: Record<string, string> = {
+      'complaint': 'Отдел по работе с гражданами',
+      'proposal': 'Канцелярия',
+      'application': 'Отдел по работе с гражданами',
+      'information_request': 'Канцелярия',
+      'appeal': 'Юридический отдел',
+      'gratitude': 'Отдел по работе с гражданами',
+      'general': 'Отдел по работе с гражданами',
+      'other': 'Канцелярия'
+    };
+    
+    return mapping[category] || 'Канцелярия';
+  }
+  
+  /**
+   * Получает краткое описание результата для сохранения в блокчейне
+   * @param result Полный результат обработки
+   * @returns Сокращенная версия результата для блокчейна
+   */
+  private getBlockchainSummary(result: any): any {
+    // Ограничиваем размер данных для блокчейна
+    const stringifiedResult = JSON.stringify(result);
+    
+    if (stringifiedResult.length <= 1000) {
+      return result;
+    }
+    
+    // Для больших результатов создаем компактную версию
+    if (result.classification) {
+      return {
+        classification: result.classification,
+        confidence: result.confidence,
+        priority: result.priority,
+        summaryLength: result.summary?.length || 0
+      };
+    }
+    
+    if (result.summary) {
+      return {
+        summaryPreview: result.summary.substring(0, 200) + '...',
+        fullResultSize: stringifiedResult.length
+      };
+    }
+    
+    if (result.response) {
+      return {
+        responsePreview: result.response.substring(0, 200) + '...',
+        fullResultSize: stringifiedResult.length
+      };
+    }
+    
+    // Общий случай
+    return {
+      resultPreview: 'Полный результат слишком большой для сохранения в блокчейне',
+      fullResultSize: stringifiedResult.length,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 
-// Создаем экземпляр сервиса
+// Экспортируем сервис для использования в других модулях
 export const agentService = new AgentService();
-
-// Инициализируем сервис при запуске
-agentService.initialize().catch(err => {
-  console.error("Failed to initialize agent service:", err);
-});
