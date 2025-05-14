@@ -163,7 +163,7 @@ export function ContextualNotification({
 }
 
 interface ContextualNotificationsContainerProps {
-  notifications: Notification[];
+  notifications: INotification[];
   onClose: (id: string) => void;
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
   maxNotifications?: number;
