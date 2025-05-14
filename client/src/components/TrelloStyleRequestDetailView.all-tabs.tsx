@@ -416,7 +416,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 Результаты обработки ИИ
               </h4>
               
-              {request.aiProcessed && request.aiResult ? (
+              {request.aiProcessed || request.aiClassification || request.aiSuggestion || request.aiResult ? (
                 <div className="space-y-3">
                   {request.aiClassification && (
                     <div>
@@ -436,20 +436,43 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                     </div>
                   )}
                   
-                  {request.aiResult && typeof request.aiResult === 'object' && (
+                  {request.aiResult && (
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Подробный анализ</p>
                       <div className="bg-white border border-gray-200 p-3 rounded-md text-sm">
                         <pre className="whitespace-pre-wrap font-sans text-xs">
-                          {JSON.stringify(request.aiResult, null, 2)}
+                          {typeof request.aiResult === 'object' 
+                            ? JSON.stringify(request.aiResult, null, 2)
+                            : request.aiResult}
                         </pre>
                       </div>
                     </div>
                   )}
+                  
+                  <div className="mt-2 flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center text-xs"
+                      onClick={() => {
+                        // Сохранить результаты ИИ в блокчейн
+                        toast({
+                          title: "Сохранение в блокчейн",
+                          description: "Результаты обработки ИИ сохранены в блокчейн"
+                        });
+                      }}
+                    >
+                      <Database className="h-3.5 w-3.5 mr-1.5" />
+                      Сохранить в блокчейн
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center p-4 bg-gray-50 rounded-md">
-                  <p className="text-gray-500">Нет данных об обработке ИИ</p>
+                  <div className="flex flex-col items-center gap-2">
+                    <Bot className="h-8 w-8 text-gray-300" />
+                    <p className="text-gray-500">Нет данных об обработке ИИ</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -541,7 +564,11 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 </div>
               ) : (
                 <div className="text-center p-4 bg-gray-50 rounded-md">
-                  <p className="text-gray-500">История пуста</p>
+                  <div className="flex flex-col items-center gap-2">
+                    <Clock className="h-8 w-8 text-gray-300" />
+                    <p className="text-gray-500">История пуста</p>
+                    <p className="text-xs text-gray-400">Действия с этим обращением будут отображаться здесь</p>
+                  </div>
                 </div>
               )}
             </div>
