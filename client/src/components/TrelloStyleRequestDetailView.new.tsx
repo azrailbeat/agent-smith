@@ -517,34 +517,34 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           </div>
 
           {/* Секция История */}
-          <div className="border-b p-3 bg-gray-50">
+          <div className="border-b p-4 bg-gray-50">
             <h3 className="text-lg font-medium">История</h3>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             {/* История действий */}
             <div className="space-y-4">
-              <h4 className="text-sm font-medium flex items-center mb-2">
-                <Clock className="h-4 w-4 text-blue-500 mr-2" />
+              <h4 className="text-base font-semibold flex items-center mb-4">
+                <History className="h-5 w-5 text-blue-500 mr-2" />
                 История обращения
               </h4>
               
               {activitiesLoading ? (
-                <div className="text-center p-4">
-                  <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2" />
-                  <p className="text-gray-500">Загрузка истории...</p>
+                <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-100">
+                  <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3 text-blue-500" />
+                  <p className="text-gray-600 font-medium">Загрузка истории...</p>
                 </div>
               ) : activities && Array.isArray(activities) && activities.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {activities.map((activity: Activity, index: number) => (
-                    <div key={index} className="bg-gray-50 p-3 rounded-md border border-gray-100">
-                      <div className="flex items-center justify-between mb-1">
+                    <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
-                          <div className="bg-white rounded-full h-6 w-6 mr-2 flex items-center justify-center border border-gray-200">
+                          <div className="bg-white rounded-full h-8 w-8 mr-3 flex items-center justify-center border border-gray-200 shadow-sm">
                             {getActionIcon(activity.actionType)}
                           </div>
                           <span className="font-medium text-sm">{getActionTypeLabel(activity.actionType)}</span>
                         </div>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-md border border-gray-100">
                           {new Date(activity.createdAt).toLocaleString('ru-RU')}
                         </span>
                       </div>
