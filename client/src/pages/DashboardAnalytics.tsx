@@ -37,6 +37,7 @@ import { TaskDistributionChart } from "@/components/analytics/TaskDistributionCh
 import RecentActivities from "@/components/dashboard/RecentActivities";
 import BlockchainRecordsList from "@/components/dashboard/BlockchainRecordsList";
 import AgentChatInterface from "@/components/dashboard/AgentChatInterface";
+import NotificationCenter, { ContextualNotificationsContainer, Notification, NotificationPriority, NotificationType } from "@/components/notifications/NotificationCenter";
 import { StatCard, Task, Activity as ActivityType, User } from "@/lib/types";
 
 export default function DashboardAnalytics() {
@@ -154,7 +155,8 @@ export default function DashboardAnalytics() {
           </p>
         </div>
         <div className="flex gap-2 mt-4 md:mt-0">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <NotificationCenter />
             <Button 
               variant="outline" 
               className="flex items-center gap-1"
