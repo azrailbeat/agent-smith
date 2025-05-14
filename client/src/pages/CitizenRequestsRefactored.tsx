@@ -507,63 +507,69 @@ const CitizenRequests = () => {
     const oldStatusLabel = getColumnLabel(source.droppableId);
     const newStatusLabel = getColumnLabel(destination.droppableId);
     
-    try {
-      // Обновляем состояние UI немедленно для лучшего UX
-      setBoard(newBoard);
-      
-      // Обновляем локальные данные немедленно для визуальной синхронности
-      queryClient.setQueryData(['/api/citizen-requests'], (oldData: CitizenRequest[] | undefined) => {
-        if (!oldData) return oldData;
-        return oldData.map(r => {
-          if (r.id === requestId) {
-            return { ...r, status: newStatus };
-          }
-          return r;
-        });
-      });
-      
-      // Создаем активность о перемещении карточки для истории
-      apiRequest('POST', `/api/citizen-requests/${requestId}/activities`, {
-        actionType: 'status_change',
-        description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
-        relatedId: requestId,
-        relatedType: 'citizen_request'
-      }).then(() => {
-        // После добавления активности записываем в блокчейн
-        return apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, {
-          action: 'status_change',
-          entityType: 'citizen_request',
-          entityId: requestId,
-          metadata: {
-            oldStatus: source.droppableId,
-            newStatus: destination.droppableId,
-            movedBy: 'operator', // или user.name если есть автор
-            timestamp: new Date()
-          }
-        });
-      }).then(() => {
-        // Обновляем статус обращения на сервере
-        return updateRequestMutation.mutate({
+    // Обновляем состояние UI немедленно для лучшего UX
+    setBoard(newBoard);
+    
+    // Используем setTimeout, чтобы избежать конфликтов с библиотекой drag-and-drop
+    setTimeout(() => {
+      try {
+        // Обновляем статус обращения на сервере напрямую
+        updateRequestMutation.mutate({
           id: requestId,
           status: newStatus,
+        }, {
+          onSuccess: () => {
+            // После успешного обновления обновляем локальные данные
+            queryClient.setQueryData(['/api/citizen-requests'], (oldData: CitizenRequest[] | undefined) => {
+              if (!oldData) return oldData;
+              return oldData.map(r => {
+                if (r.id === requestId) {
+                  return { ...r, status: newStatus };
+                }
+                return r;
+              });
+            });
+            
+            // В фоновом режиме создаем активность
+            apiRequest('POST', `/api/citizen-requests/${requestId}/activities`, {
+              actionType: 'status_change',
+              description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
+              relatedId: requestId,
+              relatedType: 'citizen_request'
+            }).catch(e => console.error('Ошибка при создании активности:', e));
+            
+            // В фоновом режиме записываем в блокчейн
+            apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, {
+              action: 'status_change',
+              entityType: 'citizen_request',
+              entityId: requestId,
+              metadata: {
+                oldStatus: source.droppableId,
+                newStatus: destination.droppableId,
+                movedBy: 'operator',
+                timestamp: new Date()
+              }
+            }).catch(e => console.error('Ошибка при записи в блокчейн:', e));
+          },
+          onError: (error) => {
+            console.error('Ошибка при обновлении статуса:', error);
+            // Откатываем UI в случае ошибки
+            toast({
+              title: "Ошибка!",
+              description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
+              variant: "destructive"
+            });
+          }
         });
-      }).catch(error => {
+      } catch (error) {
         console.error('Ошибка при обновлении статуса:', error);
-        // Откатываем UI в случае ошибки
         toast({
           title: "Ошибка!",
           description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
           variant: "destructive"
         });
-      });
-    } catch (error) {
-      console.error('Ошибка при обновлении статуса:', error);
-      toast({
-        title: "Ошибка!",
-        description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
-        variant: "destructive"
-      });
-    }
+      }
+    }, 0);
   };
 
   // Обработчик изменения в форме нового обращения
