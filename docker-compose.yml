@@ -1,0 +1,232 @@
+version: '3.8'
+
+services:
+  # Основное приложение
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agent-smith-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Almaty
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/agent_smith_db
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=agent_smith_db
+      - VECTOR_DB_TYPE=qdrant
+      - QDRANT_URL=http://qdrant:6333
+      - KEYCLOAK_URL=http://keycloak:8080
+    volumes:
+      - app-uploads:/app/uploads
+      - app-logs:/app/logs
+      - app-data:/app/data
+    networks:
+      - agent-smith-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:15-alpine
+    container_name: agent-smith-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=agent_smith_db
+      - TZ=Asia/Almaty
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - agent-smith-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Qdrant - векторная база данных для RAG
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: agent-smith-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - agent-smith-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+
+  # MLflow сервер для отслеживания моделей
+  mlflow:
+    image: mlflow/mlflow
+    container_name: agent-smith-mlflow
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    command: mlflow server --host 0.0.0.0 --backend-store-uri postgresql://postgres:postgres@postgres:5432/mlflow --default-artifact-root /mlflow/artifacts
+    volumes:
+      - mlflow-data:/mlflow/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Almaty
+    networks:
+      - agent-smith-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Keycloak для авторизации и SSO
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: agent-smith-keycloak
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=postgres
+      - TZ=Asia/Almaty
+    command: start-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent-smith-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Prometheus для мониторинга
+  prometheus:
+    image: prom/prometheus
+    container_name: agent-smith-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - agent-smith-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.25'
+
+  # Grafana для визуализации метрик
+  grafana:
+    image: grafana/grafana
+    container_name: agent-smith-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - agent-smith-network
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.25'
+
+  # pgAdmin для управления базой данных (опционально)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: agent-smith-pgadmin
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@qosi.kz
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - TZ=Asia/Almaty
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - agent-smith-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+volumes:
+  postgres-data:
+  qdrant-data:
+  mlflow-data:
+  app-uploads:
+  app-logs:
+  app-data:
+  pgadmin-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  agent-smith-network:
+    driver: bridge
+
+# Инструкция по запуску:
+# 1. Убедитесь, что файл .env настроен правильно
+# 2. Запустите: docker-compose up -d
+# 3. Для просмотра логов: docker-compose logs -f
