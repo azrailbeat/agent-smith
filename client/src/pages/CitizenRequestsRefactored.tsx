@@ -48,7 +48,7 @@ import {
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard.fixed';
-import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.fixed';
+import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.all-tabs';
 import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog.fixed';
 import {
   ChevronDown,
@@ -1241,6 +1241,7 @@ const CitizenRequests = () => {
             
             <TrelloStyleRequestDetailView 
               request={selectedRequest}
+              isOpen={true}
               activeTab={viewMode}
               onTabChange={(tab: string) => setViewMode(tab as 'details' | 'ai' | 'history')}
               onAutoProcess={() => {

@@ -128,160 +128,94 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
     return null;
   };
 
+  const [showActions, setShowActions] = useState(false);
+  
+  // Форматирование даты
+  const formatDate = (date: Date | string) => {
+    const d = new Date(date);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${day}.${month} ${hours}:${minutes}`;
+  };
+  
   return (
-    <Card
+    <div
       ref={innerRef}
       {...draggableProps}
       {...dragHandleProps}
-      className={`mb-2 border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} ${isDragging ? "kanban-card-moving shadow-lg" : isJustMoved ? "kanban-card-flash shadow-md" : "shadow-sm"} hover:shadow-md transition-all duration-200 max-w-full overflow-hidden`}
-      onClick={onClick}
-      style={{ minHeight: '100px', maxHeight: '220px' }}
+      className="mb-2"
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
-      <div className="p-4 flex flex-col h-full">
-        {/* Заголовок и метки */}
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-1 w-full">
-            <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4 mr-0.5 flex-shrink-0`} variant="outline">
-              {request.priority || 'medium'}
-            </Badge>
-            <h4 className="font-medium text-sm line-clamp-1 overflow-hidden text-ellipsis w-full">
-              {request.subject || request.title || ""}
-            </h4>
+      <Card
+        className={`overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer bg-white ${
+          isDragging ? "shadow-md opacity-90" : ""
+        }`}
+        onClick={onClick}
+      >
+        <div className="p-3">
+          <div>
+            <h3 className="text-sm font-semibold line-clamp-1">{request.subject}</h3>
+            <div className="mt-1 text-xs text-gray-500 flex items-center">
+              <span className="flex-shrink-0">{formatDate(request.createdAt)}</span>
+              <span className="mx-1">•</span>
+              <span className="flex items-center gap-0.5">
+                <User className="h-3 w-3" /> {request.fullName}
+              </span>
+            </div>
+            <div className="mt-1">
+              <Badge 
+                variant="outline" 
+                className={`${priorityColors[request.priority] || 'bg-gray-100 text-gray-800'} text-xs px-1.5 py-0 font-normal`}
+              >
+                {request.priority || 'medium'}
+              </Badge>
+            </div>
           </div>
           
-          <div className="flex-shrink-0">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm" onClick={e => e.stopPropagation()}>
-                  <MoreHorizontal className="h-3 w-3" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-60 p-2" side="bottom" align="end">
-                <div className="space-y-1.5">
-                  {/* Меню действий */}
-                  <div className="text-[11px] font-semibold text-slate-500 mb-1.5">Действия</div>
-                  
-                  {/* Кнопка автообработки */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full justify-start text-[11px] h-7 mb-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onAutoProcess) {
-                        onAutoProcess(request);
-                      }
-                    }}
-                    disabled={isProcessing}
-                  >
-                    <RefreshCw className="h-3 w-3 mr-2" />
-                    Авто-обработка
-                  </Button>
-                  
-                  {/* Сохранить в блокчейн */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full justify-start text-[11px] h-7 mb-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // TODO: Реализовать сохранение в блокчейн
-                      toast({
-                        title: "Сохранение",
-                        description: "Запись о запросе сохранена в блокчейн",
-                      });
-                    }}
-                  >
-                    <Database className="h-3 w-3 mr-2" />
-                    Сохранить в блокчейн
-                  </Button>
-                  
-                  {/* Кнопка удаления */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full justify-start text-[11px] h-7 mb-0.5 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm('Вы уверены, что хотите удалить это обращение? Эта операция не может быть отменена и будет записана в блокчейн.')) {
-                        deleteRequestMutation.mutate();
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3 mr-2" />
-                    Удалить обращение
-                  </Button>
-                  
-                  {/* Назначить агента */}
-                  <div className="text-[11px] font-semibold text-slate-500 mt-2 mb-1.5">Назначить агенту</div>
-                  <div className="grid grid-cols-1 gap-0.5">
-                    {citizenRequestAgents.map(agent => (
-                      <Button 
-                        key={agent.id} 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start text-[11px] h-7"
-                        onClick={(e) => handleProcessWithAgent(agent.id, e)}
-                        disabled={isProcessing}
-                      >
-                        <Bot className="h-3 w-3 mr-2" />
-                        {agent.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-        
-        {/* Имя заявителя */}
-        <div className="mb-3">
-          <span className="text-[13px] font-medium text-gray-700 block w-full overflow-hidden text-ellipsis whitespace-nowrap">
-            {request.fullName || ""}
-          </span>
-        </div>
-        
-        {/* Краткое описание */}
-        <div className="flex-grow overflow-hidden mb-3">
-          <p className="text-xs text-gray-600 line-clamp-2 break-words whitespace-pre-line px-0.5 leading-relaxed">
-            {(request.description || request.content || "").substring(0, 150)}
-          </p>
-        </div>
-        
-        {/* Индикаторы статуса */}
-        <div className="flex flex-wrap gap-2 mt-auto pt-1">
-          {request.aiProcessed && (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] flex items-center px-2 h-5 border-purple-200">
-              <Bot className="h-3 w-3 mr-1" /> ИИ
-            </Badge>
-          )}
-          {request.blockchainHash && (
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px] flex items-center px-2 h-5 border-blue-200">
-              <Database className="h-3 w-3 mr-1" /> Блокчейн
-            </Badge>
-          )}
-          {assignedAgent && (
-            <Badge variant="outline" className="bg-green-50 text-green-700 text-[10px] flex items-center px-2 h-5 border-green-200">
-              <User className="h-3 w-3 mr-1" />
-              {assignedAgent.name.split(' ')[0]}
-            </Badge>
-          )}
-          {request.aiClassification && (
-            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-[10px] border-gray-200 h-5 px-2">
-              {request.aiClassification}
-            </Badge>
+          {request.description && (
+            <div className="mt-1.5 text-xs text-gray-600 line-clamp-2 whitespace-pre-line">
+              {request.description}
+            </div>
           )}
           
-          <div className="ml-auto text-[11px] text-gray-500 flex items-center bg-gray-50 px-2 py-0.5 rounded">
-            <Clock className="h-3 w-3 mr-1 text-gray-400" />
-            {new Date(request.createdAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit'})}
+          {request.aiSuggestion && (
+            <div className="mt-1.5 text-xs text-gray-700 bg-gray-50 p-1.5 rounded border border-gray-200 line-clamp-2">
+              {request.aiSuggestion}
+            </div>
+          )}
+          
+          <div className="mt-2 flex justify-between items-center">
+            <div className="flex gap-1">
+              {request.aiProcessed && <Bot className="h-3 w-3 text-purple-500" />}
+              {request.blockchainHash && <Database className="h-3 w-3 text-blue-500" />}
+              {request.aiClassification && 
+                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-purple-50 text-purple-700 border-purple-100">
+                  {request.aiClassification}
+                </Badge>
+              }
+            </div>
+            
+            {showActions && onAutoProcess && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-xs p-0 px-1 hover:bg-gray-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAutoProcess(request);
+                }}
+              >
+                <Bot className="h-3 w-3 mr-1" />
+                Автообработка
+              </Button>
+            )}
           </div>
         </div>
-        
-        {/* История действий и рекомендации перемещены в детальный просмотр */}
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 };
 
