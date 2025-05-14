@@ -28,6 +28,8 @@ import { registerSystemRoutes } from "./system-api";
 import { registerDatabaseRoutes } from "./database-api";
 import { registerPlankaRoutes } from "./planka-api";
 import { registerKnowledgeRoutes } from "./vector-storage/knowledge-api";
+import { registerPerplexityRoutes } from "./routes/perplexity-api";
+import { saveApiSettings, getApiSettings } from "./controllers/perplexity-controller";
 import { registerMeetingRoutes } from "./meeting-api";
 import { registerAudioRoutes } from "./audio-api";
 import agentRoutes from "./routes/agent-routes";
@@ -114,6 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMeetingRoutes(app);
   registerAudioRoutes(app);
   registerKnowledgeRoutes(app);
+  registerPerplexityRoutes(app);
   
   // Регистрируем маршруты для управления агентами
   app.use('/api/agents', agentRoutes);

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Notification, NotificationType, NotificationPriority } from './NotificationCenter';
+import { Notification, NotificationType, NotificationPriority } from './shared-types';
 
 interface NotificationContextType {
   notifications: Notification[];

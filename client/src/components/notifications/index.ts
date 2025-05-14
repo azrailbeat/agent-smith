@@ -1,3 +1,5 @@
+// Экспорт компонентов и типов
+export * from './shared-types';
 export * from './NotificationCenter';
 export * from './NotificationProvider';
 export * from './NotificationSound';

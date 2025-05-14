@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -128,7 +129,8 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      {isEmbedded ? (
+      <NotificationProvider>
+        {isEmbedded ? (
         // Встроенный режим без хедера, футера и сайдбара
         <div className="min-h-screen flex flex-col bg-white text-slate-800">
           <main className="flex-1">
@@ -182,6 +184,7 @@ function App() {
         </div>
       )}
       <Toaster />
+      </NotificationProvider>
     </QueryClientProvider>
   );
 }

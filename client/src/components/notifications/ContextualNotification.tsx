@@ -1,10 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Bell, AlertCircle, Info, AlertTriangle, MessageSquare, Clock, FileText, UserCheck, Database } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Notification, getNotificationIcon, getNotificationColor } from './NotificationCenter';
 import { cn } from '@/lib/utils';
+import { Notification, NotificationPriority, NotificationType } from './shared-types';
+
+// Вспомогательная функция для получения иконки уведомления
+function getNotificationIcon(type: NotificationType) {
+  switch (type) {
+    case NotificationType.TASK:
+      return <FileText className="h-4 w-4" />;
+    case NotificationType.MEETING:
+      return <Clock className="h-4 w-4" />;
+    case NotificationType.DOCUMENT:
+      return <FileText className="h-4 w-4" />;
+    case NotificationType.CITIZEN_REQUEST:
+      return <MessageSquare className="h-4 w-4" />;
+    case NotificationType.SYSTEM:
+      return <AlertCircle className="h-4 w-4" />;
+    case NotificationType.BLOCKCHAIN:
+      return <Database className="h-4 w-4" />;
+    case NotificationType.MESSAGE:
+      return <MessageSquare className="h-4 w-4" />;
+    case NotificationType.AI_AGENT:
+      return <UserCheck className="h-4 w-4" />;
+    default:
+      return <Info className="h-4 w-4" />;
+  }
+}
+
+// Вспомогательная функция для получения цвета уведомления
+function getNotificationColor(priority: NotificationPriority) {
+  switch (priority) {
+    case NotificationPriority.LOW:
+      return "bg-slate-100 text-slate-700";
+    case NotificationPriority.MEDIUM:
+      return "bg-blue-100 text-blue-700";
+    case NotificationPriority.HIGH:
+      return "bg-orange-100 text-orange-700";
+    case NotificationPriority.URGENT:
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
 
 interface ContextualNotificationProps {
   notification: Notification;

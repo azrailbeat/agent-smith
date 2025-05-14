@@ -28,42 +28,12 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-export enum NotificationPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  URGENT = 'urgent'
-}
-
-export enum NotificationType {
-  TASK = 'task',
-  MEETING = 'meeting',
-  DOCUMENT = 'document',
-  CITIZEN_REQUEST = 'citizen_request',
-  SYSTEM = 'system',
-  BLOCKCHAIN = 'blockchain',
-  MESSAGE = 'message',
-  AI_AGENT = 'ai_agent'
-}
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  priority: NotificationPriority;
-  type: NotificationType;
-  entityId?: string;
-  entityType?: string;
-  actionUrl?: string;
-  sender?: {
-    id: number;
-    name: string;
-    avatarUrl?: string;
-  };
-  metadata?: Record<string, any>;
-}
+// Импортируем типы из shared-types
+import { 
+  Notification, 
+  NotificationPriority, 
+  NotificationType 
+} from './shared-types';
 
 export function getNotificationIcon(type: NotificationType) {
   switch (type) {
