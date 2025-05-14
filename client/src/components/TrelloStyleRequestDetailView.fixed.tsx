@@ -70,7 +70,7 @@ interface CitizenRequest {
   subject: string;
   description: string;
   status: string;
-  priority: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent' | string;
   createdAt: Date;
   updatedAt?: Date;
   assignedTo?: number | null;

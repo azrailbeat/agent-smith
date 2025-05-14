@@ -1160,7 +1160,15 @@ const CitizenRequests = () => {
               }}
               onClose={() => setIsViewDetailsOpen(false)}
               availableAgents={availableAgents}
-              onProcessWithAgent={processRequestWithAgent}
+              onProcessWithAgent={(request, agentId, action) => {
+                // Преобразуем тип priority и обеспечиваем наличие updatedAt
+                const typedRequest = {
+                  ...request, 
+                  updatedAt: request.updatedAt || new Date(),
+                  priority: request.priority as 'low' | 'medium' | 'high' | 'urgent'
+                };
+                processRequestWithAgent(typedRequest, agentId, action);
+              }}
             />
           </DialogContent>
         </Dialog>

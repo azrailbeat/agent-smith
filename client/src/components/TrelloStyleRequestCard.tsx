@@ -414,7 +414,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Краткое описание */}
         <div className="mb-3">
-          <p className="text-xs text-gray-600 line-clamp-3 break-words">
+          <p className="text-xs text-gray-600 line-clamp-3 break-words whitespace-pre-line px-0.5">
             {(request.description || request.content || "Без описания").substring(0, 250)}
           </p>
         </div>
@@ -451,7 +451,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="line-clamp-4 break-words">
+            <div className="line-clamp-4 break-words whitespace-pre-line">
               {request.aiSuggestion?.substring(0, 250)}
             </div>
           </div>
@@ -523,7 +523,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
                         </div>
                         <div className="text-[10px] text-gray-600 flex-1 overflow-hidden">
                           <div className="flex justify-between items-start w-full">
-                            <span className="font-medium truncate max-w-[65%] overflow-hidden text-ellipsis" style={{ display: 'inline-block' }}>
+                            <span className="font-medium truncate max-w-[65%] overflow-hidden text-ellipsis whitespace-pre-line" style={{ display: 'inline-block' }}>
                               {(activity?.description || 'Действие с запросом').substring(0, 80)}
                             </span>
                             <span className="text-gray-400 ml-1 whitespace-nowrap text-[9px] flex-shrink-0">
