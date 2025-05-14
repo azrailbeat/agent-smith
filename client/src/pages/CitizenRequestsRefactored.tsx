@@ -805,10 +805,13 @@ const CitizenRequests = () => {
           <TabsTrigger value="integrations">Интеграции</TabsTrigger>
         </TabsList>
         
-        {/* Канбан доска */}
+        {/* Заголовок канбан-доски */}
         <TabsContent value="kanban" className="mt-0">
+          <h2 className="text-xl font-semibold mb-1">Канбан-доска обращений граждан</h2>
+          <p className="text-gray-500 mb-4">Перетаскивайте карточки для изменения статуса обращений</p>
+          
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="flex gap-2 pb-4">
               {board.columnOrder.map(columnId => {
                 const column = board.columns[columnId];
                 const requests = column.requestIds.map(requestId => 
@@ -829,33 +832,60 @@ const CitizenRequests = () => {
                     })
                   : requests;
                 
+                // Определяем цвета заголовка и иконки в зависимости от колонки (как в Meetings.tsx)
+                const getColumnStyle = (columnId: string) => {
+                  if (columnId === 'new') return { bgColor: 'bg-yellow-100 text-yellow-800', icon: <FileText className="h-3.5 w-3.5 mr-1" /> };
+                  if (columnId === 'in_progress') return { bgColor: 'bg-blue-100 text-blue-800', icon: <Clock className="h-3.5 w-3.5 mr-1" /> };
+                  if (columnId === 'completed') return { bgColor: 'bg-green-100 text-green-800', icon: <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> };
+                  if (columnId === 'cancelled') return { bgColor: 'bg-red-100 text-red-800', icon: <AlertCircle className="h-3.5 w-3.5 mr-1" /> };
+                  return { bgColor: 'bg-gray-100 text-gray-800', icon: <FileText className="h-3.5 w-3.5 mr-1" /> };
+                };
+                
+                const columnStyle = getColumnStyle(columnId);
+                
                 return (
-                  <div key={column.id} className="flex-shrink-0 w-72">
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                      <h3 className="font-medium mb-3 flex justify-between items-center">
-                        <span className="flex items-center">
-                          {column.title}
-                          <Badge className="ml-2 rounded-full" variant="outline">
+                  <div key={column.id} className="flex-1 rounded-md border shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-[260px]">
+                    <div className={`p-2 border-b sticky top-0 z-10 ${columnStyle.bgColor}`}>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold flex items-center text-sm">
+                          {columnStyle.icon}
+                          <span>{column.title}</span>
+                        </h3>
+                        <div className="flex items-center gap-1">
+                          <div className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[22px] text-center">
                             {filteredColumnRequests.length}
-                          </Badge>
-                        </span>
-                        <button className="text-gray-500 hover:text-gray-700">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </h3>
-                      
-                      <Droppable droppableId={column.id}>
-                        {(provided, snapshot) => (
-                          <div
-                            className={`min-h-[150px] transition-colors ${
-                              snapshot.isDraggingOver
-                                ? "bg-blue-50 dark:bg-blue-950"
-                                : ""
-                            }`}
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5 rounded-full hover:bg-white/80"
+                            onClick={() => {
+                              if (columnId === 'new') {
+                                setIsNewRequestOpen(true);
+                              }
+                            }}
                           >
-                            {filteredColumnRequests.map((request, index) => {
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Droppable droppableId={column.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className="p-2 flex-1 overflow-y-auto bg-gray-50/50 h-full"
+                        >
+                          {filteredColumnRequests.length === 0 ? (
+                            <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2 transition-all duration-300 hover:bg-white hover:border-gray-400">
+                              <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400 opacity-70" />
+                              <p className="font-medium text-xs">Нет обращений</p>
+                              <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда</p>
+                            </div>
+                          ) : (
+                            filteredColumnRequests.map((request, index) => {
                               // Определяем цвета в зависимости от приоритета
                               const priorityBorderColors = {
                                 low: 'border-gray-300',
@@ -896,23 +926,12 @@ const CitizenRequests = () => {
                                   )}
                                 </Draggable>
                               );
-                            })}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                      
-                      {column.id === 'new' && (
-                        <Button 
-                          variant="ghost" 
-                          className="w-full mt-3 text-gray-500 hover:text-gray-700 justify-start"
-                          onClick={() => setIsNewRequestOpen(true)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Добавить обращение
-                        </Button>
+                            })
+                          )}
+                          {provided.placeholder}
+                        </div>
                       )}
-                    </div>
+                    </Droppable>
                   </div>
                 );
               })}
