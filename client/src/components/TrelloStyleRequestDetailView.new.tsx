@@ -18,7 +18,7 @@ import {
   RefreshCw, ChevronDown, MessageSquare, FileText, Clock, Edit, 
   CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2, Mail, 
   Building, Users, LayoutGrid, CheckSquare, BrainCircuit, History,
-  Loader2, Trash, Cpu as CpuIcon, Zap
+  Loader2, Trash, Cpu, Zap
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
