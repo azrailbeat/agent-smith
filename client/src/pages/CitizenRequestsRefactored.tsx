@@ -241,12 +241,18 @@ const CitizenRequests = () => {
   // Мутация для обработки обращения агентом
   const processWithAgentMutation = useMutation({
     mutationFn: ({ requestId, agentId, action = "full" }: { requestId: number; agentId: number; action?: string }) => {
+      // Проверка параметров
+      if (!requestId || !agentId) {
+        throw new Error("Отсутствуют обязательные параметры");
+      }
+      
       return apiRequest('POST', `/api/citizen-requests/${requestId}/process-with-agent`, { 
         agentId, 
         actionType: action // Исправление: используем actionType вместо action
       });
     },
     onSuccess: (data) => {
+      // После успешной обработки обновляем список обращений
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
       
       // Добавляем финальный результат в список результатов
@@ -260,10 +266,18 @@ const CitizenRequests = () => {
         }]
       }));
       
+      // Уведомляем пользователя об успешной обработке
       toast({
         title: "Обращение обработано",
         description: "Обращение успешно обработано ИИ агентом",
       });
+      
+      // Закрываем диалог через 2 секунды
+      setTimeout(() => {
+        if (isProcessingDialogOpen) {
+          setIsProcessingDialogOpen(false);
+        }
+      }, 2000);
     },
     onError: (error) => {
       console.error("Error processing request with agent:", error);
@@ -272,18 +286,22 @@ const CitizenRequests = () => {
       setProcessingState(prev => ({
         ...prev,
         isProcessing: false,
+        progress: 0,
         results: [...prev.results, { 
           step: 'Ошибка обработки', 
           result: 'Не удалось обработать обращение. Пожалуйста, попробуйте еще раз или обратитесь к администратору системы.'
         }]
       }));
       
+      // Уведомляем пользователя об ошибке
       toast({
         title: "Ошибка",
         description: "Не удалось обработать обращение",
         variant: "destructive",
       });
     },
+    // Добавляем retry для повторных попыток при сетевых ошибках
+    retry: 1,
   });
 
   // Состояние для диалога обработки и отображения прогресса
@@ -355,6 +373,16 @@ const CitizenRequests = () => {
 
   // Обработка обращения с помощью агента
   const processRequestWithAgent = (request: CitizenRequest, agentId: number, action: string = "full") => {
+    // Проверка параметров перед запуском обработки
+    if (!request || !request.id || !agentId) {
+      toast({
+        title: "Ошибка",
+        description: "Некорректные параметры для обработки обращения",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Сбрасываем состояние обработки
     setProcessingState({
       isProcessing: true,
@@ -369,49 +397,69 @@ const CitizenRequests = () => {
     // Имитируем шаги обработки (это будет заменено реальным API)
     const processingSteps = [
       { step: 'Анализ обращения', delay: 1000, progress: 30 },
-      { step: 'Классификация темы', delay: 1500, progress: 50 },
-      { step: 'Подготовка ответа', delay: 2000, progress: 70 },
+      { step: 'Классификация темы', delay: 1000, progress: 50 },
+      { step: 'Подготовка ответа', delay: 1000, progress: 70 },
       { step: 'Финальная проверка', delay: 1000, progress: 90 },
       { step: 'Сохранение результатов', delay: 500, progress: 100 }
     ];
     
-    // Функция для последовательного выполнения шагов
-    const runSteps = (stepIndex = 0) => {
-      if (stepIndex >= processingSteps.length) {
-        // Все шаги выполнены, отправляем запрос на сервер
-        processWithAgentMutation.mutate({ 
-          requestId: request.id, 
-          agentId, 
-          action  // API ждет action, но внутри функции переименовывает в actionType
-        });
-        return;
-      }
-      
-      const currentStep = processingSteps[stepIndex];
-      setProcessingState(prev => ({
-        ...prev,
-        currentStep: currentStep.step,
-        progress: currentStep.progress
-      }));
-      
-      // Имитация задержки обработки
-      setTimeout(() => {
-        // Добавляем результат шага (в реальном API будут настоящие результаты)
+    // Используем setTimeout, чтобы не блокировать UI
+    setTimeout(() => {
+      // Функция для последовательного выполнения шагов
+      const runSteps = (stepIndex = 0) => {
+        // Защита от ошибок - проверяем, что диалог всё еще открыт
+        if (!isProcessingDialogOpen) {
+          return;
+        }
+        
+        if (stepIndex >= processingSteps.length) {
+          // Все шаги выполнены, отправляем запрос на сервер
+          try {
+            processWithAgentMutation.mutate({ 
+              requestId: request.id, 
+              agentId, 
+              action  // API ждет action, но внутри функции переименовывает в actionType
+            });
+          } catch (error) {
+            console.error("Error initiating agent processing:", error);
+            setProcessingState(prev => ({
+              ...prev,
+              isProcessing: false,
+              results: [...prev.results, { 
+                step: 'Ошибка обработки', 
+                result: 'Не удалось запустить обработку обращения. Попробуйте позже.'
+              }]
+            }));
+          }
+          return;
+        }
+        
+        const currentStep = processingSteps[stepIndex];
         setProcessingState(prev => ({
           ...prev,
-          results: [...prev.results, { 
-            step: currentStep.step, 
-            result: `Успешно выполнен шаг: ${currentStep.step}`
-          }]
+          currentStep: currentStep.step,
+          progress: currentStep.progress
         }));
         
-        // Переходим к следующему шагу
-        runSteps(stepIndex + 1);
-      }, currentStep.delay);
-    };
-    
-    // Запускаем процесс обработки
-    runSteps();
+        // Имитация задержки обработки
+        setTimeout(() => {
+          // Добавляем результат шага (в реальном API будут настоящие результаты)
+          setProcessingState(prev => ({
+            ...prev,
+            results: [...prev.results, { 
+              step: currentStep.step, 
+              result: `Успешно выполнен шаг: ${currentStep.step}`
+            }]
+          }));
+          
+          // Переходим к следующему шагу
+          runSteps(stepIndex + 1);
+        }, currentStep.delay);
+      };
+      
+      // Запускаем процесс обработки
+      runSteps();
+    }, 0);
     
     toast({
       title: "Отправка на обработку",

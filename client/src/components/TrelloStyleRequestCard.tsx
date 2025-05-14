@@ -392,18 +392,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
           </div>
         </div>
         
-        {/* Результаты ИИ обработки */}
-        {request.aiProcessed && request.aiSuggestion && (
-          <div className="bg-amber-50 p-2 rounded text-[11px] text-amber-900 mb-3 border border-amber-200 border-l-2 border-l-amber-400 overflow-hidden">
-            <div className="font-medium mb-1 flex items-center">
-              <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
-              <span className="truncate">Рекомендация:</span>
-            </div>
-            <div className="line-clamp-4 break-words whitespace-pre-line">
-              {request.aiSuggestion?.substring(0, 250)}
-            </div>
-          </div>
-        )}
+        {/* Рекомендации ИИ перемещены в детальный просмотр */}
         
         {/* История действий - раскрывающаяся */}
         <Collapsible className="mt-2" onOpenChange={setActivitiesOpen}>
