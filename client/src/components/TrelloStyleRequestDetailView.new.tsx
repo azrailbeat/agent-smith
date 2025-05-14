@@ -1,0 +1,636 @@
+/**
+ * Agent Smith Platform - Компонент отображения деталей обращения со всеми табами одновременно
+ * 
+ * Объединяет информацию об обращении и результаты ИИ-обработки в единый интерфейс
+ * в виде одной страницы без табов
+ * 
+ * @version 1.2.0
+ * @since 14.05.2025
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, 
+  RefreshCw, ChevronDown, MessageSquare, FileText, Clock, Edit, 
+  CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2, Mail, 
+  Building, Users, LayoutGrid, CheckSquare, BrainCircuit
+} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+import { CitizenRequest, Activity, Agent } from '@shared/types';
+
+// Extend CitizenRequest interface with additional fields we need
+declare module '@shared/types' {
+  interface CitizenRequest {
+    contactInfo?: string;
+    citizenInfo?: {
+      address?: string;
+      iin?: string;
+    };
+  }
+}
+
+interface TrelloStyleRequestDetailViewProps {
+  request: CitizenRequest;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate?: (request: CitizenRequest) => void;
+  onDelete?: (requestId: number) => void;
+  onStatusChange?: (requestId: number, newStatus: string) => void;
+  // Параметры для автоматической обработки
+  onAutoProcess?: () => void;
+  // Параметры для обработки с помощью ИИ-агентов
+  availableAgents?: Agent[];
+  onProcessWithAgent?: (request: CitizenRequest, agentId: number, action?: string) => void;
+}
+
+const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> = ({
+  request,
+  isOpen,
+  onClose,
+  onUpdate,
+  onDelete,
+  onStatusChange,
+  onAutoProcess,
+  availableAgents,
+  onProcessWithAgent
+}) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [comment, setComment] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [activitiesLoaded, setActivitiesLoaded] = useState(false);
+  const [aiClassification, setAiClassification] = useState<string | null>(null);
+  const [processingAgent, setProcessingAgent] = useState<number | null>(null);
+  
+  // Форматирование даты
+  const formatDate = (dateString: string | Date | undefined) => {
+    if (!dateString) return "Не указано";
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleString('ru-RU');
+  };
+  
+  if (!isOpen) return null;
+  
+  // Запрос списка агентов
+  const { data: agents = [] } = useQuery<Agent[]>({
+    queryKey: ["/api/agents"],
+    refetchOnWindowFocus: false,
+  });
+  
+  // Выборка агентов для обработки обращений
+  const citizenRequestAgents = agents.filter(agent => 
+    agent.type === "citizen_requests"
+  );
+  
+  // Получить цвет статуса
+  const getStatusColor = (status: string): string => {
+    const statusColors: {[key: string]: string} = {
+      'new': 'text-blue-500',
+      'inProgress': 'text-yellow-500',
+      'waiting': 'text-orange-500',
+      'completed': 'text-green-500',
+      'canceled': 'text-red-500',
+      'rejected': 'text-gray-500'
+    };
+    return statusColors[status] || 'text-gray-500';
+  };
+  
+  // Получить название статуса
+  const getStatusLabel = (status: string): string => {
+    const statusLabels: {[key: string]: string} = {
+      'new': 'Новое',
+      'inProgress': 'В обработке',
+      'waiting': 'Ожидает',
+      'completed': 'Завершено',
+      'canceled': 'Отменено',
+      'rejected': 'Отклонено'
+    };
+    return statusLabels[status] || status;
+  };
+  
+  // Получить цвет приоритета
+  const getPriorityColor = (priority: string): string => {
+    const priorityColors: {[key: string]: string} = {
+      'low': 'bg-green-500',
+      'medium': 'bg-yellow-500',
+      'high': 'bg-orange-500',
+      'urgent': 'bg-red-500'
+    };
+    return priorityColors[priority] || 'bg-gray-500';
+  };
+  
+  // Получить название приоритета
+  const getPriorityLabel = (priority: string): string => {
+    const priorityLabels: {[key: string]: string} = {
+      'low': 'Низкий',
+      'medium': 'Средний',
+      'high': 'Высокий',
+      'urgent': 'Срочный'
+    };
+    return priorityLabels[priority] || priority;
+  };
+  
+  // Запрос списка активностей
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery<Activity[]>({
+    queryKey: [`/api/citizen-requests/${request.id}/activities`],
+    refetchOnWindowFocus: false
+  });
+  
+  // Устанавливаем флаг загрузки активностей
+  useEffect(() => {
+    if (!activitiesLoading && activities) {
+      setActivitiesLoaded(true);
+    }
+  }, [activitiesLoading, activities]);
+  
+  // Получить название типа действия
+  const getActionTypeLabel = (actionType: string): string => {
+    const actionTypeMap: {[key: string]: string} = {
+      'create': 'Создание',
+      'update': 'Обновление',
+      'status_change': 'Изменение статуса',
+      'comment': 'Комментирование',
+      'assign': 'Назначение',
+      'process': 'Обработка',
+      'ai_process': 'ИИ обработка',
+      'blockchain_record': 'Запись в блокчейн',
+      'priority_change': 'Изменение приоритета',
+      'document_attach': 'Прикрепление документа'
+    };
+    return actionTypeMap[actionType] || actionType;
+  };
+  
+  // Получить иконку для типа действия
+  const getActionIcon = (actionType: string) => {
+    switch (actionType) {
+      case 'create':
+        return <Plus className="h-3 w-3 text-green-500" />;
+      case 'update':
+        return <Edit className="h-3 w-3 text-blue-500" />;
+      case 'status_change':
+        return <RefreshCw className="h-3 w-3 text-yellow-500" />;
+      case 'comment':
+        return <MessageSquare className="h-3 w-3 text-purple-500" />;
+      case 'assign':
+        return <UserCheck className="h-3 w-3 text-orange-500" />;
+      case 'process':
+        return <CheckCircle2 className="h-3 w-3 text-green-500" />;
+      case 'ai_process':
+        return <Bot className="h-3 w-3 text-amber-500" />;
+      case 'blockchain_record':
+        return <Database className="h-3 w-3 text-cyan-500" />;
+      case 'priority_change':
+        return <Flag className="h-3 w-3 text-red-500" />;
+      case 'document_attach':
+        return <FileText className="h-3 w-3 text-indigo-500" />;
+      default:
+        return <Info className="h-3 w-3 text-gray-500" />;
+    }
+  };
+  
+  // Обработка изменения статуса
+  const handleStatusChange = (newStatus: string) => {
+    if (onStatusChange) {
+      onStatusChange(request.id, newStatus);
+    }
+  };
+  
+  // Обработка изменения агента
+  const handleProcessWithAgent = () => {
+    if (processingAgent && onProcessWithAgent) {
+      setIsProcessing(true);
+      onProcessWithAgent(request, processingAgent, 'full');
+      setIsProcessing(false);
+    } else {
+      toast({
+        title: "Ошибка",
+        description: "Выберите агента для обработки",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Обработка автоматической обработки
+  const handleAutoProcess = () => {
+    if (onAutoProcess) {
+      onAutoProcess();
+    }
+  };
+  
+  // Отправка комментария
+  const handleCommentSubmit = () => {
+    if (!comment.trim()) return;
+    
+    // Отправляем комментарий на сервер
+    const commentMutation = apiRequest('POST', `/api/citizen-requests/${request.id}/comment`, { text: comment });
+    
+    commentMutation
+      .then(() => {
+        setComment('');
+        queryClient.invalidateQueries({ queryKey: [`/api/citizen-requests/${request.id}/activities`] });
+        toast({
+          title: "Комментарий добавлен",
+          description: "Ваш комментарий успешно добавлен",
+        });
+      })
+      .catch((err) => {
+        console.error("Error submitting comment:", err);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось добавить комментарий",
+          variant: "destructive",
+        });
+      });
+  };
+  
+  // Сохранение изменений
+  const handleSubmit = () => {
+    if (onUpdate) {
+      onUpdate(request);
+    }
+    onClose();
+  };
+  
+  // Сохранить в блокчейн
+  const saveToBlockchain = () => {
+    apiRequest('POST', `/api/citizen-requests/${request.id}/blockchain`, {})
+      .then((data) => {
+        toast({
+          title: "Сохранение в блокчейн",
+          description: `Данные обращения сохранены в блокчейн: ${data.blockchainHash ? data.blockchainHash.substring(0, 8) + '...' : 'успешно'}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/citizen-requests/${request.id}/activities`] });
+      })
+      .catch((err) => {
+        console.error("Error saving to blockchain:", err);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось сохранить данные в блокчейн",
+          variant: "destructive",
+        });
+      });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={isOpen ? onClose : undefined}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-4 py-2 border-b sticky top-0 bg-white z-10">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg flex items-center gap-2">
+              Обращение #{request.id} 
+              <Badge className={`${getPriorityColor(request.priority)} text-white ml-2`}>
+                {getPriorityLabel(request.priority)}
+              </Badge>
+            </DialogTitle>
+          </div>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-y-auto">
+          {/* Секция Детали */}
+          <div className="border-b p-3 bg-gray-50">
+            <h3 className="text-lg font-medium">Детали</h3>
+          </div>
+          <div className="p-4">
+            <h4 className="text-base font-medium mb-2">{request.subject}</h4>
+            <p className="text-sm text-gray-700 mb-4 whitespace-pre-line">{request.description}</p>
+            
+            <div className="grid md:grid-cols-2 gap-6 mt-4">
+              <div>
+                <h5 className="text-sm font-medium mb-2">Статус</h5>
+                <div className="flex items-center">
+                  <div className={`h-3 w-3 rounded-full ${getStatusColor(request.status)} mr-2`}></div>
+                  <span className="text-sm">{getStatusLabel(request.status)}</span>
+                </div>
+              </div>
+              
+              <div>
+                <h5 className="text-sm font-medium mb-2">Приоритет</h5>
+                <div className="flex items-center">
+                  <div className={`h-3 w-3 rounded-full ${getPriorityColor(request.priority)} mr-2`}></div>
+                  <span className="text-sm">{getPriorityLabel(request.priority)}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <h5 className="text-sm font-medium mb-2">Информация о заявителе</h5>
+              <div className="bg-gray-50 p-3 rounded-md">
+                <div className="flex items-center text-sm mb-2">
+                  <User className="h-4 w-4 text-gray-500 mr-2" />
+                  <span className="font-medium">{request.fullName}</span>
+                </div>
+                {/* Email, если есть */}
+                {request.contactInfo && (
+                  <div className="flex items-center text-sm mb-2">
+                    <Mail className="h-4 w-4 text-gray-500 mr-2" />
+                    <span>{request.contactInfo}</span>
+                  </div>
+                )}
+                {request.citizenInfo && (
+                  <>
+                    {request.citizenInfo.address && (
+                      <div className="flex items-start text-sm mb-2">
+                        <Building className="h-4 w-4 text-gray-500 mr-2 mt-0.5" />
+                        <span>{request.citizenInfo.address}</span>
+                      </div>
+                    )}
+                    {request.citizenInfo.iin && (
+                      <div className="flex items-center text-sm">
+                        <CreditCard className="h-4 w-4 text-gray-500 mr-2" />
+                        <span>ИИН: {request.citizenInfo.iin}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <h5 className="text-sm font-medium mb-2">Обработка заявки</h5>
+              <div className="space-y-2">
+                <div className="flex items-center text-sm">
+                  <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                  <span className="text-gray-500 mr-1">Создано:</span>
+                  <span>{formatDate(request.createdAt)}</span>
+                </div>
+                
+                <div className="flex items-center text-sm">
+                  <Clock className="h-4 w-4 text-gray-500 mr-2" />
+                  <span className="text-gray-500 mr-1">Последнее обновление:</span>
+                  <span>{formatDate(request.updatedAt)}</span>
+                </div>
+                
+                {request.aiProcessed && (
+                  <div className="flex items-center text-sm">
+                    <Bot className="h-4 w-4 text-purple-500 mr-2" />
+                    <span className="text-gray-500 mr-1">Обработано ИИ:</span>
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 ml-1">
+                      Успешно
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Секция ИИ обработка */}
+          <div className="border-b p-3 bg-gray-50">
+            <h3 className="text-lg font-medium">ИИ обработка</h3>
+          </div>
+          <div className="p-4">
+            {/* Результаты обработки */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium flex items-center mb-3">
+                <Bot className="h-4 w-4 text-purple-500 mr-2" />
+                Результаты обработки ИИ
+              </h4>
+              
+              {request.aiProcessed || request.aiClassification || request.aiSuggestion || request.aiResult ? (
+                <div className="space-y-3">
+                  {request.aiClassification && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Классификация обращения</p>
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                        {request.aiClassification}
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  {request.aiSuggestion && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Рекомендации по обработке</p>
+                      <div className="bg-purple-50 p-3 rounded-md text-sm border border-purple-100">
+                        {request.aiSuggestion}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {request.aiResult && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Подробный анализ</p>
+                      <div className="bg-white border border-gray-200 p-3 rounded-md text-sm">
+                        <pre className="whitespace-pre-wrap font-sans text-xs">
+                          {typeof request.aiResult === 'object' 
+                            ? JSON.stringify(request.aiResult, null, 2)
+                            : request.aiResult}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="mt-2 flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center text-xs"
+                      onClick={saveToBlockchain}
+                    >
+                      <Database className="h-3.5 w-3.5 mr-1.5" />
+                      Сохранить в блокчейн
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center p-4 bg-gray-50 rounded-md">
+                  <div className="flex flex-col items-center gap-2">
+                    <Bot className="h-8 w-8 text-gray-300" />
+                    <p className="text-gray-500">Нет данных об обработке ИИ</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Обработать с помощью ИИ */}
+            <div className="border-t pt-4 mt-4">
+              <h4 className="text-sm font-medium mb-3">Обработать с помощью ИИ</h4>
+              <div className="flex space-x-2">
+                <Select 
+                  value={processingAgent?.toString() || ""} 
+                  onValueChange={(value) => setProcessingAgent(parseInt(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Выберите агента" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {citizenRequestAgents.map(agent => (
+                      <SelectItem key={agent.id} value={agent.id.toString()}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button 
+                  className="w-auto whitespace-nowrap"
+                  onClick={handleProcessWithAgent}
+                  disabled={isProcessing || !processingAgent}
+                >
+                  {isProcessing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Bot className="h-4 w-4 mr-2" />}
+                  Обработать ИИ
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Секция История */}
+          <div className="border-b p-3 bg-gray-50">
+            <h3 className="text-lg font-medium">История</h3>
+          </div>
+          <div className="p-4">
+            {/* История действий */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium flex items-center mb-2">
+                <Clock className="h-4 w-4 text-blue-500 mr-2" />
+                История обращения
+              </h4>
+              
+              {activitiesLoading ? (
+                <div className="text-center p-4">
+                  <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2" />
+                  <p className="text-gray-500">Загрузка истории...</p>
+                </div>
+              ) : activities && Array.isArray(activities) && activities.length > 0 ? (
+                <div className="space-y-2">
+                  {activities.map((activity: Activity, index: number) => (
+                    <div key={index} className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center">
+                          <div className="bg-white rounded-full h-6 w-6 mr-2 flex items-center justify-center border border-gray-200">
+                            {getActionIcon(activity.actionType)}
+                          </div>
+                          <span className="font-medium text-sm">{getActionTypeLabel(activity.actionType)}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {new Date(activity.createdAt).toLocaleString('ru-RU')}
+                        </span>
+                      </div>
+                      
+                      {activity.description && (
+                        <p className="text-sm text-gray-700 ml-8">{activity.description}</p>
+                      )}
+                      
+                      {activity.userName && (
+                        <div className="mt-1 flex items-center ml-8">
+                          <User className="h-3 w-3 text-gray-400 mr-1" />
+                          <span className="text-xs text-gray-500">{activity.userName}</span>
+                        </div>
+                      )}
+                      
+                      {activity.blockchainHash && (
+                        <div className="mt-1 flex items-center ml-8">
+                          <Database className="h-3 w-3 text-blue-400 mr-1" />
+                          <span className="text-xs text-gray-500 font-mono">{activity.blockchainHash.substring(0, 10)}...</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-4 bg-gray-50 rounded-md">
+                  <div className="flex flex-col items-center gap-2">
+                    <Clock className="h-8 w-8 text-gray-300" />
+                    <p className="text-gray-500">История пуста</p>
+                    <p className="text-xs text-gray-400">Действия с этим обращением будут отображаться здесь</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Добавить комментарий */}
+            <div className="mt-4 pt-4 border-t">
+              <h4 className="text-sm font-medium mb-3">Добавить комментарий</h4>
+              <div className="space-y-3">
+                <Textarea 
+                  placeholder="Введите комментарий..." 
+                  value={comment} 
+                  onChange={(e) => setComment(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <div className="flex justify-end">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={handleCommentSubmit}
+                    disabled={!comment.trim()}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Отправить
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Кнопки действий */}
+        <div className="flex justify-between p-4 border-t bg-gray-50 sticky bottom-0">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onClose()}
+          >
+            Закрыть
+          </Button>
+          
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={saveToBlockchain}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Сохранить в блокчейн
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAutoProcess}
+              disabled={isProcessing}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Автообработка
+            </Button>
+            
+            {onDelete && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (confirm('Вы уверены, что хотите удалить это обращение? Эта операция не может быть отменена.')) {
+                    onDelete(request.id);
+                    onClose();
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Удалить
+              </Button>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default TrelloStyleRequestDetailView;

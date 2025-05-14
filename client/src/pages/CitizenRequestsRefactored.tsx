@@ -47,8 +47,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
-import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard.fixed';
-import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.all-tabs';
+import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard.new';
+import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.new';
 import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog.fixed';
 import {
   ChevronDown,
@@ -962,21 +962,20 @@ const CitizenRequests = () => {
                                   index={index}
                                 >
                                   {(provided, snapshot) => (
-                                    <TrelloStyleRequestCard
-                                      request={request}
-                                      priorityBorderColors={priorityBorderColors}
-                                      priorityColors={priorityColors}
-                                      onClick={() => {
-                                        setSelectedRequest(request);
-                                        setIsViewDetailsOpen(true);
-                                      }}
-                                      draggableProps={provided.draggableProps}
-                                      dragHandleProps={provided.dragHandleProps}
-                                      innerRef={provided.innerRef}
-                                      isDragging={snapshot.isDragging}
-                                      onAutoProcess={() => handleAutoProcess(request)}
-                                      isJustMoved={lastMovedRequestId === request.id}
-                                    />
+                                    <div
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      ref={provided.innerRef}
+                                      className={`${snapshot.isDragging ? 'shadow-lg' : ''} ${lastMovedRequestId === request.id ? 'border-green-400 border-2' : ''}`}
+                                    >
+                                      <TrelloStyleRequestCard
+                                        request={request}
+                                        onClick={() => {
+                                          setSelectedRequest(request);
+                                          setIsViewDetailsOpen(true);
+                                        }}
+                                      />
+                                    </div>
                                   )}
                                 </Draggable>
                               );
@@ -1242,8 +1241,6 @@ const CitizenRequests = () => {
             <TrelloStyleRequestDetailView 
               request={selectedRequest}
               isOpen={true}
-              activeTab={viewMode}
-              onTabChange={(tab: string) => setViewMode(tab as 'details' | 'ai' | 'history')}
               onAutoProcess={() => {
                 if (agentSettings.enabled && agentSettings.defaultAgent) {
                   processRequestWithAgent(selectedRequest, agentSettings.defaultAgent, "full");
