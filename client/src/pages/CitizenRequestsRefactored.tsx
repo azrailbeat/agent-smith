@@ -341,151 +341,6 @@ const CitizenRequests = () => {
     columnOrder: ["new", "inProgress", "waiting", "completed"],
   });
 
-  // Статистика обращений
-  const stats = {
-    total: citizenRequests.length,
-    new: citizenRequests.filter(req => req.status === "new").length,
-    inProgress: citizenRequests.filter(req => req.status === "inProgress").length,
-    waiting: citizenRequests.filter(req => req.status === "waiting").length,
-    completed: citizenRequests.filter(req => req.status === "completed").length,
-  };
-
-  // Обработчик перетаскивания карточек в канбане
-  const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    // Если нет места назначения или место назначения совпадает с исходным
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
-      return;
-    }
-
-    // Получаем исходную и целевую колонки
-    const startColumn = board.columns[source.droppableId];
-    const finishColumn = board.columns[destination.droppableId];
-
-    // Обновляем порядок ID в исходной колонке
-    const startRequestIds = Array.from(startColumn.requestIds);
-    startRequestIds.splice(source.index, 1);
-
-    // Обновляем порядок ID в целевой колонке
-    const finishRequestIds = Array.from(finishColumn.requestIds);
-    finishRequestIds.splice(destination.index, 0, parseInt(draggableId));
-
-    // Создаем обновленные колонки
-    const newStartColumn = {
-      ...startColumn,
-      requestIds: startRequestIds,
-    };
-
-    const newFinishColumn = {
-      ...finishColumn,
-      requestIds: finishRequestIds,
-    };
-
-    // Обновляем состояние доски
-    const newBoard = {
-      ...board,
-      columns: {
-        ...board.columns,
-        [newStartColumn.id]: newStartColumn,
-        [newFinishColumn.id]: newFinishColumn,
-      },
-    };
-
-    setBoard(newBoard);
-
-    // Обновляем статус обращения на сервере
-    const requestId = parseInt(draggableId);
-    let newStatus = destination.droppableId;
-    
-    // Устанавливаем ID последней перемещенной карточки для анимации
-    setLastMovedRequestId(requestId);
-    
-    // Сбрасываем ID через 2 секунды
-    setTimeout(() => {
-      setLastMovedRequestId(null);
-    }, 2000);
-    
-    // Приводим статус к формату, который ожидает сервер
-    if (newStatus === 'inProgress') {
-      newStatus = 'in_progress';
-    }
-    
-    // Находим старый и новый статус для записи в историю
-    const oldStatusLabel = getColumnLabel(source.droppableId);
-    const newStatusLabel = getColumnLabel(destination.droppableId);
-    
-    // Получаем обращение для записи в историю
-    const request = citizenRequests.find(r => r.id === requestId);
-    
-    if (request) {
-      // Создаем активность о перемещении карточки для истории
-      fetch(`/api/citizen-requests/${requestId}/activities`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          actionType: 'status_change',
-          description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
-          relatedId: requestId,
-          relatedType: 'citizen_request'
-        })
-      }).catch(err => {
-        console.error('Ошибка при записи активности:', err);
-      });
-      
-      // После добавления активности записываем в блокчейн
-      fetch(`/api/citizen-requests/${requestId}/blockchain`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'status_change',
-          entityType: 'citizen_request',
-          entityId: requestId,
-          metadata: {
-            oldStatus: source.droppableId,
-            newStatus: destination.droppableId,
-            movedBy: 'operator', // или user.name если есть авторизация
-            timestamp: new Date().toISOString()
-          }
-        })
-      }).catch(err => {
-        console.error('Ошибка при записи в блокчейн:', err);
-      });
-    }
-    
-    // Обновляем статус обращения
-    updateRequestMutation.mutate({ id: requestId, status: newStatus });
-    
-    // Устанавливаем ID последней перемещенной карточки для анимации
-    setLastMovedRequestId(requestId);
-    
-    // Сбрасываем ID после завершения анимации через 2 секунды
-    setTimeout(() => {
-      setLastMovedRequestId(null);
-    }, 2000);
-    
-    // Если включена ИИ обработка и есть выбранный агент, автоматически обрабатываем обращение при перемещении в колонку "inProgress"
-    if (agentSettings.enabled && agentSettings.defaultAgent && destination.droppableId === 'inProgress') {
-      // Находим обращение по ID
-      if (request) {
-        // Автоматически запускаем обработку перемещенного обращения выбранным агентом
-        if (agentSettings.requestProcessingMode === 'auto' || agentSettings.requestProcessingMode === 'simple') {
-          processRequestWithAgent(request, agentSettings.defaultAgent, "full");
-          toast({
-            title: "Автоматическая обработка",
-            description: `Обращение автоматически отправлено на обработку ИИ`,
-          });
-        }
-      }
-    }
-  };
-  
   // Функция для получения человекочитаемого названия колонки
   const getColumnLabel = (columnId: string): string => {
     switch (columnId) {
@@ -493,29 +348,9 @@ const CitizenRequests = () => {
       case 'inProgress': return 'В обработке';
       case 'completed': return 'Завершенные';
       case 'rejected': return 'Отклоненные';
+      case 'waiting': return 'Ожидание';
       default: return columnId;
     }
-  };
-
-  // Обработчик изменения в форме нового обращения
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Обработчик отправки формы
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const newRequest = {
-      ...formData,
-      status: "new",
-      priority: "medium",
-      createdAt: new Date(),
-      source: "web"
-    };
-    
-    createRequestMutation.mutate(newRequest);
   };
 
   // Обработка обращения с помощью агента
@@ -584,6 +419,155 @@ const CitizenRequests = () => {
     });
   };
 
+  // Статистика обращений
+  const stats = {
+    total: citizenRequests.length,
+    new: citizenRequests.filter(req => req.status === "new").length,
+    inProgress: citizenRequests.filter(req => req.status === "inProgress").length,
+    waiting: citizenRequests.filter(req => req.status === "waiting").length,
+    completed: citizenRequests.filter(req => req.status === "completed").length,
+  };
+
+  // Обработчик перетаскивания карточек в канбане
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    // Если нет места назначения или место назначения совпадает с исходным
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
+
+    // Получаем исходную и целевую колонки
+    const startColumn = board.columns[source.droppableId];
+    const finishColumn = board.columns[destination.droppableId];
+
+    // Обновляем порядок ID в исходной колонке
+    const startRequestIds = Array.from(startColumn.requestIds);
+    startRequestIds.splice(source.index, 1);
+
+    // Обновляем порядок ID в целевой колонке
+    const finishRequestIds = Array.from(finishColumn.requestIds);
+    finishRequestIds.splice(destination.index, 0, parseInt(draggableId));
+
+    // Создаем обновленные колонки
+    const newStartColumn = {
+      ...startColumn,
+      requestIds: startRequestIds,
+    };
+
+    const newFinishColumn = {
+      ...finishColumn,
+      requestIds: finishRequestIds,
+    };
+
+    // Обновляем состояние доски
+    const newBoard = {
+      ...board,
+      columns: {
+        ...board.columns,
+        [newStartColumn.id]: newStartColumn,
+        [newFinishColumn.id]: newFinishColumn,
+      },
+    };
+
+    setBoard(newBoard);
+
+    // Обновляем статус обращения на сервере
+    const requestId = parseInt(draggableId);
+    let newStatus = destination.droppableId;
+    
+    // Устанавливаем ID последней перемещенной карточки для анимации
+    setLastMovedRequestId(requestId);
+    
+    // Сбрасываем ID через 2 секунды
+    setTimeout(() => {
+      setLastMovedRequestId(null);
+    }, 2000);
+    
+    console.log('Перемещение карточки:', {
+      requestId,
+      oldStatus: source.droppableId,
+      newStatus: destination.droppableId
+    });
+    
+    // Приводим статус к формату, который ожидает сервер
+    if (newStatus === 'inProgress') {
+      newStatus = 'in_progress';
+    }
+    
+    // Находим старый и новый статус для записи в историю
+    const oldStatusLabel = getColumnLabel(source.droppableId);
+    const newStatusLabel = getColumnLabel(destination.droppableId);
+    
+    // Получаем обращение для записи в историю
+    const request = citizenRequests.find(r => r.id === requestId);
+    
+    if (request) {
+      try {
+        // Создаем активность о перемещении карточки для истории
+        apiRequest('POST', `/api/citizen-requests/${requestId}/activities`, {
+          actionType: 'status_change',
+          description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
+          relatedId: requestId,
+          relatedType: 'citizen_request'
+        }).catch(err => {
+          console.error('Ошибка при записи активности:', err);
+        });
+        
+        // После добавления активности записываем в блокчейн
+        apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, {
+          action: 'status_change',
+          entityType: 'citizen_request',
+          entityId: requestId,
+          metadata: {
+            oldStatus: source.droppableId,
+            newStatus: destination.droppableId,
+            movedBy: 'operator', // или user.name если есть автор
+            timestamp: new Date()
+          }
+        }).catch(err => {
+          console.error('Ошибка при записи в блокчейн:', err);
+        });
+        
+        // Обновляем статус обращения
+        updateRequestMutation.mutate({
+          id: requestId,
+          status: newStatus,
+        });
+      } catch (error) {
+        console.error('Ошибка при обновлении статуса:', error);
+        toast({
+          title: "Ошибка!",
+          description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  // Обработчик изменения в форме нового обращения
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Обработчик отправки формы
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const newRequest = {
+      ...formData,
+      status: "new",
+      priority: "medium",
+      createdAt: new Date(),
+      source: "web"
+    };
+    
+    createRequestMutation.mutate(newRequest);
+  };
+
   // Форматируем текущее состояние канбан-доски на основе данных о обращениях
   useEffect(() => {
     if (citizenRequests.length > 0) {
@@ -599,6 +583,7 @@ const CitizenRequests = () => {
             newIds.push(request.id);
             break;
           case "inProgress":
+          case "in_progress":
             inProgressIds.push(request.id);
             break;
           case "waiting":
@@ -607,614 +592,646 @@ const CitizenRequests = () => {
           case "completed":
             completedIds.push(request.id);
             break;
-          default:
-            newIds.push(request.id);
         }
       });
 
-      // Обновляем состояние доски
+      // Обновляем состояние канбан-доски
       setBoard({
-        ...board,
         columns: {
-          ...board.columns,
           new: {
-            ...board.columns.new,
+            id: "new",
+            title: "Новые",
             requestIds: newIds,
           },
           inProgress: {
-            ...board.columns.inProgress,
+            id: "inProgress",
+            title: "В работе",
             requestIds: inProgressIds,
           },
           waiting: {
-            ...board.columns.waiting,
+            id: "waiting",
+            title: "Ожидание",
             requestIds: waitingIds,
           },
           completed: {
-            ...board.columns.completed,
+            id: "completed",
+            title: "Выполнено",
             requestIds: completedIds,
           },
         },
+        columnOrder: ["new", "inProgress", "waiting", "completed"],
       });
     }
   }, [citizenRequests]);
 
-  // Получение запроса по ID
-  const getRequestById = (id: number): CitizenRequest | undefined => {
-    return citizenRequests.find(request => request.id === id);
+  // Обработчик включения/выключения AI обработки
+  const handleAIToggle = (enabled: boolean) => {
+    setAgentSettings(prev => ({
+      ...prev,
+      enabled
+    }));
   };
 
-  // Фильтрация запросов по поисковому запросу
+  // Обработчик выбора режима обработки обращений
+  const handleProcessingModeChange = (mode: 'manual' | 'auto' | 'simple') => {
+    setAgentSettings(prev => ({
+      ...prev,
+      requestProcessingMode: mode
+    }));
+  };
+
+  // Обработчик выбора агента по умолчанию
+  const handleDefaultAgentChange = (agentId: number) => {
+    setAgentSettings(prev => ({
+      ...prev,
+      defaultAgent: agentId
+    }));
+  };
+  
+  // Функция для автоматической обработки обращения
+  const handleAutoProcess = (request: CitizenRequest) => {
+    if (autoProcessSettings.aiEnabled && autoProcessSettings.selectedAgent) {
+      // Открываем диалоговое окно с процессом обработки
+      setSelectedRequest(request);
+      processRequestWithAgent(request, autoProcessSettings.selectedAgent, "full");
+    } else {
+      toast({
+        title: "Ошибка",
+        description: "Необходимо включить ИИ обработку и выбрать агента",
+        variant: "destructive",
+      });
+      
+      setIsAutoProcessDialogOpen(true);
+    }
+  };
+  
+  // Обработчик сохранения настроек автоматической обработки
+  const handleSaveAutoProcessSettings = (settings: AutoProcessSettings) => {
+    setAutoProcessSettings(settings);
+    setIsAutoProcessDialogOpen(false);
+    
+    toast({
+      title: "Настройки сохранены",
+      description: `ИИ обработка ${settings.aiEnabled ? 'включена' : 'выключена'}`,
+    });
+  };
+  
+  // Функция для фильтрации обращений по поисковому запросу
   const filteredRequests = citizenRequests.filter(request => {
     const searchLower = searchQuery.toLowerCase();
     return (
-      request.fullName?.toLowerCase().includes(searchLower) ||
-      request.subject?.toLowerCase().includes(searchLower) ||
-      request.description?.toLowerCase().includes(searchLower) ||
-      request.requestType?.toLowerCase().includes(searchLower)
+      request.fullName.toLowerCase().includes(searchLower) ||
+      request.subject.toLowerCase().includes(searchLower) ||
+      request.description.toLowerCase().includes(searchLower) ||
+      (request.title && request.title.toLowerCase().includes(searchLower)) ||
+      (request.aiClassification && request.aiClassification.toLowerCase().includes(searchLower))
     );
   });
 
-  // Константы для отображения
-  const statusIcons: { [key: string]: React.ReactNode } = {
-    new: <FileText className="h-4 w-4" />,
-    inProgress: <Clock className="h-4 w-4" />,
-    waiting: <Clock className="h-4 w-4" />,
-    completed: <CheckCircle2 className="h-4 w-4" />,
-  };
-
-  const priorityColors: { [key: string]: string } = {
-    low: "bg-blue-100 text-blue-800",
-    medium: "bg-yellow-100 text-yellow-800",
-    high: "bg-orange-100 text-orange-800",
-    urgent: "bg-red-100 text-red-800",
-  };
-
-  // Цвета бордеров для приоритетов
-  const priorityBorderColors: { [key: string]: string } = {
-    low: "border-l-blue-400",
-    medium: "border-l-yellow-400",
-    high: "border-l-orange-500",
-    urgent: "border-l-red-500",
-  };
-
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h1 className="text-2xl font-bold">Воронка обращений</h1>
-          <Button
-            onClick={() => setIsNewRequestOpen(true)}
-            className="bg-gradient-to-r from-green-600 to-green-700"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Создать обращение
+    <div className="flex flex-col space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Обращения граждан</h1>
+        <div className="flex space-x-3">
+          <Button onClick={() => setIsNewRequestOpen(true)} variant="default">
+            <Plus className="h-4 w-4 mr-2" />
+            Новое обращение
           </Button>
-        </div>
-        <p className="text-muted-foreground mb-4">
-          Управление и обслуживание процесса обработки обращений
-        </p>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex flex-wrap gap-3">
-            <Badge className="bg-gray-200 text-gray-700 px-2.5 py-1">
-              Всего: {stats.total}
-            </Badge>
-            <Badge className="bg-blue-100 text-blue-700 px-2.5 py-1">
-              Новых: {stats.new}
-            </Badge>
-            <Badge className="bg-amber-100 text-amber-700 px-2.5 py-1">
-              В работе: {stats.inProgress}
-            </Badge>
-            <Badge className="bg-purple-100 text-purple-700 px-2.5 py-1">
-              Ожидание: {stats.waiting}
-            </Badge>
-            <Badge className="bg-green-100 text-green-700 px-2.5 py-1">
-              Выполнено: {stats.completed}
-            </Badge>
-          </div>
+          <Button onClick={() => setIsAutoProcessDialogOpen(true)} variant="outline">
+            <Bot className="h-4 w-4 mr-2" />
+            Настройки ИИ
+          </Button>
         </div>
       </div>
-
-      <div className="flex items-center justify-between mb-4 bg-white rounded-md border border-gray-100 shadow-sm p-2">
-        <div className="relative w-64">
-          <Input
-            placeholder="Поиск обращений..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-9"
-          />
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <Search className="h-4 w-4" />
-          </div>
-        </div>
+      
+      {/* Верхняя панель информации и поиска */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-white dark:bg-gray-950">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-md flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              Статистика обращений
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="text-center">
+                <div className="text-lg font-bold">{stats.total}</div>
+                <div className="text-xs text-gray-500">Всего</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{stats.new}</div>
+                <div className="text-xs text-gray-500">Новых</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-amber-600">{stats.inProgress}</div>
+                <div className="text-xs text-gray-500">В работе</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{stats.completed}</div>
+                <div className="text-xs text-gray-500">Завершено</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="ai-processing" className="text-sm whitespace-nowrap">
-              ИИ обработка:
-            </Label>
-            <Switch
-              id="ai-processing"
-              checked={agentSettings.enabled}
-              onCheckedChange={(enabled) => setAgentSettings(prev => ({ ...prev, enabled }))}
-            />
-          </div>
+        <Card className="bg-white dark:bg-gray-950">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-md flex items-center">
+              <Search className="h-5 w-5 mr-2" />
+              Поиск и фильтры
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-2">
+              <div className="flex-1">
+                <Input
+                  placeholder="Поиск по обращениям"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Фильтры
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Статус</DropdownMenuLabel>
+                  <DropdownMenuItem>Все</DropdownMenuItem>
+                  <DropdownMenuItem>Новые</DropdownMenuItem>
+                  <DropdownMenuItem>В работе</DropdownMenuItem>
+                  <DropdownMenuItem>Ожидание</DropdownMenuItem>
+                  <DropdownMenuItem>Выполненные</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Приоритет</DropdownMenuLabel>
+                  <DropdownMenuItem>Все</DropdownMenuItem>
+                  <DropdownMenuItem>Высокий</DropdownMenuItem>
+                  <DropdownMenuItem>Средний</DropdownMenuItem>
+                  <DropdownMenuItem>Низкий</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Вкладки для переключения между представлениями */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+        <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="kanban">Канбан</TabsTrigger>
+          <TabsTrigger value="table">Таблица</TabsTrigger>
+          <TabsTrigger value="integrations">Интеграции</TabsTrigger>
+        </TabsList>
+        
+        {/* Канбан доска */}
+        <TabsContent value="kanban" className="mt-0">
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex space-x-4 overflow-x-auto pb-4">
+              {board.columnOrder.map(columnId => {
+                const column = board.columns[columnId];
+                const requests = column.requestIds.map(requestId => 
+                  citizenRequests.find(r => r.id === requestId)
+                ).filter(r => r !== undefined) as CitizenRequest[];
+                
+                // Проверка на совпадение с поисковым запросом
+                const filteredColumnRequests = searchQuery 
+                  ? requests.filter(request => {
+                      const searchLower = searchQuery.toLowerCase();
+                      return (
+                        request.fullName.toLowerCase().includes(searchLower) ||
+                        request.subject.toLowerCase().includes(searchLower) ||
+                        request.description.toLowerCase().includes(searchLower) ||
+                        (request.title && request.title.toLowerCase().includes(searchLower)) ||
+                        (request.aiClassification && request.aiClassification.toLowerCase().includes(searchLower))
+                      );
+                    })
+                  : requests;
+                
+                return (
+                  <div key={column.id} className="flex-shrink-0 w-72">
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                      <h3 className="font-medium mb-3 flex justify-between items-center">
+                        <span className="flex items-center">
+                          {column.title}
+                          <Badge className="ml-2 rounded-full" variant="outline">
+                            {filteredColumnRequests.length}
+                          </Badge>
+                        </span>
+                        <button className="text-gray-500 hover:text-gray-700">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </h3>
+                      
+                      <Droppable droppableId={column.id}>
+                        {(provided, snapshot) => (
+                          <div
+                            className={`min-h-[150px] transition-colors ${
+                              snapshot.isDraggingOver
+                                ? "bg-blue-50 dark:bg-blue-950"
+                                : ""
+                            }`}
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                          >
+                            {filteredColumnRequests.map((request, index) => {
+                              // Определяем цвета в зависимости от приоритета
+                              const priorityBorderColors = {
+                                low: 'border-gray-300',
+                                medium: 'border-blue-300',
+                                high: 'border-orange-300',
+                                urgent: 'border-red-300'
+                              };
+                              
+                              const priorityColors = {
+                                low: 'bg-gray-100 text-gray-800',
+                                medium: 'bg-blue-100 text-blue-800',
+                                high: 'bg-orange-100 text-orange-800',
+                                urgent: 'bg-red-100 text-red-800'
+                              };
+                              
+                              return (
+                                <Draggable
+                                  key={request.id.toString()}
+                                  draggableId={request.id.toString()}
+                                  index={index}
+                                >
+                                  {(provided, snapshot) => (
+                                    <TrelloStyleRequestCard
+                                      request={request}
+                                      priorityBorderColors={priorityBorderColors}
+                                      priorityColors={priorityColors}
+                                      onClick={() => {
+                                        setSelectedRequest(request);
+                                        setIsViewDetailsOpen(true);
+                                      }}
+                                      draggableProps={provided.draggableProps}
+                                      dragHandleProps={provided.dragHandleProps}
+                                      innerRef={provided.innerRef}
+                                      isDragging={snapshot.isDragging}
+                                      onAutoProcess={() => handleAutoProcess(request)}
+                                      isJustMoved={lastMovedRequestId === request.id}
+                                    />
+                                  )}
+                                </Draggable>
+                              );
+                            })}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                      
+                      {column.id === 'new' && (
+                        <Button 
+                          variant="ghost" 
+                          className="w-full mt-3 text-gray-500 hover:text-gray-700 justify-start"
+                          onClick={() => setIsNewRequestOpen(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Добавить обращение
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </DragDropContext>
+        </TabsContent>
+        
+        {/* Табличное представление */}
+        <TabsContent value="table" className="mt-0">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Список обращений</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-4">Загрузка данных...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-3 text-left">ID</th>
+                        <th className="py-3 text-left">Гражданин</th>
+                        <th className="py-3 text-left">Тема</th>
+                        <th className="py-3 text-left">Тип</th>
+                        <th className="py-3 text-left">Статус</th>
+                        <th className="py-3 text-left">Приоритет</th>
+                        <th className="py-3 text-left">Создано</th>
+                        <th className="py-3 text-left">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRequests.map((request) => (
+                        <tr key={request.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
+                          <td className="py-3">{request.id}</td>
+                          <td className="py-3">{request.fullName}</td>
+                          <td className="py-3">{request.subject}</td>
+                          <td className="py-3">{request.requestType}</td>
+                          <td className="py-3">
+                            <Badge 
+                              variant={
+                                request.status === 'new' ? 'default' : 
+                                request.status === 'inProgress' || request.status === 'in_progress' ? 'secondary' :
+                                request.status === 'completed' ? 'success' : 'outline'
+                              }
+                            >
+                              {getColumnLabel(request.status)}
+                            </Badge>
+                          </td>
+                          <td className="py-3">
+                            <Badge 
+                              variant={
+                                request.priority === 'low' ? 'outline' :
+                                request.priority === 'medium' ? 'default' :
+                                request.priority === 'high' ? 'secondary' : 'destructive'
+                              }
+                            >
+                              {request.priority === 'low' ? 'Низкий' : 
+                               request.priority === 'medium' ? 'Средний' :
+                               request.priority === 'high' ? 'Высокий' : 'Срочный'}
+                            </Badge>
+                          </td>
+                          <td className="py-3">
+                            {new Date(request.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3">
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setIsViewDetailsOpen(true);
+                                }}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setIsViewDetailsOpen(true);
+                                    }}
+                                  >
+                                    Просмотр деталей
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleAutoProcess(request)}
+                                  >
+                                    Автоматическая обработка
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel>Изменить статус</DropdownMenuLabel>
+                                  <DropdownMenuItem>Переместить в "В работе"</DropdownMenuItem>
+                                  <DropdownMenuItem>Переместить в "Ожидание"</DropdownMenuItem>
+                                  <DropdownMenuItem>Завершить обработку</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Настройки интеграций */}
+        <TabsContent value="integrations" className="mt-0">
+          <IntegrationSettings />
+        </TabsContent>
+      </Tabs>
+      
+      {/* Диалоговое окно для создания нового обращения */}
+      <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Создать новое обращение</DialogTitle>
+            <DialogDescription>
+              Заполните информацию об обращении гражданина
+            </DialogDescription>
+          </DialogHeader>
           
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-gray-50 text-xs h-9"
-            onClick={() => setIsAutoProcessDialogOpen(true)}
-          >
-            <Bot className="mr-1.5 h-3.5 w-3.5" />
-            Авто-обработка
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="bg-gray-50 text-xs h-9">
-                <Filter className="mr-1.5 h-3.5 w-3.5" />
-                Все статусы
-                <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-blue-400 mr-2"></div>
-                Все статусы
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
-                Новые
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-yellow-400 mr-2"></div>
-                В работе
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-purple-400 mr-2"></div>
-                Ожидание
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-blue-400 mr-2"></div>
-                Выполнено
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {agentSettings.enabled && (
-            <>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="agent-select" className="text-sm whitespace-nowrap">
-                  Агент:
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="fullName" className="text-right">
+                  ФИО
                 </Label>
-                <Select 
-                  value={agentSettings.defaultAgent?.toString() || ""} 
-                  onValueChange={(value) => setAgentSettings(prev => ({ ...prev, defaultAgent: parseInt(value) }))}
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  required
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="contactInfo" className="text-right">
+                  Контакты
+                </Label>
+                <Input
+                  id="contactInfo"
+                  name="contactInfo"
+                  value={formData.contactInfo}
+                  onChange={handleInputChange}
+                  placeholder="Email или телефон"
+                  required
+                  className="col-span-3"
+                />
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="requestType" className="text-right">
+                  Тип обращения
+                </Label>
+                <Select
+                  name="requestType"
+                  value={formData.requestType}
+                  onValueChange={(value) => 
+                    setFormData(prev => ({ ...prev, requestType: value }))
+                  }
                 >
-                  <SelectTrigger id="agent-select" className="w-[180px] h-9">
-                    <SelectValue placeholder="Выберите агента" />
+                  <SelectTrigger id="requestType" className="col-span-3">
+                    <SelectValue placeholder="Выберите тип" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableAgents.map(agent => (
-                      <SelectItem key={agent.id} value={agent.id.toString()}>
-                        {agent.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="Обращение">Обращение</SelectItem>
+                    <SelectItem value="Жалоба">Жалоба</SelectItem>
+                    <SelectItem value="Запрос информации">Запрос информации</SelectItem>
+                    <SelectItem value="Предложение">Предложение</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              <div className="flex items-center gap-2">
-                <Label htmlFor="processing-mode" className="text-sm whitespace-nowrap">
-                  Режим:
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="subject" className="text-right">
+                  Тема
                 </Label>
-                <Select 
-                  value={agentSettings.requestProcessingMode} 
-                  onValueChange={(value: 'manual' | 'auto' | 'simple') => setAgentSettings(prev => ({ ...prev, requestProcessingMode: value }))}
-                >
-                  <SelectTrigger id="processing-mode" className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">Ручной</SelectItem>
-                    <SelectItem value="auto">Автоматический</SelectItem>
-                    <SelectItem value="simple">Базовый</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="subject"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleInputChange}
+                  required
+                  className="col-span-3"
+                />
               </div>
-            </>
-          )}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-gray-50 text-xs h-9 ml-auto"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] })}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Обновить
-          </Button>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="py-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
-          <p className="mt-2 text-gray-600">Загрузка обращений...</p>
-        </div>
-      ) : (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {board.columnOrder.map((columnId) => {
-              const column = board.columns[columnId];
-              const requestsInColumn = column.requestIds
-                .map((requestId) => getRequestById(requestId))
-                .filter((request): request is CitizenRequest => request !== undefined);
-
-              return (
-                <div key={column.id} className="bg-background rounded-lg border border-border shadow-sm">
-                  <div className="p-3 border-b border-border">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium flex items-center">
-                        {statusIcons[column.id]}
-                        <span className="ml-2">{column.title}</span>
-                      </h3>
-                      <div className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">
-                        {requestsInColumn.length}
-                      </div>
-                    </div>
-                  </div>
-                  <Droppable droppableId={column.id}>
-                    {(provided) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className="p-2 min-h-[70vh]"
-                      >
-                        {requestsInColumn.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-32 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-md p-4 mt-2">
-                            <div className="text-4xl mb-2">🗂️</div>
-                            <p className="text-sm">Нет обращений</p>
-                            <p className="text-xs">Перетащите карточки сюда</p>
-                          </div>
-                        ) : (
-                          requestsInColumn.map((request, index) => (
-                            <Draggable
-                              key={request.id}
-                              draggableId={request.id.toString()}
-                              index={index}
-                            >
-                              {(provided, snapshot) => (
-                                <TrelloStyleRequestCard
-                                  request={request}
-                                  priorityBorderColors={priorityBorderColors}
-                                  priorityColors={priorityColors}
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setIsViewDetailsOpen(true);
-                                  }}
-                                  draggableProps={provided.draggableProps}
-                                  dragHandleProps={provided.dragHandleProps}
-                                  innerRef={provided.innerRef}
-                                  isDragging={snapshot.isDragging}
-                                  onAutoProcess={(request) => {
-                                    setIsAutoProcessDialogOpen(true);
-                                    // Можно установить какой-то контекст для автоматической обработки
-                                    setAutoProcessSettings(prev => ({
-                                      ...prev,
-                                      aiEnabled: true,
-                                      selectedAgent: agentSettings.defaultAgent
-                                    }));
-                                  }}
-                                  isJustMoved={lastMovedRequestId === request.id}
-                                />
-                              )}
-                            </Draggable>
-                          ))
-                        )}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </div>
-              );
-            })}
-          </div>
-        </DragDropContext>
-      )}
-
-      {/* Диалог создания нового обращения */}
-      <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Новое обращение</DialogTitle>
-            <DialogDescription>
-              Заполните форму для создания нового обращения гражданина
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="fullName">ФИО</Label>
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="contactInfo">Контактная информация</Label>
-                  <Input
-                    id="contactInfo"
-                    name="contactInfo"
-                    value={formData.contactInfo}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="requestType">Тип обращения</Label>
-                  <Select
-                    name="requestType"
-                    value={formData.requestType}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, requestType: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите тип обращения" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Обращение">Обращение</SelectItem>
-                      <SelectItem value="Жалоба">Жалоба</SelectItem>
-                      <SelectItem value="Предложение">Предложение</SelectItem>
-                      <SelectItem value="Вопрос">Вопрос</SelectItem>
-                      <SelectItem value="Благодарность">Благодарность</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="subject">Тема обращения</Label>
-                  <Input
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="description">Описание</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={5}
-                    required
-                  />
-                </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Описание
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  required
+                  className="col-span-3"
+                />
               </div>
             </div>
+            
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewRequestOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsNewRequestOpen(false)}
+              >
                 Отмена
               </Button>
-              <Button type="submit">Создать обращение</Button>
+              <Button type="submit">Отправить</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-
-      {/* Диалог просмотра деталей обращения */}
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        {selectedRequest && (
-          <DialogContent className="sm:max-w-[1100px] max-h-[90vh] p-0" aria-describedby="request-detail-view">
+      
+      {/* Диалоговое окно для просмотра деталей обращения */}
+      {selectedRequest && (
+        <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
+          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <span className="mr-2">Обращение #{selectedRequest.id}</span>
+                <Badge 
+                  variant={
+                    selectedRequest.priority === 'low' ? 'outline' :
+                    selectedRequest.priority === 'medium' ? 'default' :
+                    selectedRequest.priority === 'high' ? 'secondary' : 'destructive'
+                  }
+                  className="ml-2"
+                >
+                  {selectedRequest.priority === 'low' ? 'Низкий' : 
+                   selectedRequest.priority === 'medium' ? 'Средний' :
+                   selectedRequest.priority === 'high' ? 'Высокий' : 'Срочный'}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            
             <TrelloStyleRequestDetailView 
               request={selectedRequest}
+              activeTab={viewMode}
+              onTabChange={setViewMode}
+              onAutoProcess={() => {
+                if (agentSettings.enabled && agentSettings.defaultAgent) {
+                  processRequestWithAgent(selectedRequest, agentSettings.defaultAgent, "full");
+                } else {
+                  setIsAutoProcessDialogOpen(true);
+                }
+              }}
               onClose={() => setIsViewDetailsOpen(false)}
-              onStatusChange={(id, status) => {
-                updateRequestMutation.mutate({ id, status });
-              }}
-              onRequestUpdate={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-              }}
-              onProcess={(requestId, actionType) => {
-                return new Promise((resolve, reject) => {
-                  // Используем мутацию для обработки обращения
-                  processWithAgentMutation.mutate(
-                    { requestId, agentId: 640, action: actionType },
-                    {
-                      onSuccess: (data) => {
-                        resolve(data);
-                      },
-                      onError: (error) => {
-                        reject(error);
-                      }
-                    }
-                  );
-                });
-              }}
-              priorityColors={priorityColors}
+              availableAgents={availableAgents}
+              onProcessWithAgent={processRequestWithAgent}
             />
           </DialogContent>
-        )}
-      </Dialog>      {/* Диалоговое окно процесса обработки */}
+        </Dialog>
+      )}
+      
+      {/* Диалоговое окно для отображения процесса обработки */}
       <Dialog open={isProcessingDialogOpen} onOpenChange={setIsProcessingDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Процесс обработки ИИ</DialogTitle>
+            <DialogTitle>Обработка обращения</DialogTitle>
             <DialogDescription>
-              Анализ обращения с использованием искусственного интеллекта
+              {processingState.isProcessing 
+                ? `Выполняется: ${processingState.currentStep}` 
+                : 'Обработка завершена'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <div className="mb-4">
-              <div className="flex justify-between mb-1">
-                <p className="text-sm font-medium">{processingState.currentStep}</p>
-                <p className="text-sm font-medium">{processingState.progress}%</p>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full" 
-                  style={{ width: `${processingState.progress}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            <div className="mt-4 border rounded-md">
-              <div className="font-medium p-3 bg-gray-100 border-b">
-                Результаты обработки
-              </div>
-              <div className="divide-y">
-                {processingState.results.map((result, index) => (
-                  <div key={index} className="p-3">
+          {/* Прогресс-бар */}
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div 
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" 
+              style={{ width: `${processingState.progress}%` }}
+            ></div>
+          </div>
+          
+          {/* Результаты обработки */}
+          <div className="mt-4 border rounded-md p-4 max-h-[300px] overflow-y-auto">
+            <h3 className="font-medium mb-2">Ход обработки:</h3>
+            {processingState.results.length > 0 ? (
+              <div className="space-y-3">
+                {processingState.results.map((result, idx) => (
+                  <div key={idx} className="pb-2 border-b border-gray-100 last:border-0">
                     <div className="font-medium text-sm">{result.step}</div>
-                    <div className="text-sm text-gray-600 mt-1">{result.result}</div>
+                    <div className="text-sm text-gray-600">{result.result}</div>
                   </div>
                 ))}
-                {processingState.results.length === 0 && (
-                  <div className="p-3 text-gray-500 text-center">
-                    Ожидание результатов обработки...
-                  </div>
-                )}
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                Ожидание начала обработки...
+              </div>
+            )}
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsProcessingDialogOpen(false)}>
-              Закрыть
-            </Button>
+            {!processingState.isProcessing && (
+              <Button 
+                variant="default"
+                onClick={() => setIsProcessingDialogOpen(false)}
+              >
+                Закрыть
+              </Button>
+            )}
+            {processingState.isProcessing && (
+              <Button 
+                variant="outline"
+                onClick={() => setIsProcessingDialogOpen(false)}
+              >
+                Скрыть (обработка продолжится)
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Диалог автоматической обработки */}
+      {/* Диалоговое окно для настройки автоматической обработки */}
       <AutoProcessingDialog 
         open={isAutoProcessDialogOpen}
         onOpenChange={setIsAutoProcessDialogOpen}
-        agents={availableAgents}
-        onStartProcessing={(settings) => {
-          if (!settings.aiEnabled || !settings.selectedAgent) {
-            toast({
-              variant: "destructive",
-              title: "Ошибка",
-              description: "Необходимо включить ИИ и выбрать агента",
-            });
-            return;
-          }
-          
-          // Получаем список запросов для обработки
-          const requestsToProcess = board.columns['new'].requestIds
-            .map(id => getRequestById(id))
-            .filter(request => {
-              // Проверяем условия для обработки
-              if (!request) return false;
-              // Не обрабатываем уже обработанные запросы, если не включена опция повторной обработки
-              if (request.aiProcessed && !settings.reprocessAI) return false;
-              return true;
-            });
-          
-          if (requestsToProcess.length === 0) {
-            toast({
-              title: "Информация",
-              description: "Не найдено запросов для обработки",
-            });
-            return;
-          }
-          
-          // Массовая обработка запросов
-          toast({
-            title: "Автоматическая обработка",
-            description: `Запущена обработка ${requestsToProcess.length} запросов ${settings.autoClassification ? 'с классификацией' : 'без классификации'}`,
-          });
-          
-          // Симулируем последовательную обработку
-          let processed = 0;
-          setProcessingState({
-            isProcessing: true,
-            currentStep: `Подготовка к обработке (0/${requestsToProcess.length})`,
-            progress: 0,
-            results: []
-          });
-          
-          // Открываем диалог обработки
-          setIsProcessingDialogOpen(true);
-          
-          // Симулируем последовательную обработку запросов
-          const processNextRequest = () => {
-            if (processed < requestsToProcess.length) {
-              const request = requestsToProcess[processed];
-              if (!request) return;
-              
-              // Обновляем состояние обработки
-              setProcessingState(prev => ({
-                ...prev,
-                currentStep: `Обработка запроса ${processed + 1}/${requestsToProcess.length}`,
-                progress: Math.round((processed / requestsToProcess.length) * 100),
-                results: [
-                  ...prev.results,
-                  { 
-                    step: `Запрос #${request.id}: ${request.subject || 'Без темы'}`, 
-                    result: 'Обрабатывается...' 
-                  }
-                ]
-              }));
-              
-              // Вызываем API для обработки
-              apiRequest('POST', `/api/citizen-requests/${request.id}/process-with-agent`, { 
-                agentId: settings.selectedAgent, 
-                action: 'full' 
-              }).then(() => {
-                // Обновляем статус в результатах
-                setProcessingState(prev => ({
-                  ...prev,
-                  results: prev.results.map((result, i) => 
-                    i === prev.results.length - 1 
-                      ? { ...result, result: 'Успешно обработано' } 
-                      : result
-                  )
-                }));
-                
-                // Переходим к следующему запросу
-                processed++;
-                setTimeout(processNextRequest, 1000);
-              }).catch(error => {
-                // Обрабатываем ошибку
-                setProcessingState(prev => ({
-                  ...prev,
-                  results: prev.results.map((result, i) => 
-                    i === prev.results.length - 1 
-                      ? { ...result, result: `Ошибка: ${error.message || 'Неизвестная ошибка'}` } 
-                      : result
-                  )
-                }));
-                
-                // Переходим к следующему запросу
-                processed++;
-                setTimeout(processNextRequest, 1000);
-              });
-            } else {
-              // Завершаем обработку
-              setProcessingState(prev => ({
-                ...prev,
-                isProcessing: false,
-                currentStep: `Обработка завершена (${processed}/${requestsToProcess.length})`,
-                progress: 100
-              }));
-              
-              // Обновляем список запросов
-              queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
-            }
-          };
-          
-          // Запускаем обработку
-          processNextRequest();
-        }}
+        settings={autoProcessSettings}
+        onSave={handleSaveAutoProcessSettings}
+        availableAgents={availableAgents}
       />
     </div>
   );

@@ -451,14 +451,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div style={{ 
-              display: '-webkit-box',
-              WebkitBoxOrient: 'vertical',
-              WebkitLineClamp: 4,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              {request.aiSuggestion?.substring(0, 150)}
+            <div className="line-clamp-4 break-words">
+              {request.aiSuggestion?.substring(0, 250)}
             </div>
           </div>
         )}
