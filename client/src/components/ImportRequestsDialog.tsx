@@ -77,7 +77,7 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
   const importMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       // Начинаем отслеживать прогресс загрузки
-      let progressInterval: ReturnType<typeof setInterval>;
+      let progressInterval: ReturnType<typeof setInterval> | undefined;
       
       try {
         // Имитируем прогресс загрузки
@@ -88,15 +88,12 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
           });
         }, 300);
         
-        const response = await apiRequest('POST', '/api/citizen-requests/import-from-file', formData, {
-          rawResponse: true,
-          headers: {
-            // Не добавляем Content-Type - FormData автоматически устанавливает правильные заголовки
-          }
+        const response = await apiRequest<ImportResult>('POST', '/api/citizen-requests/import-from-file', formData, {
+          rawResponse: true
         });
         
         // Останавливаем интервал прогресса
-        clearInterval(progressInterval);
+        if (progressInterval) clearInterval(progressInterval);
         
         // Завершаем прогресс
         setUploadProgress(100);
