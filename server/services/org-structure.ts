@@ -418,6 +418,109 @@ export async function createTaskRule(rule: any): Promise<any> {
 }
 
 /**
+ * Получает список всех правил маршрутизации задач
+ * @returns Список правил маршрутизации
+ */
+export async function getTaskRules(): Promise<any[]> {
+  try {
+    // Получаем все правила из БД
+    const rules = await storage.getTaskRules();
+    return rules || [];
+  } catch (error) {
+    console.error('Ошибка при получении правил маршрутизации:', error);
+    return [];
+  }
+}
+
+/**
+ * Получает правило маршрутизации по ID
+ * @param id ID правила
+ * @returns Правило маршрутизации или undefined, если не найдено
+ */
+export async function getTaskRuleById(id: number): Promise<any | undefined> {
+  try {
+    // Получаем правило по ID из БД
+    const rule = await storage.getTaskRule(id);
+    return rule;
+  } catch (error) {
+    console.error(`Ошибка при получении правила маршрутизации с ID ${id}:`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Обновляет или создает правило маршрутизации задач
+ * @param rule Данные правила
+ * @returns Обновленное или созданное правило
+ */
+export async function saveTaskRule(rule: any): Promise<any> {
+  try {
+    if (rule.id) {
+      // Логируем обновление правила
+      await logActivity({
+        action: ActivityType.ENTITY_UPDATE,
+        details: `Обновление правила маршрутизации задач: ${rule.name}`
+      });
+      
+      // Обновляем правило в БД
+      const updatedRule = await storage.updateTaskRule(rule.id, rule);
+      return updatedRule;
+    } else {
+      // Если ID не указан, создаем новое правило
+      return await createTaskRule(rule);
+    }
+  } catch (error) {
+    console.error('Ошибка при сохранении правила маршрутизации:', error);
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_ERROR,
+      details: `Ошибка при сохранении правила маршрутизации: ${error.message}`
+    });
+    
+    throw error;
+  }
+}
+
+/**
+ * Удаляет правило маршрутизации задач
+ * @param id ID правила для удаления
+ * @returns true в случае успеха, false в случае ошибки
+ */
+export async function deleteTaskRule(id: number): Promise<boolean> {
+  try {
+    // Получаем правило перед удалением для логирования
+    const rule = await storage.getTaskRuleById(id);
+    
+    if (!rule) {
+      console.error(`Правило маршрутизации с ID ${id} не найдено`);
+      return false;
+    }
+    
+    // Логируем удаление правила
+    await logActivity({
+      action: ActivityType.ENTITY_DELETE,
+      details: `Удаление правила маршрутизации задач: ${rule.name}`
+    });
+    
+    // Удаляем правило из БД
+    await storage.deleteTaskRule(id);
+    
+    return true;
+  } catch (error) {
+    console.error(`Ошибка при удалении правила маршрутизации с ID ${id}:`, error);
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_ERROR,
+      details: `Ошибка при удалении правила маршрутизации: ${error.message}`
+    });
+    
+    return false;
+  }
+}
+
+/**
  * Назначает обращение конкретному сотруднику
  * @param requestId ID обращения
  * @param userId ID сотрудника
