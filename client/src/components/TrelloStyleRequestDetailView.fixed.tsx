@@ -369,11 +369,18 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         </Button>
       </div>
       
-      <div className="overflow-y-auto max-h-[calc(85vh-80px)]">
-        {/* Отображаем все секции одновременно на одном экране */}
-        <div className="border-b p-3 bg-gray-50">
-          <h3 className="text-lg font-medium">Детали</h3>
+      <Tabs defaultValue={activeTab} value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <div className="bg-white border-b px-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Детали</TabsTrigger>
+            <TabsTrigger value="ai">ИИ обработка</TabsTrigger>
+            <TabsTrigger value="history">История</TabsTrigger>
+          </TabsList>
         </div>
+        
+        <div className="overflow-y-auto max-h-[calc(85vh-120px)]">
+          {/* Вкладка с деталями */}
+          <TabsContent value="details" className="p-0 m-0">
             <CardContent className="p-4">
               <div className="grid grid-cols-1 gap-4">
                 <div className="bg-gray-50 p-4 rounded-md">

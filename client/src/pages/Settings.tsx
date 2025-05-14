@@ -15,13 +15,10 @@ import {
   Globe, 
   BarChart4, 
   Shield, 
-  Key,
-  Cpu,
-  Brain
+  Key
 } from 'lucide-react';
 import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings';
 import { MonitoringSettings } from '@/components/settings/MonitoringSettings';
-import { PerplexitySettings } from '@/components/settings/PerplexitySettings';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -36,9 +33,8 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-8 rounded-full bg-muted/50">
+        <TabsList className="grid w-full grid-cols-4 mb-8 rounded-full bg-muted/50">
           <TabsTrigger value="general" className="rounded-full">Общие</TabsTrigger>
-          <TabsTrigger value="ai-models" className="rounded-full">AI Модели</TabsTrigger>
           <TabsTrigger value="integrations" className="rounded-full">Интеграции</TabsTrigger>
           <TabsTrigger value="monitoring" className="rounded-full">Мониторинг</TabsTrigger>
           <TabsTrigger value="security" className="rounded-full">Безопасность</TabsTrigger>
@@ -113,9 +109,6 @@ export default function Settings() {
                 </Card>
               </div>
               
-              {/* Настройки Perplexity API */}
-              <PerplexitySettings />
-              
               <Card>
                 <CardHeader>
                   <CardTitle>Информация о системе</CardTitle>
@@ -128,7 +121,7 @@ export default function Settings() {
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium">Последнее обновление:</span>
-                      <span>14 мая 2025</span>
+                      <span>12 мая 2025</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium">Среда выполнения:</span>
@@ -146,28 +139,11 @@ export default function Settings() {
                       <span className="font-medium">Векторное хранилище:</span>
                       <span>Qdrant/Milvus</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">LLM провайдеры:</span>
-                      <span>OpenAI, Anthropic, Perplexity</span>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Вкладка AI моделей */}
-        <TabsContent value="ai-models" className="space-y-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold flex items-center">
-              <Brain className="mr-2 h-6 w-6" />
-              Настройки моделей искусственного интеллекта
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-6">
-            <PerplexitySettings />
-          </div>
         </TabsContent>
 
         {/* Вкладка интеграций */}

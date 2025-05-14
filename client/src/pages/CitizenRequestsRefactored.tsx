@@ -47,8 +47,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
-import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard.new';
-import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.new';
+import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
+import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.fixed';
 import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog.fixed';
 import {
   ChevronDown,
@@ -241,18 +241,12 @@ const CitizenRequests = () => {
   // Мутация для обработки обращения агентом
   const processWithAgentMutation = useMutation({
     mutationFn: ({ requestId, agentId, action = "full" }: { requestId: number; agentId: number; action?: string }) => {
-      // Проверка параметров
-      if (!requestId || !agentId) {
-        throw new Error("Отсутствуют обязательные параметры");
-      }
-      
       return apiRequest('POST', `/api/citizen-requests/${requestId}/process-with-agent`, { 
         agentId, 
         actionType: action // Исправление: используем actionType вместо action
       });
     },
     onSuccess: (data) => {
-      // После успешной обработки обновляем список обращений
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
       
       // Добавляем финальный результат в список результатов
@@ -266,18 +260,10 @@ const CitizenRequests = () => {
         }]
       }));
       
-      // Уведомляем пользователя об успешной обработке
       toast({
         title: "Обращение обработано",
         description: "Обращение успешно обработано ИИ агентом",
       });
-      
-      // Закрываем диалог через 2 секунды
-      setTimeout(() => {
-        if (isProcessingDialogOpen) {
-          setIsProcessingDialogOpen(false);
-        }
-      }, 2000);
     },
     onError: (error) => {
       console.error("Error processing request with agent:", error);
@@ -286,22 +272,18 @@ const CitizenRequests = () => {
       setProcessingState(prev => ({
         ...prev,
         isProcessing: false,
-        progress: 0,
         results: [...prev.results, { 
           step: 'Ошибка обработки', 
           result: 'Не удалось обработать обращение. Пожалуйста, попробуйте еще раз или обратитесь к администратору системы.'
         }]
       }));
       
-      // Уведомляем пользователя об ошибке
       toast({
         title: "Ошибка",
         description: "Не удалось обработать обращение",
         variant: "destructive",
       });
     },
-    // Добавляем retry для повторных попыток при сетевых ошибках
-    retry: 1,
   });
 
   // Состояние для диалога обработки и отображения прогресса
@@ -373,16 +355,6 @@ const CitizenRequests = () => {
 
   // Обработка обращения с помощью агента
   const processRequestWithAgent = (request: CitizenRequest, agentId: number, action: string = "full") => {
-    // Проверка параметров перед запуском обработки
-    if (!request || !request.id || !agentId) {
-      toast({
-        title: "Ошибка",
-        description: "Некорректные параметры для обработки обращения",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Сбрасываем состояние обработки
     setProcessingState({
       isProcessing: true,
@@ -397,69 +369,49 @@ const CitizenRequests = () => {
     // Имитируем шаги обработки (это будет заменено реальным API)
     const processingSteps = [
       { step: 'Анализ обращения', delay: 1000, progress: 30 },
-      { step: 'Классификация темы', delay: 1000, progress: 50 },
-      { step: 'Подготовка ответа', delay: 1000, progress: 70 },
+      { step: 'Классификация темы', delay: 1500, progress: 50 },
+      { step: 'Подготовка ответа', delay: 2000, progress: 70 },
       { step: 'Финальная проверка', delay: 1000, progress: 90 },
       { step: 'Сохранение результатов', delay: 500, progress: 100 }
     ];
     
-    // Используем setTimeout, чтобы не блокировать UI
-    setTimeout(() => {
-      // Функция для последовательного выполнения шагов
-      const runSteps = (stepIndex = 0) => {
-        // Защита от ошибок - проверяем, что диалог всё еще открыт
-        if (!isProcessingDialogOpen) {
-          return;
-        }
-        
-        if (stepIndex >= processingSteps.length) {
-          // Все шаги выполнены, отправляем запрос на сервер
-          try {
-            processWithAgentMutation.mutate({ 
-              requestId: request.id, 
-              agentId, 
-              action  // API ждет action, но внутри функции переименовывает в actionType
-            });
-          } catch (error) {
-            console.error("Error initiating agent processing:", error);
-            setProcessingState(prev => ({
-              ...prev,
-              isProcessing: false,
-              results: [...prev.results, { 
-                step: 'Ошибка обработки', 
-                result: 'Не удалось запустить обработку обращения. Попробуйте позже.'
-              }]
-            }));
-          }
-          return;
-        }
-        
-        const currentStep = processingSteps[stepIndex];
+    // Функция для последовательного выполнения шагов
+    const runSteps = (stepIndex = 0) => {
+      if (stepIndex >= processingSteps.length) {
+        // Все шаги выполнены, отправляем запрос на сервер
+        processWithAgentMutation.mutate({ 
+          requestId: request.id, 
+          agentId, 
+          action  // API ждет action, но внутри функции переименовывает в actionType
+        });
+        return;
+      }
+      
+      const currentStep = processingSteps[stepIndex];
+      setProcessingState(prev => ({
+        ...prev,
+        currentStep: currentStep.step,
+        progress: currentStep.progress
+      }));
+      
+      // Имитация задержки обработки
+      setTimeout(() => {
+        // Добавляем результат шага (в реальном API будут настоящие результаты)
         setProcessingState(prev => ({
           ...prev,
-          currentStep: currentStep.step,
-          progress: currentStep.progress
+          results: [...prev.results, { 
+            step: currentStep.step, 
+            result: `Успешно выполнен шаг: ${currentStep.step}`
+          }]
         }));
         
-        // Имитация задержки обработки
-        setTimeout(() => {
-          // Добавляем результат шага (в реальном API будут настоящие результаты)
-          setProcessingState(prev => ({
-            ...prev,
-            results: [...prev.results, { 
-              step: currentStep.step, 
-              result: `Успешно выполнен шаг: ${currentStep.step}`
-            }]
-          }));
-          
-          // Переходим к следующему шагу
-          runSteps(stepIndex + 1);
-        }, currentStep.delay);
-      };
-      
-      // Запускаем процесс обработки
-      runSteps();
-    }, 0);
+        // Переходим к следующему шагу
+        runSteps(stepIndex + 1);
+      }, currentStep.delay);
+    };
+    
+    // Запускаем процесс обработки
+    runSteps();
     
     toast({
       title: "Отправка на обработку",
@@ -555,69 +507,63 @@ const CitizenRequests = () => {
     const oldStatusLabel = getColumnLabel(source.droppableId);
     const newStatusLabel = getColumnLabel(destination.droppableId);
     
-    // Обновляем состояние UI немедленно для лучшего UX
-    setBoard(newBoard);
-    
-    // Используем setTimeout, чтобы избежать конфликтов с библиотекой drag-and-drop
-    setTimeout(() => {
-      try {
-        // Обновляем статус обращения на сервере напрямую
-        updateRequestMutation.mutate({
-          id: requestId,
-          status: newStatus,
-        }, {
-          onSuccess: () => {
-            // После успешного обновления обновляем локальные данные
-            queryClient.setQueryData(['/api/citizen-requests'], (oldData: CitizenRequest[] | undefined) => {
-              if (!oldData) return oldData;
-              return oldData.map(r => {
-                if (r.id === requestId) {
-                  return { ...r, status: newStatus };
-                }
-                return r;
-              });
-            });
-            
-            // В фоновом режиме создаем активность
-            apiRequest('POST', `/api/citizen-requests/${requestId}/activities`, {
-              actionType: 'status_change',
-              description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
-              relatedId: requestId,
-              relatedType: 'citizen_request'
-            }).catch(e => console.error('Ошибка при создании активности:', e));
-            
-            // В фоновом режиме записываем в блокчейн
-            apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, {
-              action: 'status_change',
-              entityType: 'citizen_request',
-              entityId: requestId,
-              metadata: {
-                oldStatus: source.droppableId,
-                newStatus: destination.droppableId,
-                movedBy: 'operator',
-                timestamp: new Date()
-              }
-            }).catch(e => console.error('Ошибка при записи в блокчейн:', e));
-          },
-          onError: (error) => {
-            console.error('Ошибка при обновлении статуса:', error);
-            // Откатываем UI в случае ошибки
-            toast({
-              title: "Ошибка!",
-              description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
-              variant: "destructive"
-            });
+    try {
+      // Обновляем состояние UI немедленно для лучшего UX
+      setBoard(newBoard);
+      
+      // Обновляем локальные данные немедленно для визуальной синхронности
+      queryClient.setQueryData(['/api/citizen-requests'], (oldData: CitizenRequest[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(r => {
+          if (r.id === requestId) {
+            return { ...r, status: newStatus };
+          }
+          return r;
+        });
+      });
+      
+      // Создаем активность о перемещении карточки для истории
+      apiRequest('POST', `/api/citizen-requests/${requestId}/activities`, {
+        actionType: 'status_change',
+        description: `Статус изменен с "${oldStatusLabel}" на "${newStatusLabel}"`,
+        relatedId: requestId,
+        relatedType: 'citizen_request'
+      }).then(() => {
+        // После добавления активности записываем в блокчейн
+        return apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, {
+          action: 'status_change',
+          entityType: 'citizen_request',
+          entityId: requestId,
+          metadata: {
+            oldStatus: source.droppableId,
+            newStatus: destination.droppableId,
+            movedBy: 'operator', // или user.name если есть автор
+            timestamp: new Date()
           }
         });
-      } catch (error) {
+      }).then(() => {
+        // Обновляем статус обращения на сервере
+        return updateRequestMutation.mutate({
+          id: requestId,
+          status: newStatus,
+        });
+      }).catch(error => {
         console.error('Ошибка при обновлении статуса:', error);
+        // Откатываем UI в случае ошибки
         toast({
           title: "Ошибка!",
           description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
           variant: "destructive"
         });
-      }
-    }, 0);
+      });
+    } catch (error) {
+      console.error('Ошибка при обновлении статуса:', error);
+      toast({
+        title: "Ошибка!",
+        description: "Возникла проблема при изменении статуса. Пожалуйста, попробуйте еще раз.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Обработчик изменения в форме нового обращения
@@ -859,13 +805,10 @@ const CitizenRequests = () => {
           <TabsTrigger value="integrations">Интеграции</TabsTrigger>
         </TabsList>
         
-        {/* Заголовок канбан-доски */}
+        {/* Канбан доска */}
         <TabsContent value="kanban" className="mt-0">
-          <h2 className="text-xl font-semibold mb-1">Канбан-доска обращений граждан</h2>
-          <p className="text-gray-500 mb-4">Перетаскивайте карточки для изменения статуса обращений</p>
-          
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex gap-2 pb-4">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
               {board.columnOrder.map(columnId => {
                 const column = board.columns[columnId];
                 const requests = column.requestIds.map(requestId => 
@@ -886,60 +829,33 @@ const CitizenRequests = () => {
                     })
                   : requests;
                 
-                // Определяем цвета заголовка и иконки в зависимости от колонки (как в Meetings.tsx)
-                const getColumnStyle = (columnId: string) => {
-                  if (columnId === 'new') return { bgColor: 'bg-yellow-100 text-yellow-800', icon: <FileText className="h-3.5 w-3.5 mr-1" /> };
-                  if (columnId === 'in_progress') return { bgColor: 'bg-blue-100 text-blue-800', icon: <Clock className="h-3.5 w-3.5 mr-1" /> };
-                  if (columnId === 'completed') return { bgColor: 'bg-green-100 text-green-800', icon: <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> };
-                  if (columnId === 'cancelled') return { bgColor: 'bg-red-100 text-red-800', icon: <AlertCircle className="h-3.5 w-3.5 mr-1" /> };
-                  return { bgColor: 'bg-gray-100 text-gray-800', icon: <FileText className="h-3.5 w-3.5 mr-1" /> };
-                };
-                
-                const columnStyle = getColumnStyle(columnId);
-                
                 return (
-                  <div key={column.id} className="flex-1 rounded-md border shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-[260px]">
-                    <div className={`p-2 border-b sticky top-0 z-10 ${columnStyle.bgColor}`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold flex items-center text-sm">
-                          {columnStyle.icon}
-                          <span>{column.title}</span>
-                        </h3>
-                        <div className="flex items-center gap-1">
-                          <div className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-white border shadow-sm min-w-[22px] text-center">
+                  <div key={column.id} className="flex-shrink-0 w-72">
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                      <h3 className="font-medium mb-3 flex justify-between items-center">
+                        <span className="flex items-center">
+                          {column.title}
+                          <Badge className="ml-2 rounded-full" variant="outline">
                             {filteredColumnRequests.length}
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 rounded-full hover:bg-white/80"
-                            onClick={() => {
-                              if (columnId === 'new') {
-                                setIsNewRequestOpen(true);
-                              }
-                            }}
+                          </Badge>
+                        </span>
+                        <button className="text-gray-500 hover:text-gray-700">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </h3>
+                      
+                      <Droppable droppableId={column.id}>
+                        {(provided, snapshot) => (
+                          <div
+                            className={`min-h-[150px] transition-colors ${
+                              snapshot.isDraggingOver
+                                ? "bg-blue-50 dark:bg-blue-950"
+                                : ""
+                            }`}
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
                           >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Droppable droppableId={column.id}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className="p-2 flex-1 overflow-y-auto bg-gray-50/50 h-full"
-                        >
-                          {filteredColumnRequests.length === 0 ? (
-                            <div className="text-center py-4 px-2 text-gray-500 text-sm bg-white/80 rounded-md border border-dashed border-gray-300 my-2 transition-all duration-300 hover:bg-white hover:border-gray-400">
-                              <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400 opacity-70" />
-                              <p className="font-medium text-xs">Нет обращений</p>
-                              <p className="text-xs text-gray-400 mt-1">Переместите карточки сюда</p>
-                            </div>
-                          ) : (
-                            filteredColumnRequests.map((request, index) => {
+                            {filteredColumnRequests.map((request, index) => {
                               // Определяем цвета в зависимости от приоритета
                               const priorityBorderColors = {
                                 low: 'border-gray-300',
@@ -962,29 +878,41 @@ const CitizenRequests = () => {
                                   index={index}
                                 >
                                   {(provided, snapshot) => (
-                                    <div
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      ref={provided.innerRef}
-                                      className={`${snapshot.isDragging ? 'shadow-lg' : ''} ${lastMovedRequestId === request.id ? 'border-green-400 border-2' : ''}`}
-                                    >
-                                      <TrelloStyleRequestCard
-                                        request={request}
-                                        onClick={() => {
-                                          setSelectedRequest(request);
-                                          setIsViewDetailsOpen(true);
-                                        }}
-                                      />
-                                    </div>
+                                    <TrelloStyleRequestCard
+                                      request={request}
+                                      priorityBorderColors={priorityBorderColors}
+                                      priorityColors={priorityColors}
+                                      onClick={() => {
+                                        setSelectedRequest(request);
+                                        setIsViewDetailsOpen(true);
+                                      }}
+                                      draggableProps={provided.draggableProps}
+                                      dragHandleProps={provided.dragHandleProps}
+                                      innerRef={provided.innerRef}
+                                      isDragging={snapshot.isDragging}
+                                      onAutoProcess={() => handleAutoProcess(request)}
+                                      isJustMoved={lastMovedRequestId === request.id}
+                                    />
                                   )}
                                 </Draggable>
                               );
-                            })
-                          )}
-                          {provided.placeholder}
-                        </div>
+                            })}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                      
+                      {column.id === 'new' && (
+                        <Button 
+                          variant="ghost" 
+                          className="w-full mt-3 text-gray-500 hover:text-gray-700 justify-start"
+                          onClick={() => setIsNewRequestOpen(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Добавить обращение
+                        </Button>
                       )}
-                    </Droppable>
+                    </div>
                   </div>
                 );
               })}
@@ -1240,7 +1168,8 @@ const CitizenRequests = () => {
             
             <TrelloStyleRequestDetailView 
               request={selectedRequest}
-              isOpen={true}
+              activeTab={viewMode}
+              onTabChange={(tab: string) => setViewMode(tab as 'details' | 'ai' | 'history')}
               onAutoProcess={() => {
                 if (agentSettings.enabled && agentSettings.defaultAgent) {
                   processRequestWithAgent(selectedRequest, agentSettings.defaultAgent, "full");

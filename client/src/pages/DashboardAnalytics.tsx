@@ -37,26 +37,12 @@ import { TaskDistributionChart } from "@/components/analytics/TaskDistributionCh
 import RecentActivities from "@/components/dashboard/RecentActivities";
 import BlockchainRecordsList from "@/components/dashboard/BlockchainRecordsList";
 import AgentChatInterface from "@/components/dashboard/AgentChatInterface";
-import { 
-  NotificationCenter, 
-  ContextualNotificationsContainer
-} from "@/components/notifications";
-
-// Import the notification types
-import { 
-  INotification,
-  NotificationPriority,
-  NotificationType
-} from "@/components/notifications/shared-types";
-
-// Типы уже импортированы из NotificationCenter
 import { StatCard, Task, Activity as ActivityType, User } from "@/lib/types";
 
 export default function DashboardAnalytics() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [refreshTimestamp, setRefreshTimestamp] = useState(new Date());
   const [timeRangeFilter, setTimeRangeFilter] = useState("month");
-  const [activeContextualNotifications, setActiveContextualNotifications] = useState<INotification[]>([]);
   
   // Fetch tasks
   const { data: tasksData, isLoading: isLoadingTasks } = useQuery<Task[]>({
@@ -158,44 +144,8 @@ export default function DashboardAnalytics() {
     });
   };
   
-  // Добавление демонстрационного уведомления
-  const addDemoNotification = () => {
-    const demoNotification: INotification = {
-      id: Date.now().toString(),
-      title: 'Истекает срок выполнения задачи',
-      message: 'Задача "Анализ данных по обращениям граждан" требует выполнения в течение 2 часов.',
-      timestamp: new Date(),
-      read: false,
-      priority: NotificationPriority.HIGH,
-      type: NotificationType.TASK,
-      entityId: '5432',
-      entityType: 'task',
-      actionUrl: '/tasks/5432'
-    };
-    
-    setActiveContextualNotifications(prev => [demoNotification, ...prev]);
-    
-    // Автоматическое удаление уведомления через 6 секунд
-    setTimeout(() => {
-      setActiveContextualNotifications(prev => 
-        prev.filter(n => n.id !== demoNotification.id)
-      );
-    }, 6000);
-  };
-
   return (
     <div className="container mx-auto py-6 px-4">
-      {/* Контекстные уведомления */}
-      <ContextualNotificationsContainer 
-        notifications={activeContextualNotifications}
-        onClose={(id) => {
-          setActiveContextualNotifications(prev => 
-            prev.filter(n => n.id !== id)
-          );
-        }}
-        position="top-right"
-      />
-      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Аналитика</h1>
@@ -204,12 +154,10 @@ export default function DashboardAnalytics() {
           </p>
         </div>
         <div className="flex gap-2 mt-4 md:mt-0">
-          <div className="flex gap-2 items-center">
-            <NotificationCenter />
+          <div className="flex gap-2">
             <Button 
               variant="outline" 
               className="flex items-center gap-1"
-              onClick={addDemoNotification}
             >
               <Bot className="h-4 w-4" />
               Анализ с помощью ИИ
