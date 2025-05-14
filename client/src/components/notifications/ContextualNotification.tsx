@@ -4,7 +4,7 @@ import { X, Bell, AlertCircle, Info, AlertTriangle, MessageSquare, Clock, FileTe
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Notification, NotificationPriority, NotificationType } from './shared-types';
+import { INotification, NotificationPriority, NotificationType } from './shared-types';
 
 // Вспомогательная функция для получения иконки уведомления
 function getNotificationIcon(type: NotificationType) {
@@ -47,7 +47,7 @@ function getNotificationColor(priority: NotificationPriority) {
 }
 
 interface ContextualNotificationProps {
-  notification: Notification;
+  notification: INotification;
   onClose: () => void;
   duration?: number; // Продолжительность отображения в миллисекундах
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';

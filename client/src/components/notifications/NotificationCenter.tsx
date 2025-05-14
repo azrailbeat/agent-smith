@@ -184,31 +184,31 @@ export function NotificationCenter() {
   const { data: notifications = [], isLoading } = useQuery<INotification[]>({
     queryKey: ['/api/notifications'],
     // Временное решение для демонстрации - в реальном приложении будет запрос к API
-    queryFn: async () => {
+    queryFn: async (): Promise<INotification[]> => {
       // Имитация задержки API
       await new Promise(resolve => setTimeout(resolve, 500));
       return demoNotifications;
     },
   });
   
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n: INotification) => !n.read).length;
   
   const filteredNotifications = {
     all: notifications,
-    unread: notifications.filter(n => !n.read),
-    tasks: notifications.filter(n => n.type === NotificationType.TASK),
-    requests: notifications.filter(n => n.type === NotificationType.CITIZEN_REQUEST),
-    system: notifications.filter(n => n.type === NotificationType.SYSTEM),
+    unread: notifications.filter((n: INotification) => !n.read),
+    tasks: notifications.filter((n: INotification) => n.type === NotificationType.TASK),
+    requests: notifications.filter((n: INotification) => n.type === NotificationType.CITIZEN_REQUEST),
+    system: notifications.filter((n: INotification) => n.type === NotificationType.SYSTEM),
   };
   
   const markAsRead = (id: string) => {
     // Обновляем локальное состояние
-    const updatedNotifications = notifications.map(n => 
+    const updatedNotifications = notifications.map((n: INotification) => 
       n.id === id ? { ...n, read: true } : n
     );
     
     // Обновляем кэш
-    queryClient.setQueryData(['/api/notifications'], updatedNotifications);
+    queryClient.setQueryData<INotification[]>(['/api/notifications'], updatedNotifications);
     
     // В реальном приложении здесь был бы вызов API для обновления на сервере
     // apiRequest(`/api/notifications/${id}/read`, { method: 'POST' });
@@ -216,10 +216,10 @@ export function NotificationCenter() {
   
   const markAllAsRead = () => {
     // Обновляем локальное состояние
-    const updatedNotifications = notifications.map(n => ({ ...n, read: true }));
+    const updatedNotifications = notifications.map((n: INotification) => ({ ...n, read: true }));
     
     // Обновляем кэш
-    queryClient.setQueryData(['/api/notifications'], updatedNotifications);
+    queryClient.setQueryData<INotification[]>(['/api/notifications'], updatedNotifications);
     
     // В реальном приложении здесь был бы вызов API для обновления на сервере
     // apiRequest('/api/notifications/read-all', { method: 'POST' });
@@ -340,7 +340,7 @@ export function NotificationCenter() {
 }
 
 // Демо-данные для локальной разработки и тестирования
-const demoNotifications: Notification[] = [
+const demoNotifications: INotification[] = [
   {
     id: '1',
     title: 'Новая задача назначена',
