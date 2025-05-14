@@ -74,7 +74,7 @@ export function getNotificationColor(priority: NotificationPriority) {
 }
 
 export function NotificationItem({ notification, onMarkAsRead }: { 
-  notification: Notification,
+  notification: INotification,
   onMarkAsRead: (id: string) => void
 }) {
   const iconClass = getNotificationColor(notification.priority);
@@ -148,7 +148,7 @@ export function NotificationItem({ notification, onMarkAsRead }: {
 }
 
 export function NotificationsList({ notifications, onMarkAsRead }: {
-  notifications: Notification[],
+  notifications: INotification[],
   onMarkAsRead: (id: string) => void
 }) {
   if (notifications.length === 0) {
@@ -181,7 +181,7 @@ export function NotificationCenter() {
   const queryClient = useQueryClient();
   
   // Fetch notifications
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+  const { data: notifications = [], isLoading } = useQuery<INotification[]>({
     queryKey: ['/api/notifications'],
     // Временное решение для демонстрации - в реальном приложении будет запрос к API
     queryFn: async () => {
