@@ -381,8 +381,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             </Badge>
           )}
           {request.aiClassification && (
-            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-[10px] border-gray-200 h-4 px-1">
-              {request.aiClassification}
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-[10px] border-gray-200 h-4 px-1 max-w-[100px] overflow-hidden">
+              <span className="truncate inline-block max-w-full">{request.aiClassification}</span>
             </Badge>
           )}
           

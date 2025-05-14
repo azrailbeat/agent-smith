@@ -183,8 +183,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
           
           {request.aiProcessed && request.aiClassification && (
             <div className="mt-1.5">
-              <Badge variant="outline" className="bg-purple-50 text-xs px-1.5 py-0 font-normal text-purple-700 border-purple-200">
-                Категория: {request.aiClassification}
+              <Badge variant="outline" className="bg-purple-50 text-xs px-1.5 py-0 font-normal text-purple-700 border-purple-200 max-w-full overflow-hidden">
+                <span className="truncate inline-block max-w-[200px]">Категория: {request.aiClassification}</span>
               </Badge>
             </div>
           )}
@@ -200,8 +200,8 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               {request.aiProcessed && <Bot className="h-3 w-3 text-purple-500" />}
               {request.blockchainHash && <Database className="h-3 w-3 text-blue-500" />}
               {request.aiClassification && 
-                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-purple-50 text-purple-700 border-purple-100">
-                  {request.aiClassification}
+                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-purple-50 text-purple-700 border-purple-100 max-w-[100px] overflow-hidden">
+                  <span className="truncate inline-block max-w-full">{request.aiClassification}</span>
                 </Badge>
               }
             </div>
