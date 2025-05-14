@@ -10,6 +10,20 @@ import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
 import { Department, Position, User, CitizenRequest } from '@shared/schema';
 
 /**
+ * Получает список всех подразделений
+ * @returns Список подразделений
+ */
+export async function getDepartments(): Promise<Department[]> {
+  try {
+    const departments = await storage.getDepartments();
+    return departments;
+  } catch (error) {
+    console.error('Ошибка при получении списка подразделений:', error);
+    return [];
+  }
+}
+
+/**
  * Получает подразделение по ID
  * @param id ID подразделения
  * @returns Подразделение или undefined, если не найдено

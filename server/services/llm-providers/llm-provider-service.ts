@@ -102,10 +102,11 @@ export class LLMProviderService {
   // Загрузка конфигураций провайдеров из хранилища
   private async loadProviders(): Promise<void> {
     try {
-      const providersSettings = await storage.getSystemSetting('llm_providers');
+      const providersValue = await storage.getSystemSetting('llm_providers');
       
-      if (providersSettings && providersSettings.value) {
-        const providers = JSON.parse(providersSettings.value) as LLMProviderConfig[];
+      if (providersValue) {
+        // Напрямую используем значение, так как storage.getSystemSetting возвращает само значение
+        const providers = JSON.parse(providersValue) as LLMProviderConfig[];
         
         // Очищаем текущие конфигурации
         this.providers.clear();
@@ -248,7 +249,7 @@ export class LLMProviderService {
   private async saveProviders(): Promise<void> {
     try {
       const providers = Array.from(this.providers.values());
-      await storage.setSystemSetting('llm_providers', JSON.stringify(providers));
+      await storage.updateSystemSetting('llm_providers', JSON.stringify(providers));
     } catch (error: any) {
       console.error('Ошибка при сохранении провайдеров LLM:', error);
       

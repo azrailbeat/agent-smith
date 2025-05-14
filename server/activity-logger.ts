@@ -60,13 +60,13 @@ export async function logActivity(activity: Activity): Promise<any> {
     
     // Создаем активность в хранилище
     const createdActivity = await storage.createActivity({
-      type: activity.action,
+      actionType: activity.action, // Соответствует полю actionType в схеме БД
       userId: activity.userId || 0, // 0 для системных действий
       entityType: activity.entityType,
       entityId: activity.entityId,
-      details: activity.details,
+      description: activity.details, // Соответствует полю description в схеме БД
       metadata: activity.metadata ? JSON.stringify(activity.metadata) : null,
-      createdAt: activity.timestamp
+      timestamp: activity.timestamp
     });
     
     // Для важных событий также записываем в консоль
