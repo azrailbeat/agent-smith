@@ -86,19 +86,46 @@ interface CitizenRequest {
   aiSuggestion?: string;
   responseText?: string;
   closedAt?: Date;
+  completedAt?: Date;
+  
+  // Поля для отслеживания крайних сроков
+  deadline?: Date;
+  overdue?: boolean;
+  decision?: string;
+  
+  // Вложения и суммаризация
   attachments?: string[];
-  title?: string;
-  content?: string;
-  category?: string;
-  source?: string;
   summary?: string;
   blockchainHash?: string;
-  completedAt?: Date;
+  
+  // eOtinish-специфические поля
+  externalId?: string;
+  externalSource?: string;
+  externalRegNum?: string;
+  region?: string;
+  district?: string;
+  locality?: string;
+  category?: string;
+  subcategory?: string;
+  responsibleOrg?: string;
+  
+  // Устаревшие поля, оставлены для совместимости
+  title?: string;
+  content?: string;
+  source?: string;
+  
+  // Расширенная информация о гражданине
   citizenInfo?: {
     name?: string;
     contact?: string;
     address?: string;
     iin?: string;
+    region?: string;
+    district?: string;
+    locality?: string;
+    category?: string;
+    subcategory?: string;
+    source?: string;
   };
 }
 

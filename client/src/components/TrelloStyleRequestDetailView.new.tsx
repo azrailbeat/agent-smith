@@ -369,15 +369,69 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                       </div>
                     )}
                     {request.citizenInfo.iin && (
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center text-sm mb-3">
                         <CreditCard className="h-4 w-4 text-blue-500 mr-3" />
                         <span>ИИН: {request.citizenInfo.iin}</span>
                       </div>
                     )}
                   </>
                 )}
+                
+                {/* Местоположение (данные из eOtinish) */}
+                {(request.region || request.district || request.locality || 
+                 (request.citizenInfo?.region || request.citizenInfo?.district || request.citizenInfo?.locality)) && (
+                  <div className="flex items-start text-sm mt-3 pt-3 border-t border-gray-200">
+                    <div className="w-full">
+                      <div className="mb-2 text-gray-600 font-medium">Местоположение:</div>
+                      <div className="pl-3 space-y-1">
+                        {(request.region || request.citizenInfo?.region) && (
+                          <div>Область: {request.region || request.citizenInfo?.region}</div>
+                        )}
+                        {(request.district || request.citizenInfo?.district) && (
+                          <div>Район: {request.district || request.citizenInfo?.district}</div>
+                        )}
+                        {(request.locality || request.citizenInfo?.locality) && (
+                          <div>Населенный пункт: {request.locality || request.citizenInfo?.locality}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+            
+            {/* Секция с категорией и подкатегорией (данные из eOtinish) */}
+            {(request.category || request.subcategory || request.responsibleOrg || 
+             (request.citizenInfo?.category || request.citizenInfo?.subcategory)) && (
+              <div className="mt-5">
+                <h5 className="text-base font-medium mb-3">Категоризация обращения</h5>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                  {(request.category || request.citizenInfo?.category) && (
+                    <div className="flex items-center text-sm mb-3">
+                      <Tag className="h-4 w-4 text-blue-500 mr-3" />
+                      <span className="text-gray-600 font-medium mr-2">Категория:</span>
+                      <span>{request.category || request.citizenInfo?.category}</span>
+                    </div>
+                  )}
+                  
+                  {(request.subcategory || request.citizenInfo?.subcategory) && (
+                    <div className="flex items-center text-sm mb-3">
+                      <Tag className="h-4 w-4 text-blue-500 mr-3" />
+                      <span className="text-gray-600 font-medium mr-2">Подкатегория:</span>
+                      <span>{request.subcategory || request.citizenInfo?.subcategory}</span>
+                    </div>
+                  )}
+                  
+                  {request.responsibleOrg && (
+                    <div className="flex items-center text-sm">
+                      <Building className="h-4 w-4 text-blue-500 mr-3" />
+                      <span className="text-gray-600 font-medium mr-2">Ответственная организация:</span>
+                      <span>{request.responsibleOrg}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <div className="mt-8">
               <h5 className="text-base font-medium mb-3">Обработка заявки</h5>
@@ -394,6 +448,29 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   <span>{formatDate(request.updatedAt)}</span>
                 </div>
                 
+                {request.deadline && (
+                  <div className="flex items-center text-sm">
+                    <Clock className="h-4 w-4 text-orange-500 mr-3" />
+                    <span className="text-gray-600 font-medium mr-2">Срок исполнения:</span>
+                    <span className={request.overdue ? "text-red-500 font-semibold" : ""}>
+                      {formatDate(request.deadline)}
+                      {request.overdue && (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 ml-2 px-2 py-0.5">
+                          Просрочено
+                        </Badge>
+                      )}
+                    </span>
+                  </div>
+                )}
+                
+                {request.completedAt && (
+                  <div className="flex items-center text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mr-3" />
+                    <span className="text-gray-600 font-medium mr-2">Завершено:</span>
+                    <span>{formatDate(request.completedAt)}</span>
+                  </div>
+                )}
+                
                 {request.aiProcessed && (
                   <div className="flex items-center text-sm">
                     <Bot className="h-4 w-4 text-blue-500 mr-3" />
@@ -401,6 +478,19 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                     <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 px-2 py-0.5">
                       Успешно
                     </Badge>
+                  </div>
+                )}
+                
+                {request.externalSource && (
+                  <div className="flex items-center text-sm">
+                    <Database className="h-4 w-4 text-blue-500 mr-3" />
+                    <span className="text-gray-600 font-medium mr-2">Источник:</span>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5">
+                      {request.externalSource === 'eotinish' ? 'eӨтініш' : request.externalSource}
+                    </Badge>
+                    {request.externalRegNum && (
+                      <span className="ml-2">№ {request.externalRegNum}</span>
+                    )}
                   </div>
                 )}
               </div>
