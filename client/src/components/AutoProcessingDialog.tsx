@@ -25,8 +25,9 @@ interface Agent {
 interface AutoProcessingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  agents: Agent[];
-  onStartProcessing: (settings: AutoProcessSettings) => void;
+  availableAgents?: Agent[];
+  settings?: AutoProcessSettings;
+  onSave: (settings: AutoProcessSettings) => void;
 }
 
 export interface AutoProcessSettings {
@@ -40,11 +41,12 @@ export interface AutoProcessSettings {
 const AutoProcessingDialog: React.FC<AutoProcessingDialogProps> = ({
   open,
   onOpenChange,
-  agents,
-  onStartProcessing
+  availableAgents = [],
+  settings: initialSettings,
+  onSave
 }) => {
   const { toast } = useToast();
-  const [settings, setSettings] = useState<AutoProcessSettings>({
+  const [settings, setSettings] = useState<AutoProcessSettings>(initialSettings || {
     aiEnabled: false,
     selectedAgent: null,
     autoClassification: false,
@@ -52,7 +54,7 @@ const AutoProcessingDialog: React.FC<AutoProcessingDialogProps> = ({
     reprocessAI: false
   });
 
-  const handleStartProcessing = () => {
+  const handleSave = () => {
     if (!settings.aiEnabled || !settings.selectedAgent) {
       toast({
         title: "Ошибка",
@@ -62,12 +64,12 @@ const AutoProcessingDialog: React.FC<AutoProcessingDialogProps> = ({
       return;
     }
     
-    // Вызываем функцию для начала обработки
-    onStartProcessing(settings);
+    // Вызываем функцию для сохранения настроек
+    onSave(settings);
     
     toast({
-      title: "Автоматическая обработка",
-      description: "Запущена автоматическая обработка обращений",
+      title: "Настройки сохранены",
+      description: "Настройки автоматической обработки сохранены",
     });
     
     // Закрываем диалог
@@ -114,7 +116,7 @@ const AutoProcessingDialog: React.FC<AutoProcessingDialogProps> = ({
                 <SelectValue placeholder="Выберите агента" />
               </SelectTrigger>
               <SelectContent>
-                {agents.map(agent => (
+                {availableAgents.map((agent: Agent) => (
                   <SelectItem key={agent.id} value={agent.id.toString()}>
                     {agent.name}
                   </SelectItem>
@@ -185,7 +187,7 @@ const AutoProcessingDialog: React.FC<AutoProcessingDialogProps> = ({
             Отмена
           </Button>
           <Button
-            onClick={handleStartProcessing}
+            onClick={handleSave}
             disabled={!settings.aiEnabled || !settings.selectedAgent}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
