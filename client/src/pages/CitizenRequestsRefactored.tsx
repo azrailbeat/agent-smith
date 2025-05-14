@@ -382,7 +382,7 @@ const CitizenRequests = () => {
         processWithAgentMutation.mutate({ 
           requestId: request.id, 
           agentId, 
-          action 
+          action  // API ждет action, но внутри функции переименовывает в actionType
         });
         return;
       }

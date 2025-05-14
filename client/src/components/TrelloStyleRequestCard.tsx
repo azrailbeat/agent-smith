@@ -12,47 +12,6 @@ import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircl
          MessageSquare, FileText, Clock, Edit, CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2 } from 'lucide-react';
 import { CitizenRequest, Activity, Agent } from '@shared/types';
 
-interface CitizenRequest {
-  id: number;
-  fullName: string;
-  contactInfo: string;
-  requestType: string;
-  subject: string;
-  description: string;
-  status: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  createdAt: Date;
-  updatedAt: Date;
-  assignedTo?: number;
-  aiProcessed?: boolean;
-  aiClassification?: string;
-  aiSuggestion?: string;
-  responseText?: string;
-  closedAt?: Date;
-  attachments?: string[];
-  title?: string;
-  content?: string;
-  category?: string;
-  source?: string;
-  summary?: string;
-  blockchainHash?: string;
-  completedAt?: Date;
-  citizenInfo?: {
-    name?: string;
-    contact?: string;
-    address?: string;
-    iin?: string;
-  };
-  activities?: Activity[];
-}
-
-interface Agent {
-  id: number;
-  name: string;
-  type: string;
-  description?: string;
-}
-
 interface TrelloStyleRequestCardProps {
   request: CitizenRequest;
   priorityBorderColors: { [key: string]: string };
