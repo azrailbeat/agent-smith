@@ -72,10 +72,13 @@ interface CitizenRequest {
   status: string;
   priority: string;
   createdAt: Date;
+  updatedAt?: Date;
   assignedTo?: number | null;
   deadline?: Date | null;
   aiProcessed?: boolean;
   aiResult?: any;
+  aiSuggestion?: string;
+  aiClassification?: string;
   citizenInfo?: {
     name?: string;
     contact?: string;
@@ -121,10 +124,10 @@ interface OrganizationUser {
 interface TrelloStyleRequestDetailViewProps {
   request: CitizenRequest;
   onClose: () => void;
-  onStatusChange: (id: number, status: string) => void;
-  onRequestUpdate: () => void;
+  onStatusChange?: (id: number, status: string) => void;
+  onRequestUpdate?: () => void;
   onProcess?: (requestId: number, actionType: string) => Promise<any>;
-  priorityColors: { [key: string]: string };
+  priorityColors?: { [key: string]: string };
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   onAutoProcess?: () => void;
@@ -135,10 +138,15 @@ interface TrelloStyleRequestDetailViewProps {
 const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> = ({
   request,
   onClose,
-  onStatusChange,
-  onRequestUpdate,
+  onStatusChange = () => {},
+  onRequestUpdate = () => {},
   onProcess,
-  priorityColors,
+  priorityColors = {
+    low: 'bg-blue-500',
+    medium: 'bg-yellow-500',
+    high: 'bg-orange-500',
+    critical: 'bg-red-500'
+  },
   activeTab: externalActiveTab = 'details',
   onTabChange,
   onAutoProcess,
@@ -207,7 +215,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       });
       setComment('');
       fetchActivities();
-      onRequestUpdate();
+      if (onRequestUpdate) onRequestUpdate();
     } catch (error) {
       console.error('Ошибка добавления комментария:', error);
       toast({
@@ -229,7 +237,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         title: 'Обращение удалено',
         description: 'Обращение успешно удалено из системы',
       });
-      onRequestUpdate();
+      if (onRequestUpdate) onRequestUpdate();
       onClose();
     } catch (error) {
       console.error('Ошибка удаления обращения:', error);

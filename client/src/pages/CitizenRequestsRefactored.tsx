@@ -1150,7 +1150,7 @@ const CitizenRequests = () => {
             <TrelloStyleRequestDetailView 
               request={selectedRequest}
               activeTab={viewMode}
-              onTabChange={setViewMode}
+              onTabChange={(tab: string) => setViewMode(tab as 'details' | 'ai' | 'history')}
               onAutoProcess={() => {
                 if (agentSettings.enabled && agentSettings.defaultAgent) {
                   processRequestWithAgent(selectedRequest, agentSettings.defaultAgent, "full");
