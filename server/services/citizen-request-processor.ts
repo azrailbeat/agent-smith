@@ -1,372 +1,555 @@
 /**
- * Сервис для обработки обращений граждан с использованием ИИ-агентов и организационной структуры
- * Система автоматически классифицирует обращения, назначает их ответственным отделам/сотрудникам
- * и обрабатывает с помощью соответствующих агентов
+ * Сервис для обработки обращений граждан
+ * 
+ * Обеспечивает автоматическую классификацию, маршрутизацию, генерацию ответов
+ * и обработку обращений с использованием ИИ-агентов и интеграции с eOtinish.kz
  */
 
 import { storage } from '../storage';
-import { agentService } from './agent-service';
-import { logActivity } from '../activity-logger';
-import { CitizenRequest } from '@shared/schema';
+import { logActivity, ActivityType } from '../activity-logger';
+import { agentService, TaskType, EntityType } from './agent-service';
+import { processRequestByOrgStructure } from './org-structure';
 import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
-import { findDepartmentByCategory, getDepartmentManagers, processRequestByOrgStructure } from './org-structure';
+import { enrichPromptWithRAG } from './vector-store';
+import axios from 'axios';
 
-/**
- * Константы типов обращений для классификации
- */
-export enum RequestCategory {
-  GENERAL = 'general',                  // Общие вопросы
-  COMPLAINT = 'complaint',              // Жалоба
-  PROPOSAL = 'proposal',                // Предложение
-  APPLICATION = 'application',          // Заявление
-  INFORMATION_REQUEST = 'info_request', // Запрос информации
-  APPEAL = 'appeal',                    // Апелляция
-  GRATITUDE = 'gratitude',              // Благодарность
-  OTHER = 'other'                       // Прочее
-}
-
-/**
- * Карта соответствия категорий обращений и профильных отделов
- */
-const CATEGORY_TO_DEPARTMENT_MAP: Record<string, string> = {
-  [RequestCategory.GENERAL]: 'Отдел по работе с гражданами',
-  [RequestCategory.COMPLAINT]: 'Отдел по работе с гражданами',
-  [RequestCategory.PROPOSAL]: 'Канцелярия',
-  [RequestCategory.APPLICATION]: 'Отдел по работе с гражданами',
-  [RequestCategory.INFORMATION_REQUEST]: 'Канцелярия',
-  [RequestCategory.APPEAL]: 'Юридический отдел',
-  [RequestCategory.GRATITUDE]: 'Отдел по работе с гражданами',
-  [RequestCategory.OTHER]: 'Канцелярия'
-};
-
-/**
- * Интерфейс для результатов классификации обращения
- */
-interface ClassificationResult {
-  category: string;
-  confidence: number;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  summary: string;
-  keywords: string[];
-  departmentName?: string;
-  needsHumanReview: boolean;
+// Интерфейс для интеграции с eOtinish.kz
+interface EOtinishAPIConfig {
+  apiUrl: string;
+  apiToken: string;
+  orgId: string;
 }
 
 /**
  * Обрабатывает новое обращение гражданина
- * 1. Классифицирует обращение с помощью ИИ
- * 2. Определяет ответственное подразделение
- * 3. Назначает исполнителя в соответствии с орг. структурой
- * 4. Создает запись в блокчейне для обеспечения прозрачности
- * 5. Логирует действия системы
- * 
  * @param requestId ID обращения для обработки
- * @returns Обработанное обращение с заполненной информацией
+ * @returns Результат обработки
  */
-export async function processNewCitizenRequest(requestId: number): Promise<CitizenRequest> {
+export async function processNewCitizenRequest(requestId: number): Promise<{
+  success: boolean;
+  requestId: number;
+  aiProcessed: boolean;
+  blockchainHash?: string;
+  error?: string;
+}> {
   try {
-    // Получаем обращение по ID
+    // Логируем начало обработки
+    await logActivity({
+      action: ActivityType.AI_PROCESSING,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: requestId,
+      details: 'Начало автоматической обработки обращения гражданина'
+    });
+    
+    // Получаем обращение из хранилища
     const request = await storage.getCitizenRequest(requestId);
+    
     if (!request) {
       throw new Error(`Обращение с ID ${requestId} не найдено`);
     }
-
-    // Логируем начало обработки
-    await logActivity({
-      action: 'process_start',
-      entityType: 'citizen_request',
-      entityId: requestId,
-      details: `Начата автоматическая обработка обращения №${requestId}`
-    });
-
-    // Шаг 1: Классификация обращения с помощью AI-агента
-    const classificationAgent = await findAIAgentByType('classification');
     
-    if (!classificationAgent) {
-      throw new Error('Не найден AI-агент для классификации обращений');
-    }
-    
-    const classificationResult = await agentService.processTask({
-      taskType: 'classification',
-      entityType: 'citizen_request',
-      entityId: requestId,
-      agentId: classificationAgent.id,
-      content: request.description,
-      metadata: {
-        subject: request.subject,
-        fullName: request.fullName,
-        contactInfo: request.contactInfo
-      }
-    });
-    
-    // Парсим результаты классификации
-    const classification: ClassificationResult = classificationResult.result 
-      ? JSON.parse(classificationResult.result.classification || '{}')
-      : { 
-          category: RequestCategory.OTHER, 
-          confidence: 0.5, 
-          priority: 'medium', 
-          summary: '', 
-          keywords: [],
-          needsHumanReview: true
-        };
-    
-    // Шаг 2: Определение ответственного подразделения
-    const departmentName = CATEGORY_TO_DEPARTMENT_MAP[classification.category] || 'Канцелярия';
-    const department = await findDepartmentByCategory(departmentName);
-    
-    if (!department) {
-      throw new Error(`Не найдено соответствующее подразделение для категории ${classification.category}`);
-    }
-    
-    // Шаг 3: Назначение исполнителя в соответствии с орг. структурой
-    const managers = await getDepartmentManagers(department.id);
-    let assignedTo = null;
-    
-    if (managers && managers.length > 0) {
-      // Назначаем первому доступному руководителю подразделения
-      assignedTo = managers[0].id;
-    }
-    
-    // Шаг 4: Обновляем данные обращения
-    const updatedRequest = await storage.updateCitizenRequest(requestId, {
+    // Обновляем статус обращения
+    await storage.updateCitizenRequest(requestId, {
       status: 'processing',
-      aiProcessed: true,
-      aiClassification: classification.category,
-      priority: classification.priority,
-      assignedTo,
-      departmentId: department.id,
-      summary: classification.summary || request.summary,
-      aiSuggestion: `Обращение автоматически классифицировано как "${classification.category}" и направлено в ${departmentName}.`
+      aiProcessed: true
     });
     
-    // Шаг 5: Записываем информацию в блокчейн для обеспечения прозрачности
+    // Обрабатываем обращение через организационную структуру
+    // Это включает классификацию, маршрутизацию и назначение
+    const processedRequest = await processRequestByOrgStructure(request);
+    
+    // Записываем результат в блокчейн для обеспечения прозрачности
+    let blockchainHash: string | undefined;
+    
     try {
-      const blockchainHash = await recordToBlockchain({
+      const blockchainRecord = await recordToBlockchain({
         entityId: requestId,
         entityType: BlockchainRecordType.CITIZEN_REQUEST,
-        action: 'classification',
+        action: 'citizen_request_processed',
         metadata: {
-          classification: classification.category,
-          priority: classification.priority,
-          department: departmentName,
-          assignedTo,
+          requestId,
+          classification: processedRequest.aiClassification,
+          priority: processedRequest.priority,
+          departmentId: processedRequest.departmentId,
+          assignedTo: processedRequest.assignedTo,
           timestamp: new Date().toISOString()
         }
       });
       
-      // Обновляем хеш блокчейна в обращении
-      await storage.updateCitizenRequest(requestId, { blockchainHash });
+      blockchainHash = blockchainRecord.hash;
       
+      // Обновляем хеш блокчейна в обращении
+      await storage.updateCitizenRequest(requestId, {
+        blockchainHash: blockchainHash
+      });
+      
+      // Логируем запись в блокчейн
+      await logActivity({
+        action: ActivityType.BLOCKCHAIN_RECORD,
+        entityType: EntityType.CITIZEN_REQUEST,
+        entityId: requestId,
+        details: `Результат обработки обращения записан в блокчейн с хешем ${blockchainHash.substring(0, 10)}...`
+      });
     } catch (blockchainError) {
       console.error('Ошибка при записи в блокчейн:', blockchainError);
-      
-      // Логируем ошибку, но продолжаем обработку
-      await logActivity({
-        action: 'blockchain_error',
-        entityType: 'citizen_request',
-        entityId: requestId,
-        details: `Ошибка при записи в блокчейн: ${blockchainError.message}`
-      });
     }
     
-    // Шаг 6: Логируем результат обработки
+    // Логируем успешное завершение
     await logActivity({
-      action: 'process_complete',
-      entityType: 'citizen_request',
+      action: ActivityType.AI_PROCESSING,
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: requestId,
-      details: `Обращение №${requestId} обработано и классифицировано как "${classification.category}"`
+      details: 'Завершена автоматическая обработка обращения'
     });
     
-    // Получаем обновленное обращение и возвращаем его
-    return await storage.getCitizenRequest(requestId);
+    return {
+      success: true,
+      requestId,
+      aiProcessed: true,
+      blockchainHash
+    };
   } catch (error) {
     console.error('Ошибка при обработке обращения:', error);
     
     // Логируем ошибку
     await logActivity({
-      action: 'process_error',
-      entityType: 'citizen_request',
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: requestId,
       details: `Ошибка при обработке обращения: ${error.message}`
     });
     
-    // В случае ошибки возвращаем исходное обращение
-    return await storage.getCitizenRequest(requestId);
+    return {
+      success: false,
+      requestId,
+      aiProcessed: false,
+      error: error.message
+    };
   }
 }
 
 /**
- * Находит AI-агента по типу
- * @param type Тип агента (classification, response, analytics)
- * @returns Агент указанного типа
- */
-async function findAIAgentByType(type: string) {
-  const agents = await storage.getAgents();
-  return agents.find(agent => agent.type === type && agent.isActive);
-}
-
-/**
- * Обрабатывает обращение AI-агентом для генерации ответа
- * 
+ * Генерирует ответ на обращение гражданина
  * @param requestId ID обращения
- * @returns Результат обработки
+ * @returns Сгенерированный ответ
  */
-export async function generateResponseForRequest(requestId: number): Promise<CitizenRequest> {
+export async function generateResponseForRequest(requestId: number): Promise<{
+  success: boolean;
+  requestId: number;
+  responseText?: string;
+  error?: string;
+}> {
   try {
-    // Получаем обращение
+    // Логируем начало генерации ответа
+    await logActivity({
+      action: ActivityType.AI_PROCESSING,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: requestId,
+      details: 'Начало генерации автоматического ответа на обращение'
+    });
+    
+    // Получаем обращение из хранилища
     const request = await storage.getCitizenRequest(requestId);
+    
     if (!request) {
       throw new Error(`Обращение с ID ${requestId} не найдено`);
     }
     
-    // Находим агента для генерации ответов
-    const responseAgent = await findAIAgentByType('response');
-    if (!responseAgent) {
-      throw new Error('Не найден AI-агент для генерации ответов');
+    // Получаем агентов для генерации ответа
+    const responseAgents = await agentService.getAgentsByType('response');
+    
+    if (responseAgents.length === 0) {
+      throw new Error('Нет доступных агентов для генерации ответа');
     }
     
-    // Логируем начало генерации ответа
-    await logActivity({
-      action: 'response_generation',
-      entityType: 'citizen_request',
-      entityId: requestId,
-      details: `Начата генерация ответа на обращение №${requestId}`
-    });
+    // Выбираем первого агента
+    const responseAgent = responseAgents[0];
     
-    // Обрабатываем запрос агентом
-    const responseResult = await agentService.processTask({
-      taskType: 'response',
-      entityType: 'citizen_request',
+    // Формируем задачу для агента
+    const responseTask = {
+      taskType: TaskType.RESPONSE,
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: requestId,
       agentId: responseAgent.id,
       content: request.description,
       metadata: {
         subject: request.subject,
         fullName: request.fullName,
-        contactInfo: request.contactInfo,
         classification: request.aiClassification,
         summary: request.summary
       }
-    });
+    };
     
-    // Получаем сгенерированный ответ
-    const responseText = responseResult.result?.response || '';
+    // Получаем ответ от агента
+    const responseResult = await agentService.processTask(responseTask);
     
-    // Обновляем обращение с сгенерированным ответом
-    const updatedRequest = await storage.updateCitizenRequest(requestId, {
+    if (!responseResult.success || !responseResult.result) {
+      throw new Error('Не удалось сгенерировать ответ на обращение');
+    }
+    
+    // Получаем текст ответа
+    const responseText = responseResult.result.response;
+    
+    // Обновляем обращение с автоматическим ответом
+    await storage.updateCitizenRequest(requestId, {
       responseText,
-      aiSuggestion: `${request.aiSuggestion || ''} Предложен автоматически сгенерированный ответ.`
+      status: 'answered'
     });
     
-    // Логируем завершение генерации ответа
-    await logActivity({
-      action: 'response_complete',
-      entityType: 'citizen_request',
+    // Создаем комментарий с автоматическим ответом
+    await storage.createComment({
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: requestId,
-      details: `Ответ на обращение №${requestId} сгенерирован`
+      userId: 0, // Системный пользователь
+      content: `**Автоматический ответ:**\n\n${responseText}`,
+      isInternal: false
     });
     
-    return updatedRequest;
+    // Логируем успешное завершение
+    await logActivity({
+      action: ActivityType.AI_PROCESSING,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: requestId,
+      details: 'Сгенерирован автоматический ответ на обращение'
+    });
+    
+    return {
+      success: true,
+      requestId,
+      responseText
+    };
   } catch (error) {
     console.error('Ошибка при генерации ответа:', error);
     
     // Логируем ошибку
     await logActivity({
-      action: 'response_error',
-      entityType: 'citizen_request',
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: requestId,
       details: `Ошибка при генерации ответа: ${error.message}`
     });
     
-    // В случае ошибки возвращаем исходное обращение
-    return await storage.getCitizenRequest(requestId);
+    return {
+      success: false,
+      requestId,
+      error: error.message
+    };
   }
 }
 
 /**
- * Синхронизировать обращения из eOtinish
- * 
- * @param limit максимальное количество обращений для синхронизации
- * @returns результат синхронизации 
+ * Синхронизирует обращения с eOtinish.kz
+ * @param config Конфигурация API eOtinish
+ * @returns Результат синхронизации
  */
-export async function synchronizeRequestsFromEOtinish(limit: number = 50): Promise<{
+export async function syncWithEOtinish(config: EOtinishAPIConfig): Promise<{
   success: boolean;
-  synchronized: number;
-  failed: number;
-  message: string;
+  newRequests: number;
+  updatedRequests: number;
+  error?: string;
 }> {
   try {
-    // Здесь будет логика интеграции с eOtinish API для получения новых обращений
-    // Поскольку это зависит от конкретной реализации API eOtinish, оставляем как заглушку
-    
-    const newRequests = [];
-    let synchronized = 0;
-    let failed = 0;
-    
     // Логируем начало синхронизации
     await logActivity({
-      action: 'eotinish_sync_start',
-      details: `Начата синхронизация обращений из eOtinish (лимит: ${limit})`
+      action: ActivityType.SYSTEM_EVENT,
+      details: 'Начало синхронизации с eOtinish.kz'
     });
     
-    // Для каждого нового обращения
-    for (const eotinishRequest of newRequests) {
-      try {
-        // Преобразуем формат данных из eOtinish в формат нашей системы
-        const requestData = {
-          // Маппинг полей из eOtinish в нашу структуру
-          fullName: eotinishRequest.applicantName,
-          contactInfo: eotinishRequest.applicantContact,
-          requestType: eotinishRequest.type,
-          subject: eotinishRequest.subject,
-          description: eotinishRequest.content,
-          externalId: eotinishRequest.id.toString(),
-          externalSource: 'eotinish',
+    // Получаем последнюю дату синхронизации
+    const lastSyncSetting = await storage.getSystemSetting('eotinish_last_sync');
+    const lastSyncDate = lastSyncSetting ? new Date(lastSyncSetting.value) : new Date(0);
+    
+    // Формируем запрос к API eOtinish
+    const eotinishResponse = await axios.get(`${config.apiUrl}/appeals`, {
+      headers: {
+        'Authorization': `Bearer ${config.apiToken}`,
+        'X-Organization-ID': config.orgId
+      },
+      params: {
+        updated_after: lastSyncDate.toISOString(),
+        limit: 100
+      }
+    });
+    
+    // Проверяем ответ
+    if (!eotinishResponse.data || !Array.isArray(eotinishResponse.data.items)) {
+      throw new Error('Неверный формат ответа от API eOtinish');
+    }
+    
+    const eotinishItems = eotinishResponse.data.items;
+    let newRequests = 0;
+    let updatedRequests = 0;
+    
+    // Обрабатываем полученные данные
+    for (const item of eotinishItems) {
+      // Проверяем, существует ли уже такое обращение
+      const existingRequests = await storage.getCitizenRequestsByExternalId(item.id);
+      
+      if (existingRequests.length === 0) {
+        // Создаем новое обращение
+        const citizenRequest = {
+          description: item.text || item.description || 'Нет описания',
+          fullName: item.fullName || item.name || 'Неизвестно',
+          contactInfo: item.contactInfo || item.email || item.phone || '',
+          requestType: mapEOtinishType(item.type),
+          subject: item.subject || item.title || 'Без темы',
+          priority: mapEOtinishPriority(item.priority),
           status: 'new',
-          createdAt: new Date(eotinishRequest.creationDate),
-          citizenInfo: eotinishRequest.applicantDetails
+          externalId: item.id.toString(),
+          externalSource: 'eOtinish',
+          metadata: JSON.stringify(item)
         };
         
-        // Создаем новое обращение в нашей системе
-        const createdRequest = await storage.createCitizenRequest(requestData);
+        // Создаем обращение в системе
+        const createdRequest = await storage.createCitizenRequest(citizenRequest);
         
-        // Запускаем обработку нового обращения
+        // Запускаем автоматическую обработку
         await processNewCitizenRequest(createdRequest.id);
         
-        synchronized++;
-      } catch (error) {
-        console.error(`Ошибка при импорте обращения из eOtinish:`, error);
-        failed++;
+        newRequests++;
+      } else {
+        // Обновляем существующее обращение
+        const existingRequest = existingRequests[0];
+        
+        // Проверяем, изменился ли статус в eOtinish
+        if (item.status && mapEOtinishStatus(item.status) !== existingRequest.status) {
+          await storage.updateCitizenRequest(existingRequest.id, {
+            status: mapEOtinishStatus(item.status),
+            metadata: JSON.stringify(item)
+          });
+          
+          // Логируем обновление статуса
+          await logActivity({
+            action: ActivityType.ENTITY_UPDATE,
+            entityType: EntityType.CITIZEN_REQUEST,
+            entityId: existingRequest.id,
+            details: `Обновлен статус из eOtinish: ${mapEOtinishStatus(item.status)}`
+          });
+          
+          updatedRequests++;
+        }
       }
     }
     
+    // Обновляем дату последней синхронизации
+    await storage.updateSystemSetting('eotinish_last_sync', new Date().toISOString());
+    
     // Логируем результат синхронизации
     await logActivity({
-      action: 'eotinish_sync_complete',
-      details: `Синхронизация завершена. Импортировано: ${synchronized}, ошибок: ${failed}`
+      action: ActivityType.SYSTEM_EVENT,
+      details: `Завершена синхронизация с eOtinish.kz. Новых обращений: ${newRequests}, Обновлено: ${updatedRequests}`
     });
     
     return {
       success: true,
-      synchronized,
-      failed,
-      message: `Синхронизация завершена. Импортировано: ${synchronized}, ошибок: ${failed}`
+      newRequests,
+      updatedRequests
     };
   } catch (error) {
     console.error('Ошибка при синхронизации с eOtinish:', error);
     
-    // Логируем ошибку синхронизации
+    // Логируем ошибку
     await logActivity({
-      action: 'eotinish_sync_error',
+      action: ActivityType.SYSTEM_EVENT,
       details: `Ошибка при синхронизации с eOtinish: ${error.message}`
     });
     
     return {
       success: false,
-      synchronized: 0,
-      failed: 0,
-      message: `Ошибка при синхронизации: ${error.message}`
+      newRequests: 0,
+      updatedRequests: 0,
+      error: error.message
     };
   }
+}
+
+/**
+ * Отправляет ответ на обращение в eOtinish.kz
+ * @param requestId ID обращения
+ * @param config Конфигурация API eOtinish
+ * @returns Результат отправки
+ */
+export async function sendResponseToEOtinish(requestId: number, config: EOtinishAPIConfig): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    // Получаем обращение
+    const request = await storage.getCitizenRequest(requestId);
+    
+    if (!request) {
+      throw new Error(`Обращение с ID ${requestId} не найдено`);
+    }
+    
+    if (!request.externalId || request.externalSource !== 'eOtinish') {
+      throw new Error('Обращение не связано с eOtinish.kz');
+    }
+    
+    // Получаем последний ответ
+    const comments = await storage.getCommentsByEntity(EntityType.CITIZEN_REQUEST, requestId);
+    const responseComment = comments.find(c => !c.isInternal && c.content.includes('Автоматический ответ'));
+    
+    if (!responseComment) {
+      throw new Error('Ответ на обращение не найден');
+    }
+    
+    // Формируем данные для отправки
+    const responseData = {
+      appeal_id: request.externalId,
+      response_text: responseComment.content.replace('**Автоматический ответ:**\n\n', ''),
+      status: 'answered',
+      org_id: config.orgId
+    };
+    
+    // Отправляем ответ в eOtinish.kz
+    await axios.post(`${config.apiUrl}/appeals/${request.externalId}/response`, responseData, {
+      headers: {
+        'Authorization': `Bearer ${config.apiToken}`,
+        'X-Organization-ID': config.orgId
+      }
+    });
+    
+    // Обновляем статус обращения
+    await storage.updateCitizenRequest(requestId, {
+      status: 'answered',
+      externalStatus: 'answered'
+    });
+    
+    // Логируем отправку ответа
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: requestId,
+      details: 'Ответ на обращение отправлен в eOtinish.kz'
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Ошибка при отправке ответа в eOtinish:', error);
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: requestId,
+      details: `Ошибка при отправке ответа в eOtinish: ${error.message}`
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Сопоставляет типы обращений из eOtinish с типами в нашей системе
+ * @param eotinishType Тип обращения в eOtinish
+ * @returns Соответствующий тип в нашей системе
+ */
+function mapEOtinishType(eotinishType: string): string {
+  // Маппинг типов из eOtinish в наши типы
+  const typeMapping: Record<string, string> = {
+    'complaint': 'complaint', 
+    'шағым': 'complaint',
+    'жалоба': 'complaint',
+    
+    'proposal': 'proposal',
+    'ұсыныс': 'proposal',
+    'предложение': 'proposal',
+    
+    'request': 'application',
+    'сұрау': 'application',
+    'запрос': 'application',
+    
+    'appeal': 'appeal',
+    'шағымдану': 'appeal',
+    'обращение': 'appeal',
+    
+    'gratitude': 'gratitude',
+    'алғыс': 'gratitude',
+    'благодарность': 'gratitude',
+    
+    'info': 'information_request',
+    'ақпарат': 'information_request',
+    'информация': 'information_request'
+  };
+  
+  // Приводим к нижнему регистру и убираем пробелы
+  const normalizedType = eotinishType?.toLowerCase().trim() || '';
+  
+  // Возвращаем соответствующий тип или general по умолчанию
+  return typeMapping[normalizedType] || 'general';
+}
+
+/**
+ * Сопоставляет приоритеты из eOtinish с приоритетами в нашей системе
+ * @param eotinishPriority Приоритет в eOtinish
+ * @returns Соответствующий приоритет в нашей системе
+ */
+function mapEOtinishPriority(eotinishPriority: string): string {
+  // Маппинг приоритетов из eOtinish в наши приоритеты
+  const priorityMapping: Record<string, string> = {
+    'high': 'high',
+    'жоғары': 'high',
+    'высокий': 'high',
+    
+    'medium': 'medium',
+    'орташа': 'medium',
+    'средний': 'medium',
+    
+    'low': 'low',
+    'төмен': 'low',
+    'низкий': 'low',
+    
+    'urgent': 'urgent',
+    'шұғыл': 'urgent',
+    'срочный': 'urgent'
+  };
+  
+  // Приводим к нижнему регистру и убираем пробелы
+  const normalizedPriority = eotinishPriority?.toLowerCase().trim() || '';
+  
+  // Возвращаем соответствующий приоритет или medium по умолчанию
+  return priorityMapping[normalizedPriority] || 'medium';
+}
+
+/**
+ * Сопоставляет статусы из eOtinish со статусами в нашей системе
+ * @param eotinishStatus Статус в eOtinish
+ * @returns Соответствующий статус в нашей системе
+ */
+function mapEOtinishStatus(eotinishStatus: string): string {
+  // Маппинг статусов из eOtinish в наши статусы
+  const statusMapping: Record<string, string> = {
+    'new': 'new',
+    'жаңа': 'new',
+    'новый': 'new',
+    
+    'in_progress': 'inProgress',
+    'өңделуде': 'inProgress',
+    'в_обработке': 'inProgress',
+    
+    'waiting': 'waiting',
+    'күтуде': 'waiting',
+    'ожидание': 'waiting',
+    
+    'answered': 'answered',
+    'жауапберілді': 'answered',
+    'отвечено': 'answered',
+    
+    'closed': 'closed',
+    'жабық': 'closed',
+    'закрыто': 'closed',
+    
+    'rejected': 'rejected',
+    'қабылданбады': 'rejected',
+    'отклонено': 'rejected'
+  };
+  
+  // Приводим к нижнему регистру и убираем пробелы
+  const normalizedStatus = eotinishStatus?.toLowerCase().trim() || '';
+  
+  // Возвращаем соответствующий статус или new по умолчанию
+  return statusMapping[normalizedStatus] || 'new';
 }

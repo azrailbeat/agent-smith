@@ -81,6 +81,7 @@
     "mailparser": "^3.7.2",
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",
+    "moralis": "^2.27.2",
     "multer": "^1.4.5-lts.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.3",

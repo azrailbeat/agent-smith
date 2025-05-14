@@ -4,10 +4,10 @@
  */
 
 import { storage } from '../storage';
-import { agentService } from './agent-service';
-import { logActivity } from '../activity-logger';
+import { logActivity, ActivityType } from '../activity-logger';
+import { agentService, TaskType, EntityType } from './agent-service';
 import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
-import { CitizenRequest, Department, Position, User } from '@shared/types';
+import { Department, Position, User, CitizenRequest } from '@shared/schema';
 
 /**
  * Находит подразделение по названию категории или отдела
@@ -16,10 +16,22 @@ import { CitizenRequest, Department, Position, User } from '@shared/types';
  */
 export async function findDepartmentByCategory(departmentName: string): Promise<Department | undefined> {
   try {
-    const departments = await storage.getDepartments();
-    return departments.find(dept => dept.name === departmentName || dept.description?.includes(departmentName));
+    // Ищем точное совпадение
+    let department = await storage.getDepartmentByName(departmentName);
+    
+    if (!department) {
+      // Ищем подразделение с близким названием
+      const departments = await storage.getDepartments();
+      
+      department = departments.find(dept => 
+        dept.name.toLowerCase().includes(departmentName.toLowerCase()) ||
+        departmentName.toLowerCase().includes(dept.name.toLowerCase())
+      );
+    }
+    
+    return department;
   } catch (error) {
-    console.error('Ошибка при поиске подразделения:', error);
+    console.error(`Ошибка при поиске подразделения по категории "${departmentName}":`, error);
     return undefined;
   }
 }
@@ -31,22 +43,22 @@ export async function findDepartmentByCategory(departmentName: string): Promise<
  */
 export async function getDepartmentManagers(departmentId: number): Promise<User[]> {
   try {
+    // Получаем руководящие должности в подразделении
     const positions = await storage.getPositionsByDepartment(departmentId);
-    // Фильтруем руководящие должности (обычно имеют уровень 1-3)
-    const managerPositions = positions.filter(pos => pos.level && pos.level <= 3);
+    const managerPositions = positions.filter(pos => 
+      pos.isManager || pos.name.toLowerCase().includes('руководитель') || 
+      pos.name.toLowerCase().includes('начальник') || pos.name.toLowerCase().includes('директор')
+    );
     
-    // Если нет руководящих должностей, возвращаем всех сотрудников отдела
-    if (managerPositions.length === 0) {
-      const users = await storage.getUsersByDepartment(departmentId);
-      return users;
-    }
+    // Находим пользователей с этими должностями
+    const managers = await storage.getUsersByDepartment(departmentId);
     
-    const managerIds = managerPositions.map(pos => pos.id);
-    const managers = await storage.getUsersByPositions(managerIds);
-    
-    return managers;
+    // Фильтруем только руководителей
+    return managers.filter(user => 
+      managerPositions.some(pos => user.positionId === pos.id)
+    );
   } catch (error) {
-    console.error('Ошибка при получении руководителей подразделения:', error);
+    console.error(`Ошибка при получении руководителей подразделения ID=${departmentId}:`, error);
     return [];
   }
 }
@@ -56,84 +68,94 @@ export async function getDepartmentManagers(departmentId: number): Promise<User[
  * @returns Результат создания базовой структуры
  */
 export async function createDefaultOrgStructure(): Promise<{
-  success: boolean;
-  message: string;
-  data?: {
-    departments: Department[];
-    positions: Position[];
-  };
+  departments: Department[];
+  positions: Position[];
 }> {
   try {
-    // Проверяем, есть ли уже созданные департаменты
-    const existingDepartments = await storage.getDepartments();
+    // Логируем начало операции
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      details: 'Создание базовой организационной структуры'
+    });
     
-    if (existingDepartments.length > 0) {
-      return {
-        success: false,
-        message: 'Организационная структура уже существует'
+    // Проверяем, существует ли уже базовая структура
+    const existingDepts = await storage.getDepartments();
+    if (existingDepts.length > 0) {
+      return { 
+        departments: existingDepts,
+        positions: await storage.getPositions()
       };
     }
     
-    // Создаем базовую структуру департаментов
+    // Создаем базовые подразделения
     const departments = [
-      { name: 'Руководство', description: 'Высшее руководство организации' },
-      { name: 'Канцелярия', description: 'Отдел документооборота и делопроизводства' },
-      { name: 'ИТ отдел', description: 'Отдел информационных технологий' },
-      { name: 'Кадровая служба', description: 'Отдел управления персоналом' },
-      { name: 'Юридический отдел', description: 'Правовое сопровождение деятельности' },
-      { name: 'Отдел по работе с гражданами', description: 'Обработка обращений граждан и оказание услуг' }
+      { name: 'Канцелярия', description: 'Прием и обработка входящей и исходящей корреспонденции' },
+      { name: 'Отдел по работе с гражданами', description: 'Рассмотрение обращений и жалоб граждан' },
+      { name: 'Юридический отдел', description: 'Правовая экспертиза документов и обращений' },
+      { name: 'Аналитический отдел', description: 'Анализ данных и подготовка аналитических материалов' },
+      { name: 'ИТ-отдел', description: 'Обеспечение работы информационных систем и ИИ-агентов' }
     ];
     
-    // Создаем департаменты
-    const createdDepartments: Record<string, any> = {};
+    // Создаем департаменты в БД
+    const createdDepartments: Department[] = [];
     for (const dept of departments) {
-      const department = await storage.createDepartment(dept);
-      createdDepartments[dept.name] = department;
+      const createdDept = await storage.createDepartment({
+        name: dept.name,
+        description: dept.description
+      });
+      createdDepartments.push(createdDept);
     }
     
-    // Создаем должности
-    const positions = [
-      { name: 'Руководитель', departmentId: createdDepartments['Руководство'].id, level: 1, canApprove: true, canAssign: true },
-      { name: 'Заместитель руководителя', departmentId: createdDepartments['Руководство'].id, level: 2, canApprove: true, canAssign: true },
-      { name: 'Начальник отдела', departmentId: createdDepartments['Отдел по работе с гражданами'].id, level: 3, canApprove: true, canAssign: true },
-      { name: 'Специалист по обработке обращений', departmentId: createdDepartments['Отдел по работе с гражданами'].id, level: 5, canApprove: false, canAssign: false },
-      { name: 'Начальник канцелярии', departmentId: createdDepartments['Канцелярия'].id, level: 3, canApprove: true, canAssign: true },
-      { name: 'Делопроизводитель', departmentId: createdDepartments['Канцелярия'].id, level: 6, canApprove: false, canAssign: false },
-      { name: 'Начальник ИТ отдела', departmentId: createdDepartments['ИТ отдел'].id, level: 3, canApprove: true, canAssign: true },
-      { name: 'Системный администратор', departmentId: createdDepartments['ИТ отдел'].id, level: 4, canApprove: false, canAssign: false },
-      { name: 'Разработчик', departmentId: createdDepartments['ИТ отдел'].id, level: 4, canApprove: false, canAssign: false },
-      { name: 'Руководитель юридической службы', departmentId: createdDepartments['Юридический отдел'].id, level: 3, canApprove: true, canAssign: true },
-      { name: 'Юрист', departmentId: createdDepartments['Юридический отдел'].id, level: 4, canApprove: false, canAssign: false },
-      { name: 'Руководитель кадровой службы', departmentId: createdDepartments['Кадровая служба'].id, level: 3, canApprove: true, canAssign: true },
-      { name: 'Специалист по кадрам', departmentId: createdDepartments['Кадровая служба'].id, level: 4, canApprove: false, canAssign: false }
-    ];
+    // Создаем базовые должности для каждого подразделения
+    const positions: Position[] = [];
     
-    const createdPositions = [];
-    for (const pos of positions) {
-      const position = await storage.createPosition(pos);
-      createdPositions.push(position);
+    for (const dept of createdDepartments) {
+      // Руководящие должности
+      positions.push(await storage.createPosition({
+        name: `Руководитель ${dept.name}`,
+        departmentId: dept.id,
+        isManager: true,
+        level: 1
+      }));
+      
+      // Рядовые сотрудники
+      positions.push(await storage.createPosition({
+        name: `Специалист ${dept.name}`,
+        departmentId: dept.id,
+        isManager: false,
+        level: 2
+      }));
+      
+      if (dept.name === 'ИТ-отдел') {
+        positions.push(await storage.createPosition({
+          name: 'Администратор ИИ-агентов',
+          departmentId: dept.id,
+          isManager: false,
+          level: 2
+        }));
+      }
     }
     
-    // Логируем создание базовой структуры
+    // Логируем завершение операции
     await logActivity({
-      action: 'create_org_structure',
-      details: 'Создана базовая организационная структура'
+      action: ActivityType.SYSTEM_EVENT,
+      details: `Создана базовая организационная структура. Департаментов: ${createdDepartments.length}, Должностей: ${positions.length}`
     });
     
     return {
-      success: true,
-      message: 'Базовая организационная структура успешно создана',
-      data: {
-        departments: Object.values(createdDepartments),
-        positions: createdPositions
-      }
+      departments: createdDepartments,
+      positions
     };
   } catch (error) {
     console.error('Ошибка при создании базовой организационной структуры:', error);
-    return {
-      success: false,
-      message: `Ошибка при создании базовой организационной структуры: ${error.message}`
-    };
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      details: `Ошибка при создании организационной структуры: ${error.message}`
+    });
+    
+    throw error;
   }
 }
 
@@ -144,156 +166,221 @@ export async function createDefaultOrgStructure(): Promise<{
  */
 export async function processRequestByOrgStructure(request: CitizenRequest): Promise<CitizenRequest> {
   try {
-    // Проверяем наличие классификации
-    if (!request.aiClassification) {
-      throw new Error('Обращение не классифицировано, требуется предварительная обработка с помощью ИИ');
-    }
+    // Логируем начало обработки
+    await logActivity({
+      action: ActivityType.AI_PROCESSING,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: request.id,
+      details: 'Начало обработки обращения через организационную структуру'
+    });
     
-    // Определяем ответственное подразделение на основе классификации
-    let targetDepartment: Department | undefined;
-    
-    // Соответствие категорий подразделениям
-    const categoryToDepartment: Record<string, string> = {
-      'complaint': 'Отдел по работе с гражданами',
-      'proposal': 'Канцелярия',
-      'application': 'Отдел по работе с гражданами',
-      'information_request': 'Канцелярия',
-      'appeal': 'Юридический отдел',
-      'gratitude': 'Отдел по работе с гражданами',
-      'general': 'Отдел по работе с гражданами',
-      'other': 'Канцелярия'
-    };
-    
-    const departmentName = categoryToDepartment[request.aiClassification] || 'Канцелярия';
-    targetDepartment = await findDepartmentByCategory(departmentName);
-    
-    if (!targetDepartment) {
-      // Если подразделение не найдено, используем первое доступное
-      const departments = await storage.getDepartments();
-      targetDepartment = departments[0];
-    }
-    
-    // Находим ответственных сотрудников
-    const managers = await getDepartmentManagers(targetDepartment.id);
-    let assignedTo = null;
-    
-    if (managers && managers.length > 0) {
-      // Назначаем первому доступному руководителю
-      assignedTo = managers[0].id;
-    }
-    
-    // Обновляем обращение с информацией о назначении
-    const updates: any = {
-      departmentId: targetDepartment.id,
-      status: 'assigned',
-      assignedTo
-    };
-    
-    // В случае высокого приоритета добавляем пометку
-    if (request.priority === 'high' || request.priority === 'urgent') {
-      updates.aiSuggestion = `${request.aiSuggestion || ''} Обращение имеет высокий приоритет и требует немедленного рассмотрения.`;
-    }
-    
-    // Применяем правила маршрутизации для обработки запроса
-    const rules = await storage.getTaskRulesByEntityType('citizen_request');
-    
-    // Проверяем, есть ли правило для автоматической обработки такого типа запроса
-    for (const rule of rules) {
-      if (
-        rule.sourceType === 'citizen_request' && 
-        rule.conditions && 
-        rule.isActive &&
-        rule.assignToAgentId
-      ) {
-        // Проверяем условия правила
-        const conditions = JSON.parse(rule.conditions);
+    // Если у запроса нет категории или она была автоматически классифицирована,
+    // выполняем классификацию с помощью ИИ-агента
+    if (!request.aiClassification || request.aiClassification === 'pending') {
+      // Получаем агентов для классификации
+      const classificationAgents = await agentService.getAgentsByType('classification');
+      
+      if (classificationAgents.length > 0) {
+        const classificationAgent = classificationAgents[0];
         
-        // Проверяем соответствие категории
-        if (
-          conditions.category && 
-          conditions.category === request.aiClassification
-        ) {
-          // Правило применимо, назначаем агенту для обработки запроса
-          updates.aiProcessed = true;
-          updates.assignedTo = null; // Сбрасываем назначение на сотрудника, так как обрабатывается агентом
-          
-          const agent = await storage.getAgent(rule.assignToAgentId);
-          if (agent) {
-            updates.aiSuggestion = `${updates.aiSuggestion || ""} Запрос автоматически обработан агентом "${agent.name}"`;
-            
-            // Здесь можно добавить логику вызова агента
-            if (agent.isActive) {
-              try {
-                // Вызов агентского сервиса для обработки запроса
-                const agentResult = await agentService.processTask({
-                  taskType: "citizen_request",
-                  entityType: "citizen_request",
-                  entityId: request.id,
-                  agentId: agent.id,
-                  content: request.description,
-                  metadata: {
-                    subject: request.subject,
-                    fullName: request.fullName,
-                    contactInfo: request.contactInfo
-                  }
-                });
-                
-                if (agentResult && agentResult.result) {
-                  updates.aiClassification = agentResult.result.classification || updates.aiClassification;
-                  updates.summary = agentResult.result.summary || updates.summary;
-                }
-              } catch (error) {
-                console.error(`Error processing request with agent: ${error}`);
-              }
-            }
+        // Обрабатываем запрос с помощью агента
+        const classificationTask = {
+          taskType: TaskType.CLASSIFICATION,
+          entityType: EntityType.CITIZEN_REQUEST,
+          entityId: request.id,
+          agentId: classificationAgent.id,
+          content: request.description,
+          metadata: {
+            subject: request.subject,
+            fullName: request.fullName
           }
+        };
+        
+        // Получаем результат классификации
+        const classificationResult = await agentService.processTask(classificationTask);
+        
+        if (classificationResult.success && classificationResult.result) {
+          // Обновляем запрос с результатами классификации
+          const classification = classificationResult.result.classification || 'general';
+          const priority = classificationResult.result.priority || 'medium';
+          const summary = classificationResult.result.summary || '';
           
-          break; // Прерываем цикл, так как нашли подходящее правило
+          // Обновляем запрос в БД
+          request = await storage.updateCitizenRequest(request.id, {
+            aiClassification: classification,
+            priority: priority,
+            summary: summary
+          });
+          
+          // Логируем результат классификации
+          await logActivity({
+            action: ActivityType.AI_PROCESSING,
+            entityType: EntityType.CITIZEN_REQUEST,
+            entityId: request.id,
+            details: `Обращение автоматически классифицировано как "${classification}" с приоритетом "${priority}"`
+          });
         }
       }
     }
     
-    // Обновляем обращение
-    const updatedRequest = await storage.updateCitizenRequest(request.id, updates);
+    // Находим подходящий отдел на основе классификации
+    const targetDepartment = await findDepartmentByCategory(
+      request.aiClassification || 'general'
+    );
     
-    // Логируем назначение
-    await logActivity({
-      action: 'assign_request',
-      entityType: 'citizen_request',
-      entityId: request.id,
-      details: `Обращение №${request.id} назначено в ${targetDepartment.name}${assignedTo ? ` сотруднику ID:${assignedTo}` : ''}`,
-    });
+    if (targetDepartment) {
+      // Находим правила маршрутизации для этого типа обращений
+      const routingRules = await storage.getTaskRulesByEntityType(EntityType.CITIZEN_REQUEST);
+      const matchingRule = routingRules.find(rule => 
+        rule.conditions?.category === request.aiClassification ||
+        rule.conditions?.priority === request.priority
+      );
+      
+      // Если есть подходящее правило, используем его
+      if (matchingRule) {
+        // Применяем правило маршрутизации
+        const targetDepartmentId = matchingRule.targetDepartmentId || targetDepartment.id;
+        
+        // Назначаем обращение в соответствии с правилом
+        request = await assignToDepartment(request, targetDepartmentId);
+        
+        // Логируем применение правила
+        await logActivity({
+          action: ActivityType.SYSTEM_EVENT,
+          entityType: EntityType.CITIZEN_REQUEST,
+          entityId: request.id,
+          details: `Применено правило маршрутизации #${matchingRule.id} для обращения`
+        });
+      } else {
+        // Назначаем обращение напрямую найденному отделу
+        request = await assignToDepartment(request, targetDepartment.id);
+      }
+      
+      // Если приоритет высокий или срочный, дополнительно уведомляем руководство
+      if (request.priority === 'high' || request.priority === 'urgent') {
+        const managers = await getDepartmentManagers(targetDepartment.id);
+        
+        if (managers.length > 0) {
+          // Выбираем первого руководителя
+          const manager = managers[0];
+          
+          // Назначаем задачу руководителю
+          request = await storage.updateCitizenRequest(request.id, {
+            assignedTo: manager.id,
+            status: 'assigned'
+          });
+          
+          // Логируем назначение руководителю
+          await logActivity({
+            action: ActivityType.ENTITY_UPDATE,
+            entityType: EntityType.CITIZEN_REQUEST,
+            entityId: request.id,
+            details: `Обращение с высоким приоритетом назначено руководителю: ${manager.fullName}`
+          });
+        }
+      }
+      
+      // Если это обращение требует ответа, генерируем черновик ответа с помощью ИИ
+      const responseAgents = await agentService.getAgentsByType('response');
+      
+      if (responseAgents.length > 0) {
+        const responseAgent = responseAgents[0];
+        
+        // Формируем задачу для агента
+        const responseTask = {
+          taskType: TaskType.RESPONSE,
+          entityType: EntityType.CITIZEN_REQUEST,
+          entityId: request.id,
+          agentId: responseAgent.id,
+          content: request.description,
+          metadata: {
+            subject: request.subject,
+            fullName: request.fullName,
+            classification: request.aiClassification,
+            summary: request.summary
+          }
+        };
+        
+        // Получаем черновик ответа
+        const responseResult = await agentService.processTask(responseTask);
+        
+        if (responseResult.success && responseResult.result) {
+          // Создаем комментарий с черновиком ответа
+          await storage.createComment({
+            entityType: EntityType.CITIZEN_REQUEST,
+            entityId: request.id,
+            userId: 0, // Системный пользователь
+            content: `**Черновик автоматического ответа:**\n\n${responseResult.result.response}`,
+            isInternal: true
+          });
+          
+          // Логируем создание черновика
+          await logActivity({
+            action: ActivityType.AI_PROCESSING,
+            entityType: EntityType.CITIZEN_REQUEST,
+            entityId: request.id,
+            details: 'Создан черновик автоматического ответа на обращение'
+          });
+        }
+      }
+    } else {
+      // Если не удалось найти подходящий отдел, назначаем в Канцелярию по умолчанию
+      const defaultDept = await storage.getDepartmentByName('Канцелярия');
+      
+      if (defaultDept) {
+        request = await assignToDepartment(request, defaultDept.id);
+      }
+    }
     
-    // Записываем в блокчейн для обеспечения прозрачности
+    // Записываем результат в блокчейн для аудита
     try {
-      const blockchainHash = await recordToBlockchain({
+      const blockchainRecord = await recordToBlockchain({
         entityId: request.id,
         entityType: BlockchainRecordType.CITIZEN_REQUEST,
-        action: 'assignment',
+        action: 'route_by_org_structure',
         metadata: {
-          department: targetDepartment.name,
-          departmentId: targetDepartment.id,
-          assignedTo,
+          departmentId: request.departmentId,
+          assignedTo: request.assignedTo,
+          priority: request.priority,
+          status: request.status,
           timestamp: new Date().toISOString()
         }
       });
       
-      // Обновляем хеш блокчейна в обращении
-      await storage.updateCitizenRequest(request.id, { blockchainHash });
-    } catch (blockchainError) {
-      console.error('Ошибка при записи в блокчейн:', blockchainError);
+      // Обновляем хеш блокчейна
+      request = await storage.updateCitizenRequest(request.id, {
+        blockchainHash: blockchainRecord.hash
+      });
+      
+      // Логируем запись в блокчейн
+      await logActivity({
+        action: ActivityType.BLOCKCHAIN_RECORD,
+        entityType: EntityType.CITIZEN_REQUEST,
+        entityId: request.id,
+        details: `Результат маршрутизации сохранен в блокчейне с хешем ${blockchainRecord.hash.substring(0, 10)}...`
+      });
+    } catch (error) {
+      console.error('Ошибка при записи в блокчейн:', error);
+      
+      // Логируем ошибку
+      await logActivity({
+        action: ActivityType.SYSTEM_EVENT,
+        entityType: EntityType.CITIZEN_REQUEST,
+        entityId: request.id,
+        details: `Ошибка при записи в блокчейн: ${error.message}`
+      });
     }
     
-    return updatedRequest;
+    return request;
   } catch (error) {
-    console.error('Ошибка при обработке запроса по орг. структуре:', error);
+    console.error('Ошибка при обработке запроса через оргструктуру:', error);
     
     // Логируем ошибку
     await logActivity({
-      action: 'org_structure_processing_error',
-      entityType: 'citizen_request',
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: request.id,
-      details: `Ошибка при обработке через орг. структуру: ${error.message}`
+      details: `Ошибка при обработке через оргструктуру: ${error.message}`
     });
     
     return request;
@@ -307,17 +394,25 @@ export async function processRequestByOrgStructure(request: CitizenRequest): Pro
  */
 export async function createTaskRule(rule: any): Promise<any> {
   try {
-    const taskRule = await storage.createTaskRule(rule);
-    
     // Логируем создание правила
     await logActivity({
-      action: 'create_task_rule',
-      details: `Создано правило маршрутизации "${rule.name}"`
+      action: ActivityType.ENTITY_CREATE,
+      details: `Создание правила маршрутизации задач: ${rule.name}`
     });
     
-    return taskRule;
+    // Создаем правило в БД
+    const createdRule = await storage.createTaskRule(rule);
+    
+    return createdRule;
   } catch (error) {
     console.error('Ошибка при создании правила маршрутизации:', error);
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      details: `Ошибка при создании правила маршрутизации: ${error.message}`
+    });
+    
     throw error;
   }
 }
@@ -330,36 +425,89 @@ export async function createTaskRule(rule: any): Promise<any> {
  */
 export async function assignRequestToUser(requestId: number, userId: number): Promise<CitizenRequest> {
   try {
-    const request = await storage.getCitizenRequest(requestId);
-    
-    if (!request) {
-      throw new Error(`Обращение с ID ${requestId} не найдено`);
-    }
-    
+    // Получаем пользователя
     const user = await storage.getUser(userId);
     
     if (!user) {
       throw new Error(`Пользователь с ID ${userId} не найден`);
     }
     
-    // Обновляем обращение
+    // Получаем обращение
+    const request = await storage.getCitizenRequest(requestId);
+    
+    if (!request) {
+      throw new Error(`Обращение с ID ${requestId} не найдено`);
+    }
+    
+    // Обновляем статус и назначенного сотрудника
     const updatedRequest = await storage.updateCitizenRequest(requestId, {
       assignedTo: userId,
-      status: 'assigned'
+      status: 'assigned',
+      departmentId: user.departmentId
     });
     
     // Логируем назначение
     await logActivity({
-      action: 'manual_assign_request',
-      entityType: 'citizen_request',
+      action: ActivityType.ENTITY_UPDATE,
+      entityType: EntityType.CITIZEN_REQUEST,
       entityId: requestId,
-      details: `Обращение №${requestId} назначено сотруднику ${user.name} (ID: ${userId})`,
+      details: `Обращение назначено сотруднику ${user.fullName} (ID: ${userId})`
     });
     
     return updatedRequest;
   } catch (error) {
     console.error('Ошибка при назначении обращения сотруднику:', error);
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: requestId,
+      details: `Ошибка при назначении сотруднику: ${error.message}`
+    });
+    
     throw error;
+  }
+}
+
+/**
+ * Назначает обращение в подразделение
+ * @param request Обращение для назначения
+ * @param departmentId ID подразделения
+ * @returns Обновленное обращение
+ */
+async function assignToDepartment(request: CitizenRequest, departmentId: number): Promise<CitizenRequest> {
+  try {
+    // Обновляем обращение
+    const updatedRequest = await storage.updateCitizenRequest(request.id, {
+      departmentId: departmentId,
+      status: 'pending'
+    });
+    
+    // Получаем название подразделения
+    const department = await storage.getDepartment(departmentId);
+    
+    // Логируем назначение
+    await logActivity({
+      action: ActivityType.ENTITY_UPDATE,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: request.id,
+      details: `Обращение направлено в подразделение: ${department?.name || 'Неизвестное подразделение'}`
+    });
+    
+    return updatedRequest;
+  } catch (error) {
+    console.error('Ошибка при назначении обращения в подразделение:', error);
+    
+    // Логируем ошибку
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: EntityType.CITIZEN_REQUEST,
+      entityId: request.id,
+      details: `Ошибка при назначении в подразделение: ${error.message}`
+    });
+    
+    return request;
   }
 }
 
@@ -369,66 +517,81 @@ export async function assignRequestToUser(requestId: number, userId: number): Pr
  * @returns Результат интеграции
  */
 export async function integrateEOtinishWithOrgStructure(eotinishData: any[]): Promise<{
-  success: boolean;
   processed: number;
-  failed: number;
-  message: string;
+  created: number;
+  error: number;
 }> {
   let processed = 0;
-  let failed = 0;
+  let created = 0;
+  let error = 0;
   
-  try {
-    for (const item of eotinishData) {
-      try {
-        // Преобразуем формат eOtinish в формат нашей системы
-        const citizenRequest = {
-          fullName: item.applicantName,
-          contactInfo: item.contactInfo || item.email || item.phone,
-          requestType: mapEOtinishType(item.requestType),
-          subject: item.subject || 'Обращение из eOtinish',
-          description: item.content || item.description,
-          status: 'new',
-          priority: mapEOtinishPriority(item.priority),
-          externalId: item.id.toString(),
-          externalSource: 'eotinish',
-          citizenInfo: JSON.stringify(item.applicantDetails || {})
-        };
-        
-        // Создаем обращение в нашей системе
-        const createdRequest = await storage.createCitizenRequest(citizenRequest);
-        
-        // Обрабатываем обращение с помощью ИИ для классификации
-        await processRequestByOrgStructure(createdRequest);
-        
-        processed++;
-      } catch (itemError) {
-        console.error(`Ошибка при интеграции элемента eOtinish ID ${item.id}:`, itemError);
-        failed++;
+  // Логируем начало интеграции
+  await logActivity({
+    action: ActivityType.SYSTEM_EVENT,
+    details: `Начало интеграции данных из eOtinish. Количество записей: ${eotinishData.length}`
+  });
+  
+  for (const eotinishRecord of eotinishData) {
+    try {
+      processed++;
+      
+      // Проверяем, существует ли уже такое обращение
+      const existingRequests = await storage.getCitizenRequestsByExternalId(eotinishRecord.id);
+      
+      if (existingRequests.length > 0) {
+        // Обращение уже импортировано, пропускаем
+        continue;
       }
+      
+      // Преобразуем данные из eOtinish в формат нашей системы
+      const citizenRequest = {
+        description: eotinishRecord.text || eotinishRecord.description || 'Нет описания',
+        fullName: eotinishRecord.fullName || eotinishRecord.name || 'Неизвестно',
+        contactInfo: eotinishRecord.contactInfo || eotinishRecord.email || eotinishRecord.phone || '',
+        requestType: mapEOtinishType(eotinishRecord.type),
+        subject: eotinishRecord.subject || eotinishRecord.title || 'Без темы',
+        priority: mapEOtinishPriority(eotinishRecord.priority),
+        status: 'new',
+        externalId: eotinishRecord.id.toString(),
+        externalSource: 'eOtinish',
+        metadata: JSON.stringify(eotinishRecord)
+      };
+      
+      // Создаем обращение в системе
+      const createdRequest = await storage.createCitizenRequest(citizenRequest);
+      
+      // Обрабатываем обращение через оргструктуру
+      await processRequestByOrgStructure(createdRequest);
+      
+      created++;
+      
+      // Логируем создание обращения
+      await logActivity({
+        action: ActivityType.ENTITY_CREATE,
+        entityType: EntityType.CITIZEN_REQUEST,
+        entityId: createdRequest.id,
+        details: `Создано обращение из eOtinish (externalId: ${eotinishRecord.id})`
+      });
+    } catch (error) {
+      console.error('Ошибка при обработке записи из eOtinish:', error);
+      
+      // Логируем ошибку
+      await logActivity({
+        action: ActivityType.SYSTEM_EVENT,
+        details: `Ошибка при обработке записи из eOtinish (ID: ${eotinishRecord.id}): ${error.message}`
+      });
+      
+      error++;
     }
-    
-    // Логируем результат интеграции
-    await logActivity({
-      action: 'eotinish_integration',
-      details: `Интеграция с eOtinish: обработано ${processed}, ошибок ${failed}`
-    });
-    
-    return {
-      success: true,
-      processed,
-      failed,
-      message: `Интеграция с eOtinish выполнена. Обработано: ${processed}, ошибок: ${failed}`
-    };
-  } catch (error) {
-    console.error('Ошибка при интеграции с eOtinish:', error);
-    
-    return {
-      success: false,
-      processed,
-      failed: eotinishData.length - processed,
-      message: `Ошибка при интеграции с eOtinish: ${error.message}`
-    };
   }
+  
+  // Логируем результаты интеграции
+  await logActivity({
+    action: ActivityType.SYSTEM_EVENT,
+    details: `Завершена интеграция данных из eOtinish. Обработано: ${processed}, Создано: ${created}, Ошибок: ${error}`
+  });
+  
+  return { processed, created, error };
 }
 
 /**
@@ -437,17 +600,38 @@ export async function integrateEOtinishWithOrgStructure(eotinishData: any[]): Pr
  * @returns Соответствующий тип в нашей системе
  */
 function mapEOtinishType(eotinishType: string): string {
-  const typeMap: Record<string, string> = {
-    'complaint': 'complaint',
+  // Маппинг типов из eOtinish в наши типы
+  const typeMapping: Record<string, string> = {
+    'complaint': 'complaint', 
+    'шағым': 'complaint',
+    'жалоба': 'complaint',
+    
+    'proposal': 'proposal',
+    'ұсыныс': 'proposal',
+    'предложение': 'proposal',
+    
+    'request': 'application',
+    'сұрау': 'application',
+    'запрос': 'application',
+    
     'appeal': 'appeal',
-    'suggestion': 'proposal',
-    'request': 'information_request',
-    'statement': 'application',
+    'шағымдану': 'appeal',
+    'обращение': 'appeal',
+    
     'gratitude': 'gratitude',
-    'default': 'other'
+    'алғыс': 'gratitude',
+    'благодарность': 'gratitude',
+    
+    'info': 'information_request',
+    'ақпарат': 'information_request',
+    'информация': 'information_request'
   };
   
-  return typeMap[eotinishType.toLowerCase()] || 'other';
+  // Приводим к нижнему регистру и убираем пробелы
+  const normalizedType = eotinishType?.toLowerCase().trim() || '';
+  
+  // Возвращаем соответствующий тип или general по умолчанию
+  return typeMapping[normalizedType] || 'general';
 }
 
 /**
@@ -456,13 +640,28 @@ function mapEOtinishType(eotinishType: string): string {
  * @returns Соответствующий приоритет в нашей системе
  */
 function mapEOtinishPriority(eotinishPriority: string): string {
-  const priorityMap: Record<string, string> = {
-    'critical': 'urgent',
+  // Маппинг приоритетов из eOtinish в наши приоритеты
+  const priorityMapping: Record<string, string> = {
     'high': 'high',
+    'жоғары': 'high',
+    'высокий': 'high',
+    
     'medium': 'medium',
+    'орташа': 'medium',
+    'средний': 'medium',
+    
     'low': 'low',
-    'default': 'medium'
+    'төмен': 'low',
+    'низкий': 'low',
+    
+    'urgent': 'urgent',
+    'шұғыл': 'urgent',
+    'срочный': 'urgent'
   };
   
-  return priorityMap[eotinishPriority?.toLowerCase()] || 'medium';
+  // Приводим к нижнему регистру и убираем пробелы
+  const normalizedPriority = eotinishPriority?.toLowerCase().trim() || '';
+  
+  // Возвращаем соответствующий приоритет или medium по умолчанию
+  return priorityMapping[normalizedPriority] || 'medium';
 }

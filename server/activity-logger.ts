@@ -1,192 +1,166 @@
 /**
- * Activity Logger Service
- * Handles all activity logging in the application for audit trail and tracking purposes
+ * Модуль для логирования активностей в системе
+ * 
+ * Обеспечивает запись и хранение всех значимых действий в системе
+ * для аудита, аналитики и восстановления истории событий
  */
 
 import { storage } from './storage';
-import { recordToBlockchain } from './blockchain';
 
-/**
- * Типы активностей в системе
- */
+// Типы активностей в системе
 export enum ActivityType {
-  USER_LOGIN = 'user_login',
-  USER_LOGOUT = 'user_logout',
+  // Действия над сущностями
   ENTITY_CREATE = 'entity_create',
   ENTITY_UPDATE = 'entity_update',
   ENTITY_DELETE = 'entity_delete',
-  BLOCKCHAIN_RECORD = 'blockchain_record',
+  
+  // Действия пользователей
+  USER_LOGIN = 'user_login',
+  USER_LOGOUT = 'user_logout',
+  USER_ACTION = 'user_action',
+  
+  // Системные события
   SYSTEM_EVENT = 'system_event',
-  AI_PROCESSING = 'ai_processing'
+  SYSTEM_ERROR = 'system_error',
+  
+  // Действия ИИ-агентов
+  AI_PROCESSING = 'ai_processing',
+  AI_ERROR = 'ai_error',
+  
+  // Блокчейн
+  BLOCKCHAIN_RECORD = 'blockchain_record',
+  
+  // Интеграция с внешними системами
+  EXTERNAL_API = 'external_api'
 }
 
-/**
- * Интерфейс для данных активности
- */
-export interface ActivityData {
-  action: string;
+// Интерфейс для активности
+export interface Activity {
+  action: ActivityType;
+  userId?: number;
   entityType?: string;
   entityId?: number;
-  userId?: number;
-  details?: string;
-  metadata?: Record<string, any>;
+  details: string;
+  metadata?: any;
+  timestamp?: Date;
 }
 
 /**
- * Логирует активность пользователя или системы
- * @param data Данные о действии
+ * Логирует активность в системе
+ * @param activity Данные активности для логирования
+ * @returns Созданная запись активности
  */
-export async function logActivity(data: ActivityData): Promise<void> {
+export async function logActivity(activity: Activity): Promise<any> {
   try {
-    const timestamp = new Date();
+    // Добавляем текущую дату, если не указана
+    if (!activity.timestamp) {
+      activity.timestamp = new Date();
+    }
     
-    // Создаем запись активности
-    const activityRecord = await storage.createActivity({
-      timestamp,
-      action: data.action,
-      actionType: determineActivityType(data.action),
-      entityType: data.entityType || null,
-      entityId: data.entityId || null,
-      userId: data.userId || null,
-      description: data.details || `Action: ${data.action}`,
-      metadata: data.metadata || {}
+    // Создаем активность в хранилище
+    const createdActivity = await storage.createActivity({
+      type: activity.action,
+      userId: activity.userId || 0, // 0 для системных действий
+      entityType: activity.entityType,
+      entityId: activity.entityId,
+      details: activity.details,
+      metadata: activity.metadata ? JSON.stringify(activity.metadata) : null,
+      createdAt: activity.timestamp
     });
     
-    // Логируем в консоль для отладки
-    console.log(`Activity logged: [${data.action}] ${data.details || ''} by user ${data.userId || 'system'}`);
-    
-    // Если действие связано с блокчейном, записываем в блокчейн
-    if (data.action.includes('blockchain') || shouldRecordToBlockchain(data)) {
-      try {
-        const blockchainHash = await recordToBlockchain({
-          entityId: data.entityId || activityRecord.id,
-          entityType: data.entityType || 'activity',
-          action: data.action,
-          userId: data.userId,
-          metadata: data.metadata
-        });
-        
-        // Добавляем хэш блокчейна к записи активности
-        await addBlockchainHashToActivity(activityRecord.id, blockchainHash);
-      } catch (error) {
-        console.error('Failed to record activity to blockchain:', error);
-      }
+    // Для важных событий также записываем в консоль
+    if (activity.action === ActivityType.SYSTEM_ERROR || 
+        activity.action === ActivityType.AI_ERROR) {
+      console.error(`[${activity.action}] ${activity.details}`);
+    } else if (process.env.NODE_ENV !== 'production') {
+      console.log(`[${activity.action}] ${activity.details}`);
     }
     
+    return createdActivity;
   } catch (error) {
+    // В случае ошибки при логировании просто пишем в консоль
     console.error('Error logging activity:', error);
+    console.error('Activity details:', activity);
+    
+    // Возвращаем нулевой результат
+    return null;
   }
 }
 
 /**
- * Получить недавние активности
- * @param limit Ограничение количества записей
- */
-export async function getRecentActivities(limit: number = 50): Promise<any[]> {
-  return await storage.getActivities(limit);
-}
-
-/**
- * Получить все активности, связанные с конкретной сущностью
+ * Получает историю активностей для сущности
  * @param entityType Тип сущности
  * @param entityId ID сущности
+ * @param limit Максимальное количество результатов
+ * @returns Список активностей
  */
-export async function getEntityActivities(entityType: string, entityId: number): Promise<any[]> {
-  return await storage.getActivitiesByEntity(entityType, entityId);
-}
-
-/**
- * Получить все активности конкретного пользователя
- * @param userId ID пользователя
- */
-export async function getUserActivities(userId: number): Promise<any[]> {
-  return await storage.getActivitiesByUser(userId);
-}
-
-/**
- * Добавить блокчейн хэш к существующей записи активности
- * @param activityId ID записи активности
- * @param blockchainHash Хэш транзакции в блокчейне
- */
-export async function addBlockchainHashToActivity(activityId: number, blockchainHash: string): Promise<void> {
+export async function getEntityActivities(
+  entityType: string, 
+  entityId: number,
+  limit: number = 100
+): Promise<any[]> {
   try {
-    // Проверяем, существует ли метод getActivity
-    if (typeof storage.getActivity !== 'function') {
-      console.log(`Warning: storage.getActivity is not available. Cannot update activity ${activityId} with blockchain hash ${blockchainHash}`);
-      return;
-    }
-    
-    const activity = await storage.getActivity(activityId);
-    if (activity) {
-      await storage.updateActivity(activityId, {
-        ...activity,
-        blockchainHash
-      });
-    }
+    return await storage.getActivitiesByEntity(entityType, entityId, limit);
   } catch (error) {
-    console.error(`Error updating activity ${activityId} with blockchain hash:`, error);
+    console.error('Error fetching entity activities:', error);
+    return [];
   }
 }
 
 /**
- * Логирует ошибку в системе
- * @param error Ошибка для логирования
- * @param context Контекст ошибки
- * @param userId ID пользователя (если есть)
+ * Получает последние системные активности
+ * @param limit Максимальное количество результатов
+ * @returns Список системных активностей
  */
-export async function logError(error: Error, context: string, userId?: number): Promise<void> {
-  await logActivity({
-    action: 'system_error',
-    details: `Error in ${context}: ${error.message}`,
-    userId,
-    metadata: {
-      errorName: error.name,
-      errorStack: error.stack,
-      context
-    }
-  });
-}
-
-/**
- * Определяет тип активности на основе названия действия
- * @param action Название действия
- */
-function determineActivityType(action: string): string {
-  if (action.includes('login') || action.includes('auth')) {
-    return ActivityType.USER_LOGIN;
-  } else if (action.includes('logout')) {
-    return ActivityType.USER_LOGOUT;
-  } else if (action.includes('create')) {
-    return ActivityType.ENTITY_CREATE;
-  } else if (action.includes('update') || action.includes('edit') || action.includes('change')) {
-    return ActivityType.ENTITY_UPDATE;
-  } else if (action.includes('delete') || action.includes('remove')) {
-    return ActivityType.ENTITY_DELETE;
-  } else if (action.includes('blockchain')) {
-    return ActivityType.BLOCKCHAIN_RECORD;
-  } else if (action.includes('ai_') || action.includes('ml_') || action.includes('gpt_')) {
-    return ActivityType.AI_PROCESSING;
-  } else {
-    return ActivityType.SYSTEM_EVENT;
+export async function getSystemActivities(limit: number = 100): Promise<any[]> {
+  try {
+    return await storage.getActivitiesByType(ActivityType.SYSTEM_EVENT, limit);
+  } catch (error) {
+    console.error('Error fetching system activities:', error);
+    return [];
   }
 }
 
 /**
- * Определяет, нужно ли записывать действие в блокчейн
- * @param data Данные действия
+ * Получает последние активности ИИ-агентов
+ * @param limit Максимальное количество результатов
+ * @returns Список активностей ИИ-агентов
  */
-function shouldRecordToBlockchain(data: ActivityData): boolean {
-  // Определяем важные действия, которые нужно записывать в блокчейн
-  const criticalEntityTypes = ['citizen_request', 'document', 'legal_act', 'contract'];
-  const criticalActions = ['approve', 'reject', 'sign', 'finalize', 'publish'];
-  
-  if (data.entityType && criticalEntityTypes.includes(data.entityType)) {
-    return true;
+export async function getAIActivities(limit: number = 100): Promise<any[]> {
+  try {
+    return await storage.getActivitiesByType(ActivityType.AI_PROCESSING, limit);
+  } catch (error) {
+    console.error('Error fetching AI activities:', error);
+    return [];
   }
-  
-  if (data.action && criticalActions.some(action => data.action.includes(action))) {
-    return true;
+}
+
+/**
+ * Получает активности пользователя
+ * @param userId ID пользователя
+ * @param limit Максимальное количество результатов
+ * @returns Список активностей пользователя
+ */
+export async function getUserActivities(userId: number, limit: number = 100): Promise<any[]> {
+  try {
+    return await storage.getActivitiesByUser(userId, limit);
+  } catch (error) {
+    console.error('Error fetching user activities:', error);
+    return [];
   }
-  
-  return false;
+}
+
+/**
+ * Получает активности определенного типа
+ * @param activityType Тип активности
+ * @param limit Максимальное количество результатов
+ * @returns Список активностей
+ */
+export async function getActivitiesByType(activityType: ActivityType, limit: number = 100): Promise<any[]> {
+  try {
+    return await storage.getActivitiesByType(activityType, limit);
+  } catch (error) {
+    console.error('Error fetching activities by type:', error);
+    return [];
+  }
 }
