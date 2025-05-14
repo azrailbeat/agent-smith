@@ -37,29 +37,29 @@ import {
 
 import { CitizenRequest, Activity, Agent } from '@shared/types';
 
-// Extend CitizenRequest interface with additional fields we need
-declare module '@shared/types' {
-  interface CitizenRequest {
-    contactInfo?: string;
-    citizenInfo?: {
-      address?: string;
-      iin?: string;
-    };
-  }
+// Расширенный тип для детального представления обращения
+interface RequestDetails extends CitizenRequest {
+  contactInfo: string;
+  citizenInfo?: {
+    name?: string;
+    contact?: string;
+    address?: string;
+    iin?: string;
+  };
 }
 
 interface TrelloStyleRequestDetailViewProps {
-  request: CitizenRequest;
+  request: RequestDetails;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate?: (request: CitizenRequest) => void;
+  onUpdate?: (request: RequestDetails) => void;
   onDelete?: (requestId: number) => void;
   onStatusChange?: (requestId: number, newStatus: string) => void;
   // Параметры для автоматической обработки
   onAutoProcess?: () => void;
   // Параметры для обработки с помощью ИИ-агентов
   availableAgents?: Agent[];
-  onProcessWithAgent?: (request: CitizenRequest, agentId: number, action?: string) => void;
+  onProcessWithAgent?: (request: RequestDetails, agentId: number, action?: string) => void;
 }
 
 const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> = ({
@@ -101,8 +101,8 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     agent.type === "citizen_requests"
   );
   
-  // Получить цвет статуса
-  const getStatusColor = (status: string): string => {
+  // Получить цвет текста статуса
+  const getStatusTextColor = (status: string): string => {
     const statusColors: {[key: string]: string} = {
       'new': 'text-blue-500',
       'inProgress': 'text-yellow-500',
@@ -136,6 +136,20 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       'urgent': 'bg-red-500'
     };
     return priorityColors[priority] || 'bg-gray-500';
+  };
+  
+  // Получить фоновый цвет статуса
+  const getStatusBgColor = (status: string): string => {
+    const statusColors: {[key: string]: string} = {
+      'pending': 'bg-yellow-400',
+      'inprogress': 'bg-blue-400',
+      'completed': 'bg-green-400',
+      'cancelled': 'bg-red-400',
+      'rejected': 'bg-gray-400',
+      'new': 'bg-purple-400',
+      'waiting': 'bg-orange-400'
+    };
+    return statusColors[status] || 'bg-gray-400';
   };
   
   // Получить название приоритета
@@ -318,7 +332,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
               <div>
                 <h5 className="text-sm font-medium mb-2">Статус</h5>
                 <div className="flex items-center">
-                  <div className={`h-3 w-3 rounded-full ${getStatusColor(request.status)} mr-2`}></div>
+                  <div className={`h-3 w-3 rounded-full ${getStatusBgColor(request.status)} mr-2`}></div>
                   <span className="text-sm">{getStatusLabel(request.status)}</span>
                 </div>
               </div>
@@ -464,15 +478,15 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             {/* Обработать с помощью ИИ */}
             <div className="border-t pt-6 mt-6">
               <h4 className="text-base font-semibold mb-4 flex items-center">
-                <BrainCircuit className="h-5 w-5 text-purple-500 mr-2" />
+                <Bot className="h-5 w-5 text-purple-600 mr-2" />
                 Обработать с помощью ИИ
               </h4>
-              <div className="flex flex-wrap gap-3">
+              <div className="space-y-3">
                 <Select 
                   value={processingAgent?.toString() || ""} 
                   onValueChange={(value) => setProcessingAgent(parseInt(value))}
                 >
-                  <SelectTrigger className="w-full min-w-[250px]">
+                  <SelectTrigger className="w-full border-gray-200 h-10 hover:border-gray-300 focus:border-purple-400">
                     <SelectValue placeholder="Выберите агента" />
                   </SelectTrigger>
                   <SelectContent>
@@ -484,34 +498,36 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   </SelectContent>
                 </Select>
                 
-                <Button 
-                  className="whitespace-nowrap px-4 py-2 bg-purple-600 hover:bg-purple-700 transition-colors"
-                  onClick={handleProcessWithAgent}
-                  disabled={isProcessing || !processingAgent}
-                >
-                  {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Обработка...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-4 w-4" /> Обработать ИИ
-                    </div>
-                  )}
-                </Button>
-                
-                {onAutoProcess && (
+                <div className="flex flex-wrap gap-3 pt-2">
                   <Button 
-                    variant="outline" 
-                    onClick={onAutoProcess} 
-                    disabled={isProcessing}
-                    className="whitespace-nowrap px-4 py-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                    className="whitespace-nowrap px-4 py-6 h-10 bg-purple-600 hover:bg-purple-700 transition-colors rounded-md"
+                    onClick={handleProcessWithAgent}
+                    disabled={isProcessing || !processingAgent}
                   >
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-purple-500" /> Автообработка
-                    </div>
+                    {isProcessing ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Обработка...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-4 w-4" /> Обработать ИИ
+                      </div>
+                    )}
                   </Button>
-                )}
+                  
+                  {onAutoProcess && (
+                    <Button 
+                      variant="outline" 
+                      onClick={onAutoProcess} 
+                      disabled={isProcessing}
+                      className="whitespace-nowrap px-4 h-10 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors rounded-md"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 text-purple-500" /> Автообработка
+                      </div>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -553,6 +569,30 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                         <p className="text-sm text-gray-700 ml-8">{activity.description}</p>
                       )}
                       
+                      {/* Комментарии */}
+                      {activity.actionType === 'comment' && activity.metadata && (
+                        <div className="mt-2 ml-8 p-3 bg-white rounded-lg border border-gray-200">
+                          <p className="text-sm text-gray-700 whitespace-pre-line">{activity.metadata.content || activity.metadata.text || activity.description}</p>
+                        </div>
+                      )}
+                      
+                      {/* Перемещения между списками */}
+                      {activity.actionType === 'status_change' && activity.metadata && (
+                        <div className="mt-2 ml-8 p-2 bg-white rounded-lg border border-gray-200">
+                          <div className="flex items-center text-xs text-gray-700">
+                            <div className="flex-1 flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-1 ${getStatusBgColor(activity.metadata.oldStatus || '')}`}></div>
+                              <span>{getStatusLabel(activity.metadata.oldStatus || '')}</span>
+                            </div>
+                            <RefreshCw className="h-3 w-3 mx-2 text-gray-400" />
+                            <div className="flex-1 flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-1 ${getStatusBgColor(activity.metadata.newStatus || '')}`}></div>
+                              <span>{getStatusLabel(activity.metadata.newStatus || '')}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {activity.userName && (
                         <div className="mt-1 flex items-center ml-8">
                           <User className="h-3 w-3 text-gray-400 mr-1" />
@@ -581,24 +621,27 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             </div>
             
             {/* Добавить комментарий */}
-            <div className="mt-4 pt-4 border-t">
-              <h4 className="text-sm font-medium mb-3">Добавить комментарий</h4>
-              <div className="space-y-3">
+            <div className="mt-8 pt-6 border-t">
+              <h4 className="text-base font-semibold mb-4">Добавить комментарий</h4>
+              <div className="space-y-4">
                 <Textarea 
                   placeholder="Введите комментарий..." 
                   value={comment} 
                   onChange={(e) => setComment(e.target.value)}
-                  className="min-h-[100px]"
+                  className="min-h-[100px] border-gray-200 focus:border-blue-300 rounded-lg"
                 />
                 <div className="flex justify-end">
                   <Button 
                     variant="default" 
-                    size="sm" 
+                    size="sm"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 transition-colors"
                     onClick={handleCommentSubmit}
                     disabled={!comment.trim()}
                   >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Отправить
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Отправить
+                    </div>
                   </Button>
                 </div>
               </div>
@@ -607,23 +650,27 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         </div>
         
         {/* Кнопки действий */}
-        <div className="flex justify-between p-4 border-t bg-gray-50 sticky bottom-0">
+        <div className="flex justify-between p-5 border-t bg-gray-50 sticky bottom-0">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => onClose()}
+            className="px-5 py-2 border-gray-300 hover:bg-gray-100 transition-colors"
           >
             Закрыть
           </Button>
           
-          <div className="flex space-x-2">
+          <div className="flex gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={saveToBlockchain}
+              className="px-4 py-2 border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
             >
-              <Database className="h-4 w-4 mr-2" />
-              Сохранить в блокчейн
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-blue-500" />
+                Сохранить в блокчейн
+              </div>
             </Button>
             
             <Button
