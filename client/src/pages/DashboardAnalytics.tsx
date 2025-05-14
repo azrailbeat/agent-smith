@@ -39,11 +39,15 @@ import BlockchainRecordsList from "@/components/dashboard/BlockchainRecordsList"
 import AgentChatInterface from "@/components/dashboard/AgentChatInterface";
 import { 
   NotificationCenter, 
-  ContextualNotificationsContainer,
-  Notification,
+  ContextualNotificationsContainer
+} from "@/components/notifications";
+
+// Import the notification types
+import { 
+  INotification,
   NotificationPriority,
   NotificationType
-} from "@/components/notifications";
+} from "@/components/notifications/shared-types";
 
 // Типы уже импортированы из NotificationCenter
 import { StatCard, Task, Activity as ActivityType, User } from "@/lib/types";
@@ -52,7 +56,7 @@ export default function DashboardAnalytics() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [refreshTimestamp, setRefreshTimestamp] = useState(new Date());
   const [timeRangeFilter, setTimeRangeFilter] = useState("month");
-  const [activeContextualNotifications, setActiveContextualNotifications] = useState<Notification[]>([]);
+  const [activeContextualNotifications, setActiveContextualNotifications] = useState<INotification[]>([]);
   
   // Fetch tasks
   const { data: tasksData, isLoading: isLoadingTasks } = useQuery<Task[]>({
@@ -156,7 +160,7 @@ export default function DashboardAnalytics() {
   
   // Добавление демонстрационного уведомления
   const addDemoNotification = () => {
-    const demoNotification: Notification = {
+    const demoNotification: INotification = {
       id: Date.now().toString(),
       title: 'Истекает срок выполнения задачи',
       message: 'Задача "Анализ данных по обращениям граждан" требует выполнения в течение 2 часов.',

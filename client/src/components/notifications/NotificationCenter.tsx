@@ -30,7 +30,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Импортируем типы из shared-types
 import { 
-  Notification, 
+  INotification, 
   NotificationPriority, 
   NotificationType 
 } from './shared-types';

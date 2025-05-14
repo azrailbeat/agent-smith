@@ -2,7 +2,28 @@
  * Централизованные типы для системы уведомлений
  */
 
-export interface Notification {
+// Приоритеты уведомлений
+export enum NotificationPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  URGENT = 'urgent'
+}
+
+// Типы уведомлений
+export enum NotificationType {
+  TASK = 'task',
+  MEETING = 'meeting',
+  DOCUMENT = 'document',
+  CITIZEN_REQUEST = 'citizen_request',
+  SYSTEM = 'system',
+  BLOCKCHAIN = 'blockchain',
+  MESSAGE = 'message',
+  AI_AGENT = 'ai_agent'
+}
+
+// Основной интерфейс уведомления
+export interface INotification {
   id: string;
   title: string;
   message: string;
@@ -21,34 +42,16 @@ export interface Notification {
   metadata?: Record<string, any>;
 }
 
-export enum NotificationPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  URGENT = 'urgent'
-}
-
-export enum NotificationType {
-  TASK = 'task',
-  MEETING = 'meeting',
-  DOCUMENT = 'document',
-  CITIZEN_REQUEST = 'citizen_request',
-  SYSTEM = 'system',
-  BLOCKCHAIN = 'blockchain',
-  MESSAGE = 'message',
-  AI_AGENT = 'ai_agent'
-}
-
 // Типы для контекстуальных уведомлений
 export interface ContextualNotificationProps {
-  notification: Notification;
+  notification: INotification;
   onClose: () => void;
   duration?: number;
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 }
 
 export interface ContextualNotificationsContainerProps {
-  notifications: Notification[];
+  notifications: INotification[];
   onClose: (id: string) => void;
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
   maxNotifications?: number;

@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Notification, NotificationType, NotificationPriority } from './shared-types';
+import { INotification, NotificationType, NotificationPriority } from './shared-types';
 
 interface NotificationContextType {
-  notifications: Notification[];
+  notifications: INotification[];
   unreadCount: number;
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
+  addNotification: (notification: Omit<INotification, 'id' | 'timestamp' | 'read'>) => void;
   removeNotification: (id: string) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -22,7 +22,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children, 
   maxNotifications = 100 
 }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<INotification[]>([]);
   
   // Загрузка уведомлений из локального хранилища при инициализации
   useEffect(() => {
@@ -53,10 +53,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   const unreadCount = notifications.filter(n => !n.read).length;
   
   // Добавление нового уведомления
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+  const addNotification = (notification: Omit<INotification, 'id' | 'timestamp' | 'read'>) => {
     const id = Math.random().toString(36).substring(2, 11);
     
-    const newNotification: Notification = {
+    const newNotification: INotification = {
       ...notification,
       id,
       timestamp: new Date(),
