@@ -7,10 +7,35 @@ import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { storage } from '../storage';
 import { insertCitizenRequestSchema } from '@shared/schema';
-import { logActivity } from '../activity-logger';
+import { logActivity, ActivityType } from '../activity-logger';
 import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
 import { processNewCitizenRequest, generateResponseForRequest, synchronizeRequestsFromEOtinish } from '../services/citizen-request-processor';
 import { processRequestByOrgStructure } from '../services/org-structure';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { parse as csvParse } from 'csv-parse/sync';
+import xlsx from 'xlsx';
+
+// Настройка multer для загрузки файлов
+const upload = multer({
+  dest: 'uploads/',
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB макс. размер файла
+  },
+  fileFilter: (req, file, cb) => {
+    // Проверка типа файла (только CSV или Excel)
+    if (
+      file.mimetype === 'text/csv' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error('Поддерживаются только файлы CSV и Excel'));
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -440,6 +465,180 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Ошибка при добавлении комментария:', error);
     res.status(500).json({ error: 'Ошибка при добавлении комментария' });
+  }
+});
+
+/**
+ * Импорт обращений граждан из файла (CSV/Excel)
+ * POST /api/citizen-requests/import-from-file
+ */
+router.post('/import-from-file', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Файл не был загружен' });
+    }
+
+    const filePath = req.file.path;
+    const originalFilename = req.file.originalname;
+    let records: any[] = [];
+
+    // Обработка в зависимости от типа файла
+    if (originalFilename.endsWith('.csv')) {
+      // Обработка CSV
+      const content = fs.readFileSync(filePath, 'utf8');
+      records = csvParse(content, {
+        columns: true,
+        skip_empty_lines: true
+      });
+    } else {
+      // Обработка Excel (xls, xlsx)
+      const workbook = xlsx.readFile(filePath);
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      records = xlsx.utils.sheet_to_json(worksheet);
+    }
+
+    // Маппинг и валидация данных
+    const importMapping = req.body.mapping || {
+      // Дефолтный маппинг, предполагая что столбцы в файле могут соответствовать полям обращений
+      fullName: ['fullName', 'name', 'fio', 'ФИО', 'полное_имя'],
+      contactInfo: ['contactInfo', 'contact', 'email', 'phone', 'телефон', 'контакт'],
+      requestType: ['requestType', 'type', 'тип'],
+      subject: ['subject', 'title', 'тема', 'заголовок'],
+      description: ['description', 'content', 'text', 'описание', 'текст'],
+      status: ['status', 'статус'],
+      priority: ['priority', 'приоритет'],
+      category: ['category', 'категория'],
+      subcategory: ['subcategory', 'подкатегория'],
+      region: ['region', 'регион'],
+      district: ['district', 'rayon', 'район'],
+      locality: ['locality', 'city', 'nas_punkt', 'город', 'населенный_пункт'],
+      responsibleOrg: ['responsibleOrg', 'org', 'organization', 'организация'],
+      externalId: ['externalId', 'id', 'external_id', 'внешний_идентификатор'],
+      externalSource: ['externalSource', 'source', 'источник'],
+      externalRegNum: ['externalRegNum', 'regNum', 'reg_num', 'номер']
+    };
+
+    // Определение функции для получения значения поля с учетом маппинга
+    const getFieldValue = (record: any, fieldMapping: string[]) => {
+      for (const field of fieldMapping) {
+        if (record[field] !== undefined) {
+          return record[field];
+        }
+      }
+      return null;
+    };
+
+    // Преобразование записей в обращения
+    const citizenRequests = [];
+    for (const record of records) {
+      // Создаем объект обращения на основе маппинга
+      const citizenRequest: any = {
+        fullName: getFieldValue(record, importMapping.fullName) || 'Не указано',
+        contactInfo: getFieldValue(record, importMapping.contactInfo) || 'Не указано',
+        requestType: getFieldValue(record, importMapping.requestType) || 'Обращение',
+        subject: getFieldValue(record, importMapping.subject) || 'Без темы',
+        description: getFieldValue(record, importMapping.description) || '',
+        status: getFieldValue(record, importMapping.status) || 'new',
+        priority: getFieldValue(record, importMapping.priority) || 'medium',
+        category: getFieldValue(record, importMapping.category) || null,
+        subcategory: getFieldValue(record, importMapping.subcategory) || null,
+        region: getFieldValue(record, importMapping.region) || null,
+        district: getFieldValue(record, importMapping.district) || null, 
+        locality: getFieldValue(record, importMapping.locality) || null,
+        responsibleOrg: getFieldValue(record, importMapping.responsibleOrg) || null,
+        externalId: getFieldValue(record, importMapping.externalId) || null,
+        externalSource: getFieldValue(record, importMapping.externalSource) || 'import',
+        externalRegNum: getFieldValue(record, importMapping.externalRegNum) || null
+      };
+
+      // Добавляем данные гражданина, если доступны
+      if (citizenRequest.fullName || citizenRequest.contactInfo || citizenRequest.region) {
+        citizenRequest.citizenInfo = {
+          name: citizenRequest.fullName,
+          contact: citizenRequest.contactInfo,
+          region: citizenRequest.region,
+          district: citizenRequest.district,
+          locality: citizenRequest.locality
+        };
+      }
+
+      // Добавляем в список
+      citizenRequests.push(citizenRequest);
+    }
+
+    // Сохраняем обращения в базу данных
+    let createdRequests = [];
+    let errors = [];
+
+    for (const request of citizenRequests) {
+      try {
+        // Проверка, нет ли уже такого обращения (если есть внешний ID)
+        if (request.externalId) {
+          const existingRequest = await storage.getCitizenRequestByExternalId(request.externalId, request.externalSource);
+          if (existingRequest) {
+            // Обновляем существующее обращение
+            const updatedRequest = await storage.updateCitizenRequest(existingRequest.id, request);
+            createdRequests.push({
+              id: updatedRequest.id,
+              subject: updatedRequest.subject,
+              status: 'updated'
+            });
+            continue;
+          }
+        }
+
+        // Создаем новое обращение
+        const newRequest = await storage.createCitizenRequest(request);
+        createdRequests.push({
+          id: newRequest.id,
+          subject: newRequest.subject,
+          status: 'created'
+        });
+
+        // Запускаем процесс обработки нового обращения, если это новое
+        processNewCitizenRequest(newRequest.id).catch(error => {
+          console.error(`Ошибка при обработке импортированного обращения №${newRequest.id}:`, error);
+        });
+      } catch (error) {
+        console.error(`Ошибка при импорте обращения:`, error);
+        errors.push({
+          data: request,
+          error: error instanceof Error ? error.message : 'Неизвестная ошибка'
+        });
+      }
+    }
+
+    // Удаляем загруженный файл
+    fs.unlinkSync(filePath);
+
+    // Логируем импорт обращений
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: 'import',
+      details: `Импортировано ${createdRequests.length} обращений из файла`,
+      metadata: {
+        filename: originalFilename,
+        total: records.length,
+        imported: createdRequests.length,
+        errors: errors.length
+      }
+    });
+
+    res.json({
+      success: true,
+      total: records.length,
+      imported: createdRequests.length,
+      errors: errors.length,
+      requests: createdRequests,
+      errorDetails: errors
+    });
+  } catch (error) {
+    console.error('Ошибка при импорте обращений из файла:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Ошибка при импорте обращений',
+    });
   }
 });
 
