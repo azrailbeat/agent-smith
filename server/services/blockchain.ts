@@ -364,3 +364,34 @@ function simulatedTransactionDetails(transactionHash: string): any {
     note: 'This is simulated data as Moralis API key is not available'
   };
 }
+import { BlockchainRecord } from '../types/monitoring';
+
+export class BlockchainService {
+  async validateTransaction(record: BlockchainRecord): Promise<boolean> {
+    try {
+      // Validate blockchain record structure
+      if (!record.hash || !record.timestamp || !record.data) {
+        return false;
+      }
+
+      // Verify record integrity
+      const calculatedHash = await this.calculateHash(record);
+      return calculatedHash === record.hash;
+    } catch (error) {
+      console.error('Blockchain validation error:', error);
+      return false;
+    }
+  }
+
+  private async calculateHash(record: BlockchainRecord): Promise<string> {
+    const data = JSON.stringify(record.data);
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      encoder.encode(data + record.timestamp)
+    );
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+}

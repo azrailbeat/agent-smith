@@ -213,3 +213,38 @@ ${JSON.stringify(inputData, null, 2)}
     };
   }
 }
+import { MetricsCollector } from '../types/monitoring';
+
+export class AIAnalytics {
+  private metricsCollector: MetricsCollector;
+
+  constructor() {
+    this.metricsCollector = {
+      requestCount: 0,
+      successRate: 0,
+      averageLatency: 0,
+      errorRate: 0
+    };
+  }
+
+  trackRequest(latency: number, success: boolean) {
+    this.metricsCollector.requestCount++;
+    this.metricsCollector.averageLatency = 
+      (this.metricsCollector.averageLatency * (this.metricsCollector.requestCount - 1) + latency) 
+      / this.metricsCollector.requestCount;
+    
+    if (success) {
+      this.metricsCollector.successRate = 
+        (this.metricsCollector.successRate * (this.metricsCollector.requestCount - 1) + 1) 
+        / this.metricsCollector.requestCount;
+    } else {
+      this.metricsCollector.errorRate = 
+        (this.metricsCollector.errorRate * (this.metricsCollector.requestCount - 1) + 1) 
+        / this.metricsCollector.requestCount;
+    }
+  }
+
+  getMetrics() {
+    return this.metricsCollector;
+  }
+}
