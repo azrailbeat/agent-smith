@@ -414,11 +414,14 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         
         {/* Краткое описание */}
         <div className="mb-3">
-          <p className="text-xs text-gray-600 whitespace-pre-wrap" style={{ 
-            display: 'block',
-            wordBreak: 'break-word'
+          <p className="text-xs text-gray-600" style={{ 
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            WebkitLineClamp: 3,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}>
-            {(request.description || request.content || "Без описания").substring(0, 250)}
+            {(request.description || request.content || "Без описания").substring(0, 150)}
           </p>
         </div>
         
@@ -454,11 +457,14 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="whitespace-pre-wrap" style={{ 
-              display: 'block',
-              wordBreak: 'break-word'
+            <div style={{ 
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: 4,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}>
-              {request.aiSuggestion}
+              {request.aiSuggestion?.substring(0, 150)}
             </div>
           </div>
         )}
