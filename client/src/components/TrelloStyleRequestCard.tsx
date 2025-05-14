@@ -413,10 +413,10 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Краткое описание */}
-        <div className="mb-3 overflow-hidden" style={{ maxHeight: '3em' }}>
-          <p className="text-xs text-gray-600 line-clamp-2 h-auto overflow-hidden" style={{ 
+        <div className="mb-3 overflow-hidden" style={{ maxHeight: '6em' }}>
+          <p className="text-xs text-gray-600 h-auto overflow-hidden" style={{ 
             display: '-webkit-box', 
-            WebkitLineClamp: 2, 
+            WebkitLineClamp: 4, 
             WebkitBoxOrient: 'vertical',
             wordBreak: 'break-word',
             textOverflow: 'ellipsis'
@@ -457,11 +457,11 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="overflow-hidden line-clamp-2" style={{ 
+            <div className="overflow-hidden" style={{ 
               display: '-webkit-box', 
-              WebkitLineClamp: 2, 
+              WebkitLineClamp: 3, 
               WebkitBoxOrient: 'vertical', 
-              maxHeight: '2.6em',
+              maxHeight: '3.9em',
               wordBreak: 'break-word',
               textOverflow: 'ellipsis'
             }}>
