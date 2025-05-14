@@ -678,40 +678,85 @@ export const citizenRequests = pgTable("citizen_requests", {
   id: serial("id").primaryKey(),
   fullName: text("full_name").notNull(),
   contactInfo: text("contact_info").notNull(),
-  requestType: text("request_type").notNull(),
+  requestType: text("request_type").notNull(), // reg_type из eOtinish
   subject: text("subject").notNull(),
-  description: text("description").notNull(),
-  status: text("status").notNull().default("new"),
+  description: text("description").notNull(), // text из eOtinish
+  status: text("status").notNull().default("new"), // status из eOtinish
   priority: text("priority").default("medium"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(), // соответствует reg_date из eOtinish
   updatedAt: timestamp("updated_at").defaultNow(),
   assignedTo: integer("assigned_to"),
+  
+  // Поля для AI обработки
   aiProcessed: boolean("ai_processed").default(false),
   aiClassification: text("ai_classification"),
   aiSuggestion: text("ai_suggestion"),
   responseText: text("response_text"),
+  
+  // Поля для отслеживания статуса
   closedAt: timestamp("closed_at"),
   completedAt: timestamp("completed_at"),
+  deadline: timestamp("deadline"), // deadline из eOtinish
+  overdue: boolean("overdue").default(false), // overdue из eOtinish
+  decision: text("decision"), // decision из eOtinish
   blockchainHash: text("blockchain_hash"), // Хэш записи в блокчейне
+  
+  // Вложения
   attachments: text("attachments").array(),
+  
+  // eOtinish-специфические поля
+  externalId: text("external_id"), // obr_id из eOtinish
+  externalSource: text("external_source").default("internal"), // SOURCE из eOtinish
+  externalRegNum: text("external_reg_num"), // reg_num из eOtinish
+  region: text("region"), // region из eOtinish
+  district: text("district"), // rayon из eOtinish
+  locality: text("locality"), // nas_punkt из eOtinish
+  category: text("category"), // category из eOtinish
+  subcategory: text("subcategory"), // subcategory из eOtinish
+  responsibleOrg: text("responsible_org"), // org_name из eOtinish
+  externalLoadDate: timestamp("external_load_date"), // SDU_LOAD_DATE из eOtinish
+  
+  // Дополнительная информация в JSON формате
   citizenInfo: jsonb("citizen_info"), // Доп. информация о гражданине
   summary: text("summary"), // Краткое содержание обращения (AI)
 });
 
-export const insertCitizenRequestSchema = createInsertSchema(citizenRequests).pick({
-  fullName: true,
-  contactInfo: true,
-  requestType: true,
-  subject: true,
-  description: true,
-  status: true,
-  priority: true,
-  assignedTo: true,
-  attachments: true,
-  citizenInfo: true,
-  blockchainHash: true,
-  summary: true,
-});
+export const insertCitizenRequestSchema = createInsertSchema(citizenRequests)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    aiProcessed: true,
+    closedAt: true,
+    completedAt: true,
+    externalLoadDate: true
+  })
+  .pick({
+    fullName: true,
+    contactInfo: true,
+    requestType: true,
+    subject: true,
+    description: true,
+    status: true,
+    priority: true,
+    assignedTo: true,
+    attachments: true,
+    citizenInfo: true,
+    blockchainHash: true,
+    summary: true,
+    externalId: true,
+    externalSource: true,
+    externalRegNum: true,
+    region: true,
+    district: true,
+    locality: true,
+    category: true,
+    subcategory: true,
+    responsibleOrg: true,
+    deadline: true,
+    overdue: true,
+    decision: true,
+  });
 
 export const citizenRequestsRelations = relations(citizenRequests, ({ one }) => ({
   assignedUser: one(users, {
