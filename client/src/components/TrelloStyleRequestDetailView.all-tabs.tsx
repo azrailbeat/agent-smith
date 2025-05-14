@@ -275,8 +275,8 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] h-[90vh] p-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div className="flex justify-between items-center p-4 bg-white border-b sticky top-0 z-10">
+      <DialogContent className="max-w-4xl w-full max-h-[95vh] h-[95vh] p-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <div className="flex justify-between items-center p-3 bg-white border-b sticky top-0 z-10">
           <DialogTitle className="text-xl flex items-center">
             Обращение #{request.id} 
             <Badge className={`ml-2 ${
@@ -293,7 +293,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           </Button>
         </div>
         
-        <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+        <div className="overflow-y-auto max-h-[calc(95vh-60px)]">
           {/* Секция Детали */}
           <div className="border-b p-3 bg-gray-50">
             <h3 className="text-lg font-medium">Детали</h3>

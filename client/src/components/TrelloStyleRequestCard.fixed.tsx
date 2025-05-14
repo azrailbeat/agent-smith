@@ -181,6 +181,14 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
             </div>
           )}
           
+          {request.aiProcessed && request.aiClassification && (
+            <div className="mt-1.5">
+              <Badge variant="outline" className="bg-purple-50 text-xs px-1.5 py-0 font-normal text-purple-700 border-purple-200">
+                Категория: {request.aiClassification}
+              </Badge>
+            </div>
+          )}
+          
           {request.aiSuggestion && (
             <div className="mt-1.5 text-xs text-gray-700 bg-gray-50 p-1.5 rounded border border-gray-200 line-clamp-2">
               {request.aiSuggestion}
