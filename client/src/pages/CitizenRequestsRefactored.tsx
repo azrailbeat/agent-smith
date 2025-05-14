@@ -50,6 +50,7 @@ import IntegrationSettings from '@/components/integration/IntegrationSettings';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard.new';
 import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.new';
 import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog.fixed';
+import ImportRequestsDialog from '@/components/ImportRequestsDialog';
 import {
   ChevronDown,
   Plus,
@@ -157,6 +158,7 @@ const CitizenRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState<boolean>(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState<boolean>(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState<boolean>(false);
   // Состояние для отслеживания ID последней перемещенной карточки
   const [lastMovedRequestId, setLastMovedRequestId] = useState<number | null>(null);
   // Состояние для настроек агентов
@@ -797,6 +799,10 @@ const CitizenRequests = () => {
             <Plus className="h-4 w-4 mr-2" />
             Новое обращение
           </Button>
+          <Button onClick={() => setIsImportDialogOpen(true)} variant="secondary">
+            <FileText className="h-4 w-4 mr-2" />
+            Импорт из файла
+          </Button>
           <Button onClick={() => setIsAutoProcessDialogOpen(true)} variant="outline">
             <Bot className="h-4 w-4 mr-2" />
             Настройки ИИ
@@ -1355,6 +1361,12 @@ const CitizenRequests = () => {
         settings={autoProcessSettings}
         onSave={handleSaveAutoProcessSettings}
         availableAgents={availableAgents}
+      />
+      
+      {/* Диалоговое окно для импорта обращений из файла */}
+      <ImportRequestsDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
       />
     </div>
   );
