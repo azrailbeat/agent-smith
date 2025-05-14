@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import Tasks from "@/pages/Tasks";
 import HistoryPage from "@/pages/History";
 import Analytics from "@/pages/Analytics";
+import DashboardAnalytics from "@/pages/DashboardAnalytics";
 import Translate from "@/pages/Translate";
 import CitizenRequests from "@/pages/CitizenRequestsRefactored";
 import Meetings from "@/pages/Meetings";
@@ -31,10 +32,10 @@ import { User } from "./lib/types";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={DashboardAnalytics} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/history" component={HistoryPage} />
-      <Route path="/analytics" component={Analytics} />
+      <Route path="/analytics" component={DashboardAnalytics} />
       <Route path="/translate" component={Translate} />
       <Route path="/citizen-requests" component={CitizenRequests} />
       <Route path="/meetings" component={Meetings} />
