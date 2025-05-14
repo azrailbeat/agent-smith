@@ -22,6 +22,7 @@ import {
 import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings';
 import { MonitoringSettings } from '@/components/settings/MonitoringSettings';
 import { PerplexitySettings } from '@/components/settings/PerplexitySettings';
+import LlmProviderSettings from '@/components/settings/LlmProviderSettings';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -148,7 +149,7 @@ export default function Settings() {
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium">LLM провайдеры:</span>
-                      <span>OpenAI, Anthropic, Perplexity</span>
+                      <span>OpenAI, Anthropic, OpenRouter, vLLM, Perplexity, Custom</span>
                     </div>
                   </div>
                 </CardContent>
@@ -165,9 +166,30 @@ export default function Settings() {
               Настройки моделей искусственного интеллекта
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-6">
-            <PerplexitySettings />
-          </div>
+          
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Настройки LLM провайдеров</CardTitle>
+              <CardDescription>
+                Управление провайдерами языковых моделей (LLM) для Agent Smith
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LlmProviderSettings />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Настройки Perplexity API</CardTitle>
+              <CardDescription>
+                Устаревший интерфейс настроек Perplexity (рекомендуется использовать LLM провайдеры выше)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PerplexitySettings />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Вкладка интеграций */}

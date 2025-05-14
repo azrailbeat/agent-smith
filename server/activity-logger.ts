@@ -22,6 +22,7 @@ export enum ActivityType {
   // Системные события
   SYSTEM_EVENT = 'system_event',
   SYSTEM_ERROR = 'system_error',
+  SYSTEM_CONFIG = 'system_config',
   
   // Действия ИИ-агентов
   AI_PROCESSING = 'ai_processing',

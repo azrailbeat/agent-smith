@@ -1,7 +1,20 @@
+/**
+ * Agent Smith Platform - Компонент для управления настройками LLM провайдеров
+ * 
+ * Позволяет:
+ * - Просматривать список настроенных провайдеров
+ * - Добавлять новых провайдеров
+ * - Редактировать существующих провайдеров
+ * - Тестировать подключения провайдеров
+ * - Устанавливать провайдер по умолчанию
+ * 
+ * @version 1.0.0
+ * @since 14.05.2025
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -9,39 +22,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -50,33 +31,42 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-
-// Icons
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
-  Check,
-  ChevronRight,
-  FileText,
-  PlusCircle,
-  RefreshCw,
-  Save,
-  Settings,
-  Trash2,
-  Zap
-} from 'lucide-react';
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { apiRequest } from '@/lib/queryClient';
+import { Loader2, Check, X, Trash, PlusCircle, Settings, Wrench, CloudLightning, Star } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 // Типы LLM провайдеров
 enum LLMProviderType {
@@ -88,7 +78,7 @@ enum LLMProviderType {
   CUSTOM = 'custom'
 }
 
-// Интерфейс для конфигурации провайдера
+// Интерфейс конфигурации LLM провайдера
 interface LLMProviderConfig {
   type: LLMProviderType;
   name: string;
@@ -105,1066 +95,1139 @@ interface LLMProviderConfig {
   customHeaders?: Record<string, string>;
 }
 
-// Схема валидации формы
+// Схема валидации для формы конфигурации провайдера
 const providerFormSchema = z.object({
-  type: z.nativeEnum(LLMProviderType),
-  name: z.string().min(1, "Название провайдера обязательно"),
+  type: z.enum(['openai', 'anthropic', 'openrouter', 'vllm', 'perplexity', 'custom']),
+  name: z.string().min(1, 'Название обязательно'),
   apiKey: z.string().optional(),
-  apiUrl: z.string().url("Некорректный URL"),
-  defaultModel: z.string().min(1, "Модель по умолчанию обязательна"),
-  enabled: z.boolean(),
-  isDefault: z.boolean().optional(),
-  requestTimeout: z.number().positive().optional(),
-  contextWindow: z.number().positive().optional(),
-  temperature: z.number().min(0).max(1).optional(),
-  maxTokens: z.number().positive().optional(),
-  availableModels: z.array(z.string()),
-  customHeaders: z.record(z.string()).optional()
+  apiUrl: z.string().min(1, 'URL API обязателен'),
+  defaultModel: z.string().min(1, 'Модель по умолчанию обязательна'),
+  availableModels: z.array(z.string()).min(1, 'Должна быть хотя бы одна доступная модель'),
+  enabled: z.boolean().default(true),
+  requestTimeout: z.number().int().positive().optional(),
+  contextWindow: z.number().int().positive().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+  customHeaders: z.record(z.string()).optional(),
 });
 
 const LlmProviderSettings: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedProvider, setSelectedProvider] = useState<LLMProviderConfig | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<LLMProviderConfig | null>(null);
+  const [testMessage, setTestMessage] = useState("Привет! Расскажи мне о многоагентных системах.");
+  const [testResult, setTestResult] = useState<{success: boolean, message: string, model?: string} | null>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [newModel, setNewModel] = useState("");
-  
-  // Получение списка провайдеров
-  const { data: providers = [], isLoading, refetch } = useQuery({
+  const [availableModelsText, setAvailableModelsText] = useState("");
+  const [customHeadersText, setCustomHeadersText] = useState("");
+
+  // Запрос на получение списка провайдеров
+  const {
+    data: providers,
+    isLoading: isLoadingProviders,
+    error: providersError
+  } = useQuery({
     queryKey: ['/api/llm-providers'],
-    staleTime: 1000 * 60 * 5, // 5 минут
+    staleTime: 30000,
   });
-  
-  // Получение информации о текущем провайдере по умолчанию
-  const { data: defaultProvider } = useQuery({
-    queryKey: ['/api/llm-providers/default'],
-    staleTime: 1000 * 60 * 5, // 5 минут
-  });
-  
-  // Мутация для добавления провайдера
-  const addProviderMutation = useMutation({
-    mutationFn: (provider: LLMProviderConfig) => {
-      return apiRequest("POST", `/api/llm-providers`, provider);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
-      toast({
-        title: "Провайдер добавлен",
-        description: "Новый провайдер LLM успешно добавлен",
-      });
-      setIsAddDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: `Не удалось добавить провайдер: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Мутация для обновления провайдера
-  const updateProviderMutation = useMutation({
-    mutationFn: (provider: LLMProviderConfig) => {
-      return apiRequest("PUT", `/api/llm-providers/${provider.name}`, provider);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
-      toast({
-        title: "Провайдер обновлен",
-        description: "Настройки провайдера LLM успешно обновлены",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: `Не удалось обновить провайдер: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Мутация для удаления провайдера
-  const deleteProviderMutation = useMutation({
-    mutationFn: (name: string) => {
-      return apiRequest("DELETE", `/api/llm-providers/${name}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
-      toast({
-        title: "Провайдер удален",
-        description: "Провайдер LLM успешно удален",
-      });
-      setSelectedProvider(null);
-      setIsDeleteDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: `Не удалось удалить провайдер: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Мутация для установки провайдера по умолчанию
-  const setDefaultProviderMutation = useMutation({
-    mutationFn: (name: string) => {
-      return apiRequest("PUT", `/api/llm-providers/${name}/default`);
-    },
-    onSuccess: (_, name) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers/default'] });
-      toast({
-        title: "Провайдер по умолчанию",
-        description: `Провайдер ${name} установлен как основной`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: `Не удалось установить провайдер по умолчанию: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Мутация для проверки настроек провайдера
-  const testProviderMutation = useMutation({
-    mutationFn: (provider: LLMProviderConfig) => {
-      return apiRequest("POST", `/api/llm-providers/test`, provider);
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Соединение успешно",
-        description: `Подключение к провайдеру проверено успешно. Модель: ${data.model}`,
-      });
-      setIsTestingConnection(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка соединения",
-        description: `Не удалось подключиться к провайдеру: ${error.message}`,
-        variant: "destructive",
-      });
-      setIsTestingConnection(false);
-    },
-  });
-  
+
   // Форма для добавления/редактирования провайдера
   const form = useForm<z.infer<typeof providerFormSchema>>({
     resolver: zodResolver(providerFormSchema),
     defaultValues: {
       type: LLMProviderType.OPENAI,
-      name: "",
-      apiUrl: "",
-      defaultModel: "",
-      enabled: true,
+      name: '',
+      apiKey: '',
+      apiUrl: '',
+      defaultModel: '',
       availableModels: [],
-      requestTimeout: 60000,
-      contextWindow: 16000,
+      enabled: true,
+      requestTimeout: 30000,
+      contextWindow: 4096,
       temperature: 0.7,
-      maxTokens: 2048
+      maxTokens: 1024
     }
   });
-  
-  // Обработчик отправки формы
-  const onSubmit = (values: z.infer<typeof providerFormSchema>) => {
-    if (selectedProvider) {
-      // Обновляем существующего провайдера
-      updateProviderMutation.mutate(values as LLMProviderConfig);
-    } else {
-      // Добавляем нового провайдера
-      addProviderMutation.mutate(values as LLMProviderConfig);
+
+  // Мутация для добавления нового провайдера
+  const addProviderMutation = useMutation({
+    mutationFn: (provider: LLMProviderConfig) => {
+      return apiRequest('POST', '/api/llm-providers', provider);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Провайдер добавлен',
+        description: 'Новый LLM провайдер успешно добавлен',
+        variant: 'default',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
+      setIsAddDialogOpen(false);
+      form.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось добавить провайдера: ${error.message}`,
+        variant: 'destructive',
+      });
     }
+  });
+
+  // Мутация для обновления существующего провайдера
+  const updateProviderMutation = useMutation({
+    mutationFn: (provider: LLMProviderConfig) => {
+      return apiRequest('PUT', `/api/llm-providers/${provider.name}`, provider);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Провайдер обновлен',
+        description: 'Настройки LLM провайдера успешно обновлены',
+        variant: 'default',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
+      setIsEditDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось обновить провайдера: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Мутация для удаления провайдера
+  const deleteProviderMutation = useMutation({
+    mutationFn: (name: string) => {
+      return apiRequest('DELETE', `/api/llm-providers/${name}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Провайдер удален',
+        description: 'LLM провайдер успешно удален',
+        variant: 'default',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось удалить провайдера: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Мутация для установки провайдера по умолчанию
+  const setDefaultProviderMutation = useMutation({
+    mutationFn: (name: string) => {
+      return apiRequest('PUT', `/api/llm-providers/${name}/default`);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Провайдер по умолчанию',
+        description: 'LLM провайдер по умолчанию успешно установлен',
+        variant: 'default',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/llm-providers'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось установить провайдера по умолчанию: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Обработчик отправки формы добавления нового провайдера
+  const handleAddSubmit = (data: z.infer<typeof providerFormSchema>) => {
+    // Преобразуем текстовое представление моделей в массив
+    const availableModels = availableModelsText
+      .split('\n')
+      .map(model => model.trim())
+      .filter(model => model.length > 0);
+
+    // Преобразуем текстовое представление заголовков в объект
+    let customHeaders: Record<string, string> = {};
+    if (customHeadersText && customHeadersText.trim().length > 0) {
+      try {
+        customHeaders = JSON.parse(customHeadersText);
+      } catch (e) {
+        toast({
+          title: 'Ошибка формата',
+          description: 'Пользовательские заголовки должны быть в формате JSON',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    const provider: LLMProviderConfig = {
+      ...data,
+      availableModels,
+      customHeaders
+    };
+
+    addProviderMutation.mutate(provider);
   };
-  
-  // Обработчик выбора провайдера
+
+  // Обработчик отправки формы редактирования провайдера
+  const handleEditSubmit = (data: z.infer<typeof providerFormSchema>) => {
+    if (!selectedProvider) return;
+
+    // Преобразуем текстовое представление моделей в массив
+    const availableModels = availableModelsText
+      .split('\n')
+      .map(model => model.trim())
+      .filter(model => model.length > 0);
+
+    // Преобразуем текстовое представление заголовков в объект
+    let customHeaders: Record<string, string> = {};
+    if (customHeadersText && customHeadersText.trim().length > 0) {
+      try {
+        customHeaders = JSON.parse(customHeadersText);
+      } catch (e) {
+        toast({
+          title: 'Ошибка формата',
+          description: 'Пользовательские заголовки должны быть в формате JSON',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    const provider: LLMProviderConfig = {
+      ...data,
+      availableModels,
+      customHeaders,
+      name: selectedProvider.name, // Имя не меняется при редактировании
+    };
+
+    updateProviderMutation.mutate(provider);
+  };
+
+  // Обработчик выбора провайдера для редактирования
   const handleSelectProvider = (provider: LLMProviderConfig) => {
     setSelectedProvider(provider);
     form.reset({
-      ...provider,
-      requestTimeout: provider.requestTimeout || 60000,
-      contextWindow: provider.contextWindow || 16000,
+      type: provider.type,
+      name: provider.name,
+      apiKey: provider.apiKey || '',
+      apiUrl: provider.apiUrl,
+      defaultModel: provider.defaultModel,
+      enabled: provider.enabled,
+      requestTimeout: provider.requestTimeout || 30000,
+      contextWindow: provider.contextWindow || 4096,
       temperature: provider.temperature || 0.7,
-      maxTokens: provider.maxTokens || 2048
+      maxTokens: provider.maxTokens || 1024
     });
+    setAvailableModelsText(provider.availableModels.join('\n'));
+    setCustomHeadersText(provider.customHeaders ? JSON.stringify(provider.customHeaders, null, 2) : '');
+    setIsEditDialogOpen(true);
   };
-  
-  // Обработчик добавления нового провайдера
-  const handleAddProvider = () => {
-    setSelectedProvider(null);
-    form.reset({
-      type: LLMProviderType.OPENAI,
-      name: "",
-      apiUrl: "",
-      defaultModel: "",
-      enabled: true,
-      availableModels: [],
-      requestTimeout: 60000,
-      contextWindow: 16000,
-      temperature: 0.7,
-      maxTokens: 2048
-    });
-    setIsAddDialogOpen(true);
+
+  // Обработчик выбора провайдера для тестирования
+  const handleTestProvider = (provider: LLMProviderConfig) => {
+    setSelectedProvider(provider);
+    setTestResult(null);
+    setIsTestDialogOpen(true);
   };
-  
-  // Обработчик тестирования соединения
-  const handleTestConnection = () => {
-    const values = form.getValues();
+
+  // Обработчик тестирования подключения к провайдеру
+  const handleTestConnection = async () => {
+    if (!selectedProvider) return;
+
     setIsTestingConnection(true);
-    testProviderMutation.mutate(values as LLMProviderConfig);
+    setTestResult(null);
+
+    try {
+      const testData = {
+        ...selectedProvider,
+        testMessage
+      };
+
+      const response = await apiRequest('POST', '/api/llm-providers/test', testData);
+      const result = await response.json();
+      
+      setTestResult(result);
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: `Ошибка при тестировании: ${error.message}`
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
   };
-  
+
+  // Обработчик удаления провайдера
+  const handleDeleteProvider = (name: string) => {
+    if (window.confirm(`Вы уверены, что хотите удалить провайдера "${name}"?`)) {
+      deleteProviderMutation.mutate(name);
+    }
+  };
+
   // Обработчик установки провайдера по умолчанию
-  const handleSetDefault = (name: string) => {
+  const handleSetDefaultProvider = (name: string) => {
     setDefaultProviderMutation.mutate(name);
   };
-  
-  // Обработчик добавления модели в список
-  const handleAddModel = () => {
-    if (!newModel) return;
-    
-    const currentModels = form.getValues("availableModels") || [];
-    if (!currentModels.includes(newModel)) {
-      form.setValue("availableModels", [...currentModels, newModel]);
-      
-      // Если это первая модель, устанавливаем ее как модель по умолчанию
-      if (currentModels.length === 0) {
-        form.setValue("defaultModel", newModel);
-      }
-      
-      setNewModel("");
-    }
-  };
-  
-  // Обработчик удаления модели из списка
-  const handleRemoveModel = (model: string) => {
-    const currentModels = form.getValues("availableModels") || [];
-    const updatedModels = currentModels.filter(m => m !== model);
-    form.setValue("availableModels", updatedModels);
-    
-    // Если удаляемая модель была моделью по умолчанию, сбрасываем дефолтную модель
-    if (form.getValues("defaultModel") === model && updatedModels.length > 0) {
-      form.setValue("defaultModel", updatedModels[0]);
-    }
-  };
-  
-  // Обработчик изменения типа провайдера
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'type') {
-        const type = value.type as LLMProviderType;
-        
-        // Устанавливаем URL по умолчанию в зависимости от типа
-        switch (type) {
-          case LLMProviderType.OPENAI:
-            form.setValue("apiUrl", "https://api.openai.com/v1/chat/completions");
-            break;
-          case LLMProviderType.ANTHROPIC:
-            form.setValue("apiUrl", "https://api.anthropic.com/v1/messages");
-            break;
-          case LLMProviderType.OPENROUTER:
-            form.setValue("apiUrl", "https://openrouter.ai/api/v1/chat/completions");
-            break;
-          case LLMProviderType.VLLM:
-            form.setValue("apiUrl", "http://localhost:8000/v1/chat/completions");
-            break;
-          case LLMProviderType.PERPLEXITY:
-            form.setValue("apiUrl", "https://api.perplexity.ai/chat/completions");
-            break;
-        }
-      }
+
+  // Подготовка формы для добавления нового провайдера
+  const handleAddProvider = () => {
+    form.reset({
+      type: LLMProviderType.OPENAI,
+      name: '',
+      apiKey: '',
+      apiUrl: '',
+      defaultModel: '',
+      availableModels: [],
+      enabled: true,
+      requestTimeout: 30000,
+      contextWindow: 4096,
+      temperature: 0.7,
+      maxTokens: 1024
     });
-    
-    return () => subscription.unsubscribe();
-  }, [form]);
-  
-  // Отображаем соответствующий интерфейс в зависимости от выбранного провайдера
+    setAvailableModelsText('');
+    setCustomHeadersText('');
+    setIsAddDialogOpen(true);
+  };
+
+  // Обработчик изменения типа провайдера - заполняем значения по умолчанию
+  const handleProviderTypeChange = (type: LLMProviderType) => {
+    switch (type) {
+      case LLMProviderType.OPENAI:
+        form.setValue('apiUrl', 'https://api.openai.com/v1');
+        form.setValue('defaultModel', 'gpt-4o');
+        setAvailableModelsText('gpt-4o\ngpt-4-turbo\ngpt-4\ngpt-3.5-turbo');
+        break;
+      case LLMProviderType.ANTHROPIC:
+        form.setValue('apiUrl', 'https://api.anthropic.com/v1');
+        form.setValue('defaultModel', 'claude-3-7-sonnet-20250219');
+        setAvailableModelsText('claude-3-7-sonnet-20250219\nclaude-3-5-sonnet-20240620\nclaude-3-opus-20240229\nclaude-3-sonnet-20240229\nclaude-3-haiku-20240307');
+        break;
+      case LLMProviderType.OPENROUTER:
+        form.setValue('apiUrl', 'https://openrouter.ai/api/v1');
+        form.setValue('defaultModel', 'openai/gpt-4o');
+        setAvailableModelsText('openai/gpt-4o\nopenai/gpt-4-turbo\nanthropic/claude-3-7-sonnet\nanthropic/claude-3-opus\nmistral/mistral-large-latest');
+        break;
+      case LLMProviderType.VLLM:
+        form.setValue('apiUrl', 'http://localhost:8000/v1');
+        form.setValue('defaultModel', 'mistralai/Mistral-7B-Instruct-v0.2');
+        setAvailableModelsText('mistralai/Mistral-7B-Instruct-v0.2\nmeta-llama/Llama-2-13b-chat-hf');
+        break;
+      case LLMProviderType.PERPLEXITY:
+        form.setValue('apiUrl', 'https://api.perplexity.ai');
+        form.setValue('defaultModel', 'llama-3.1-sonar-small-128k-online');
+        setAvailableModelsText('llama-3.1-sonar-small-128k-online\nllama-3.1-sonar-large-128k-online\nllama-3.1-sonar-huge-128k-online');
+        break;
+      case LLMProviderType.CUSTOM:
+        form.setValue('apiUrl', '');
+        form.setValue('defaultModel', '');
+        setAvailableModelsText('');
+        break;
+    }
+  };
+
+  // Отображение индикатора загрузки при загрузке данных
+  if (isLoadingProviders) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Загрузка провайдеров...</span>
+      </div>
+    );
+  }
+
+  // Отображение ошибки при неудачной загрузке данных
+  if (providersError) {
+    return (
+      <div className="rounded-md bg-destructive/15 p-4 text-destructive">
+        <h3 className="text-lg font-semibold">Ошибка загрузки данных</h3>
+        <p>Не удалось загрузить список LLM провайдеров.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Настройка провайдеров LLM</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Настройки LLM провайдеров</h2>
         <Button onClick={handleAddProvider}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Добавить провайдера
+          <PlusCircle className="mr-2 h-4 w-4" /> Добавить провайдера
         </Button>
       </div>
       
-      <Tabs defaultValue="providers" className="w-full">
-        <TabsList>
-          <TabsTrigger value="providers">Провайдеры</TabsTrigger>
-          <TabsTrigger value="settings">Настройки</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="providers" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {isLoading ? (
-              <p>Загрузка провайдеров...</p>
-            ) : providers.length === 0 ? (
-              <div className="col-span-3 text-center p-8 border rounded-lg">
-                <p className="text-lg text-gray-600 mb-4">Нет настроенных провайдеров LLM</p>
-                <Button onClick={handleAddProvider}>
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Добавить первого провайдера
-                </Button>
-              </div>
-            ) : (
-              providers.map((provider: LLMProviderConfig) => (
-                <Card 
-                  key={provider.name} 
-                  className={`cursor-pointer hover:border-blue-300 transition-colors ${
-                    selectedProvider?.name === provider.name ? 'border-blue-500' : ''
-                  }`}
-                  onClick={() => handleSelectProvider(provider)}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg flex items-center">
-                        {getProviderIcon(provider.type)}
-                        <span className="ml-2">{provider.name}</span>
-                      </CardTitle>
-                      <div className="flex items-center space-x-2">
-                        {provider.isDefault && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            По умолчанию
-                          </Badge>
-                        )}
-                        <Badge variant={provider.enabled ? "default" : "outline"}>
-                          {provider.enabled ? "Включен" : "Отключен"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <CardDescription>
-                      {getProviderDescription(provider.type)}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">URL API:</span>
-                        <span className="text-gray-700 truncate max-w-[180px]">{provider.apiUrl}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Модель:</span>
-                        <span className="text-gray-700">{provider.defaultModel}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Кол-во моделей:</span>
-                        <span className="text-gray-700">{provider.availableModels.length}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-0 justify-end">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="text-blue-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectProvider(provider);
-                      }}
-                    >
-                      Настроить <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          {selectedProvider ? (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-medium flex items-center">
-                  {getProviderIcon(selectedProvider.type)}
-                  <span className="ml-2">Настройка провайдера: {selectedProvider.name}</span>
-                </h3>
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Удалить
-                  </Button>
-                  
-                  {!selectedProvider.isDefault && selectedProvider.enabled && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleSetDefault(selectedProvider.name)}
-                    >
-                      <Zap className="h-4 w-4 mr-2" />
-                      Сделать основным
-                    </Button>
+      <p className="text-muted-foreground">
+        Настройте провайдеров языковых моделей (LLM) для использования в платформе. Вы можете подключить различные API, такие как OpenAI, Claude, OpenRouter, vLLM или Perplexity.
+      </p>
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {providers && providers.map((provider: LLMProviderConfig) => (
+          <Card key={provider.name} className={`${provider.isDefault ? 'border-2 border-primary' : ''}`}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  {getProviderIcon(provider.type)}
+                  <CardTitle>{provider.name}</CardTitle>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {provider.isDefault && (
+                    <Badge className="bg-primary">По умолчанию</Badge>
                   )}
-                  
-                  <Button 
-                    variant="outline"
-                    onClick={handleTestConnection}
-                    disabled={isTestingConnection}
-                  >
-                    {isTestingConnection ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Проверка...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Проверить соединение
-                      </>
-                    )}
-                  </Button>
+                  <Badge className={provider.enabled ? 'bg-green-600' : 'bg-gray-400'}>
+                    {provider.enabled ? 'Активен' : 'Отключен'}
+                  </Badge>
                 </div>
               </div>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Основные настройки</CardTitle>
-                        <CardDescription>
-                          Настройте основные параметры подключения к провайдеру LLM
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Тип провайдера</FormLabel>
-                              <FormControl>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                  disabled={!!selectedProvider} // Нельзя менять тип существующего провайдера
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Выберите тип провайдера" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value={LLMProviderType.OPENAI}>OpenAI</SelectItem>
-                                    <SelectItem value={LLMProviderType.ANTHROPIC}>Anthropic</SelectItem>
-                                    <SelectItem value={LLMProviderType.OPENROUTER}>OpenRouter</SelectItem>
-                                    <SelectItem value={LLMProviderType.VLLM}>vLLM (локальная модель)</SelectItem>
-                                    <SelectItem value={LLMProviderType.PERPLEXITY}>Perplexity</SelectItem>
-                                    <SelectItem value={LLMProviderType.CUSTOM}>Пользовательский API</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormDescription>
-                                Тип провайдера определяет формат API и доступные модели
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Название</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Например: OpenAI Main" {...field} 
-                                  disabled={!!selectedProvider} // Нельзя менять имя существующего провайдера
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Уникальное название для идентификации провайдера
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="apiUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>URL API</FormLabel>
-                              <FormControl>
-                                <Input placeholder="https://api.example.com/v1/chat/completions" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                URL эндпоинта API для отправки запросов
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="apiKey"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>API ключ</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="password" 
-                                  placeholder="sk-..." 
-                                  {...field} 
-                                  value={field.value || ''}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Ключ API для аутентификации
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="enabled"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">Активен</FormLabel>
-                                <FormDescription>
-                                  Включить или отключить использование провайдера
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Настройки моделей</CardTitle>
-                        <CardDescription>
-                          Управление доступными моделями и их параметрами
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="defaultModel"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Модель по умолчанию</FormLabel>
-                                <FormControl>
-                                  <Select 
-                                    onValueChange={field.onChange} 
-                                    defaultValue={field.value}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Выберите модель по умолчанию" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {form.getValues('availableModels')?.map((model) => (
-                                        <SelectItem key={model} value={model}>
-                                          {model}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormDescription>
-                                  Модель, которая будет использоваться, если не указана конкретная модель
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <div>
-                            <Label>Доступные модели</Label>
-                            <div className="flex items-center mt-2 space-x-2">
-                              <Input 
-                                placeholder="Название модели..."
-                                value={newModel}
-                                onChange={(e) => setNewModel(e.target.value)}
-                                className="flex-1"
-                              />
-                              <Button 
-                                type="button" 
-                                onClick={handleAddModel}
-                                variant="outline"
-                              >
-                                Добавить
-                              </Button>
-                            </div>
-                            
-                            <ScrollArea className="h-[200px] mt-2 border rounded-md">
-                              <div className="p-4 space-y-2">
-                                {form.getValues('availableModels')?.length === 0 ? (
-                                  <p className="text-sm text-gray-500 text-center">
-                                    Нет доступных моделей. Добавьте хотя бы одну.
-                                  </p>
-                                ) : (
-                                  form.getValues('availableModels')?.map((model) => (
-                                    <div key={model} className="flex items-center justify-between py-1">
-                                      <div className="flex items-center">
-                                        {model === form.getValues('defaultModel') && (
-                                          <Badge variant="outline" className="mr-2 bg-blue-50 text-blue-600 border-blue-200">
-                                            По умолчанию
-                                          </Badge>
-                                        )}
-                                        <span className="text-sm">{model}</span>
-                                      </div>
-                                      <div className="flex space-x-2">
-                                        <Button 
-                                          type="button" 
-                                          variant="ghost" 
-                                          size="sm"
-                                          className="h-8 w-8 p-0 text-blue-600"
-                                          onClick={() => form.setValue('defaultModel', model)}
-                                          disabled={model === form.getValues('defaultModel')}
-                                        >
-                                          <Check className="h-4 w-4" />
-                                          <span className="sr-only">Сделать моделью по умолчанию</span>
-                                        </Button>
-                                        <Button 
-                                          type="button" 
-                                          variant="ghost" 
-                                          size="sm"
-                                          className="h-8 w-8 p-0 text-red-600"
-                                          onClick={() => handleRemoveModel(model)}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                          <span className="sr-only">Удалить модель</span>
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </ScrollArea>
-                          </div>
-                          
-                          <Separator />
-                          
-                          <FormField
-                            control={form.control}
-                            name="temperature"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Температура по умолчанию</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min="0" 
-                                    max="1" 
-                                    step="0.1" 
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Определяет случайность ответов (от 0 до 1)
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="maxTokens"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Максимальное кол-во токенов</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min="1" 
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Максимальное количество токенов, которые может вернуть API
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Расширенные настройки</CardTitle>
-                      <CardDescription>
-                        Дополнительные параметры для тонкой настройки работы провайдера
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="requestTimeout"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Таймаут запроса (мс)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="1000" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Максимальное время ожидания ответа от API
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="contextWindow"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Размер контекстного окна</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="1000" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Максимальный размер контекста в токенах
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      {/* Пользовательские заголовки */}
-                      {form.getValues('type') === LLMProviderType.CUSTOM && (
-                        <div>
-                          <Label>Пользовательские заголовки</Label>
-                          <p className="text-sm text-gray-500 mb-2">
-                            Дополнительные HTTP заголовки для запросов к API
-                          </p>
-                          
-                          {/* TODO: Добавить управление пользовательскими заголовками */}
-                          <div className="border p-4 rounded-md text-center text-gray-500 text-sm">
-                            Добавление пользовательских заголовков пока не поддерживается через UI.
-                            Используйте API для настройки.
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter className="flex justify-end space-x-2">
-                      <Button variant="outline" type="button" onClick={() => handleSelectProvider(selectedProvider)}>
-                        Отменить изменения
-                      </Button>
-                      <Button type="submit" disabled={updateProviderMutation.isPending}>
-                        {updateProviderMutation.isPending ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Сохранение...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Сохранить
-                          </>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </form>
-              </Form>
-              
-              {/* Диалог подтверждения удаления */}
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Удалить провайдера LLM?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Вы действительно хотите удалить провайдера "{selectedProvider.name}"?
-                      Это действие нельзя отменить.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Отмена</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={() => deleteProviderMutation.mutate(selectedProvider.name)}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      {deleteProviderMutation.isPending ? "Удаление..." : "Удалить"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          ) : (
-            <div className="text-center p-8 border rounded-lg">
-              <FileText className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-lg text-gray-600 mb-4">Выберите провайдера LLM для настройки</p>
-              <p className="text-sm text-gray-500 mb-4">
-                Или добавьте нового провайдера, чтобы настроить его
-              </p>
-              <Button onClick={handleAddProvider}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Добавить провайдера
-              </Button>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-      
+              <CardDescription>
+                {getProviderDescription(provider.type)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Тип:</span>
+                  <span>{provider.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">API URL:</span>
+                  <span className="text-sm truncate max-w-[200px]">{provider.apiUrl}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Модель по умолчанию:</span>
+                  <span className="text-sm">{provider.defaultModel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">API ключ:</span>
+                  <span>{provider.hasApiKey ? '••••••••' : 'Не задан'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Доступные модели:</span>
+                  <span>{provider.availableModels.length}</span>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Действия</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Управление провайдером</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleSelectProvider(provider)}>
+                    <Settings className="mr-2 h-4 w-4" /> Редактировать
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTestProvider(provider)}>
+                    <Wrench className="mr-2 h-4 w-4" /> Тестировать
+                  </DropdownMenuItem>
+                  {!provider.isDefault && (
+                    <DropdownMenuItem onClick={() => handleSetDefaultProvider(provider.name)}>
+                      <Star className="mr-2 h-4 w-4" /> Сделать по умолчанию
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem 
+                    onClick={() => handleDeleteProvider(provider.name)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash className="mr-2 h-4 w-4" /> Удалить
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
       {/* Диалог добавления нового провайдера */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Добавление нового провайдера LLM</DialogTitle>
+            <DialogTitle>Добавление нового LLM провайдера</DialogTitle>
             <DialogDescription>
-              Настройте параметры для подключения к новому провайдеру языковых моделей.
+              Заполните данные для подключения к API языковой модели.
             </DialogDescription>
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Тип провайдера</FormLabel>
-                      <FormControl>
+            <form onSubmit={form.handleSubmit(handleAddSubmit)} className="space-y-6">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Основные настройки</TabsTrigger>
+                  <TabsTrigger value="models">Модели</TabsTrigger>
+                  <TabsTrigger value="advanced">Дополнительно</TabsTrigger>
+                </TabsList>
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Тип провайдера</FormLabel>
                         <Select 
-                          onValueChange={field.onChange} 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleProviderTypeChange(value as LLMProviderType);
+                          }} 
                           defaultValue={field.value}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Выберите тип провайдера" />
-                          </SelectTrigger>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Выберите тип провайдера" />
+                            </SelectTrigger>
+                          </FormControl>
                           <SelectContent>
                             <SelectItem value={LLMProviderType.OPENAI}>OpenAI</SelectItem>
-                            <SelectItem value={LLMProviderType.ANTHROPIC}>Anthropic</SelectItem>
+                            <SelectItem value={LLMProviderType.ANTHROPIC}>Anthropic (Claude)</SelectItem>
                             <SelectItem value={LLMProviderType.OPENROUTER}>OpenRouter</SelectItem>
-                            <SelectItem value={LLMProviderType.VLLM}>vLLM (локальная модель)</SelectItem>
+                            <SelectItem value={LLMProviderType.VLLM}>vLLM (локальные модели)</SelectItem>
                             <SelectItem value={LLMProviderType.PERPLEXITY}>Perplexity</SelectItem>
-                            <SelectItem value={LLMProviderType.CUSTOM}>Пользовательский API</SelectItem>
+                            <SelectItem value={LLMProviderType.CUSTOM}>Пользовательский</SelectItem>
                           </SelectContent>
                         </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Название</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Например: OpenAI Main" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="apiUrl"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>URL API</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://api.example.com/v1/chat/completions" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="apiKey"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>API ключ</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="sk-..." 
-                          {...field} 
-                          value={field.value || ''}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div>
-                <Label>Доступные модели</Label>
-                <div className="flex items-center mt-2 space-x-2">
-                  <Input 
-                    placeholder="Название модели..."
-                    value={newModel}
-                    onChange={(e) => setNewModel(e.target.value)}
-                    className="flex-1"
+                        <FormDescription>
+                          Выберите тип API для языковой модели.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <Button 
-                    type="button" 
-                    onClick={handleAddModel}
-                    variant="outline"
-                  >
-                    Добавить
-                  </Button>
-                </div>
-                
-                <div className="h-[100px] mt-2 border rounded-md overflow-auto p-2">
-                  {form.getValues('availableModels')?.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center p-4">
-                      Нет доступных моделей. Добавьте хотя бы одну.
-                    </p>
-                  ) : (
-                    <div className="space-y-1">
-                      {form.getValues('availableModels')?.map((model) => (
-                        <div key={model} className="flex items-center justify-between py-1 px-2 hover:bg-gray-50 rounded">
-                          <span className="text-sm">{model}</span>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-6 w-6 p-0 text-red-600"
-                            onClick={() => handleRemoveModel(model)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            <span className="sr-only">Удалить модель</span>
-                          </Button>
+                  
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Название провайдера</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Мой OpenAI провайдер" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Уникальное имя для идентификации провайдера в системе
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="apiUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL API</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://api.openai.com/v1" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Базовый URL для API запросов
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="apiKey"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>API ключ</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="sk-..." {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Секретный ключ для авторизации запросов к API
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Активен</FormLabel>
+                          <FormDescription>
+                            Включить или отключить использование этого провайдера
+                          </FormDescription>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="enabled"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Активировать провайдера
-                      </FormLabel>
-                      <FormDescription>
-                        Провайдер будет доступен для использования в системе
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="models" className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="defaultModel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Модель по умолчанию</FormLabel>
+                        <FormControl>
+                          <Input placeholder="gpt-4" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Идентификатор модели, используемой по умолчанию
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="availableModels">Доступные модели</Label>
+                    <Textarea
+                      id="availableModels"
+                      placeholder="gpt-4-turbo
+gpt-4
+gpt-3.5-turbo"
+                      className="min-h-[150px]"
+                      value={availableModelsText}
+                      onChange={(e) => setAvailableModelsText(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Введите идентификаторы доступных моделей, по одной на строку
+                    </p>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="advanced" className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="requestTimeout"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Таймаут запроса (мс)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="30000" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Максимальное время ожидания ответа от API
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="contextWindow"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Размер контекстного окна</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="4096" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Максимальное количество токенов в запросе + ответе
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="temperature"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Температура по умолчанию</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="0.7"
+                            step="0.1"
+                            min="0"
+                            max="2"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Значение от 0 до 2, определяющее "креативность" модели
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="maxTokens"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Максимальное кол-во токенов</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="1024" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Максимальное количество токенов в ответе модели
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="customHeaders">Пользовательские заголовки (JSON)</Label>
+                    <Textarea
+                      id="customHeaders"
+                      placeholder='{"X-Custom-Header": "value"}'
+                      className="min-h-[100px] font-mono text-sm"
+                      value={customHeadersText}
+                      onChange={(e) => setCustomHeadersText(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Дополнительные HTTP заголовки для запросов к API в формате JSON
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
               
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button variant="outline" type="button" onClick={() => setIsAddDialogOpen(false)}>
                   Отмена
                 </Button>
                 <Button type="submit" disabled={addProviderMutation.isPending}>
-                  {addProviderMutation.isPending ? "Добавление..." : "Добавить провайдера"}
+                  {addProviderMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Добавить
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Диалог редактирования провайдера */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Редактирование LLM провайдера</DialogTitle>
+            <DialogDescription>
+              Измените настройки подключения к API языковой модели.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-6">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Основные настройки</TabsTrigger>
+                  <TabsTrigger value="models">Модели</TabsTrigger>
+                  <TabsTrigger value="advanced">Дополнительно</TabsTrigger>
+                </TabsList>
+                <TabsContent value="basic" className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Тип провайдера</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleProviderTypeChange(value as LLMProviderType);
+                          }} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Выберите тип провайдера" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={LLMProviderType.OPENAI}>OpenAI</SelectItem>
+                            <SelectItem value={LLMProviderType.ANTHROPIC}>Anthropic (Claude)</SelectItem>
+                            <SelectItem value={LLMProviderType.OPENROUTER}>OpenRouter</SelectItem>
+                            <SelectItem value={LLMProviderType.VLLM}>vLLM (локальные модели)</SelectItem>
+                            <SelectItem value={LLMProviderType.PERPLEXITY}>Perplexity</SelectItem>
+                            <SelectItem value={LLMProviderType.CUSTOM}>Пользовательский</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Выберите тип API для языковой модели.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Название провайдера</FormLabel>
+                        <FormControl>
+                          <Input disabled placeholder="Мой OpenAI провайдер" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Название нельзя изменить после создания
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="apiUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL API</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://api.openai.com/v1" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Базовый URL для API запросов
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="apiKey"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>API ключ</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password" 
+                            placeholder={selectedProvider?.hasApiKey ? "••••••••" : "sk-..."} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Оставьте пустым, чтобы сохранить текущий ключ
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Активен</FormLabel>
+                          <FormDescription>
+                            Включить или отключить использование этого провайдера
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="models" className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="defaultModel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Модель по умолчанию</FormLabel>
+                        <FormControl>
+                          <Input placeholder="gpt-4" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Идентификатор модели, используемой по умолчанию
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="availableModels">Доступные модели</Label>
+                    <Textarea
+                      id="availableModels"
+                      placeholder="gpt-4-turbo
+gpt-4
+gpt-3.5-turbo"
+                      className="min-h-[150px]"
+                      value={availableModelsText}
+                      onChange={(e) => setAvailableModelsText(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Введите идентификаторы доступных моделей, по одной на строку
+                    </p>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="advanced" className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="requestTimeout"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Таймаут запроса (мс)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="30000" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Максимальное время ожидания ответа от API
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="contextWindow"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Размер контекстного окна</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="4096" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Максимальное количество токенов в запросе + ответе
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="temperature"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Температура по умолчанию</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="0.7"
+                            step="0.1"
+                            min="0"
+                            max="2"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Значение от 0 до 2, определяющее "креативность" модели
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="maxTokens"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Максимальное кол-во токенов</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="1024" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Максимальное количество токенов в ответе модели
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="customHeaders">Пользовательские заголовки (JSON)</Label>
+                    <Textarea
+                      id="customHeaders"
+                      placeholder='{"X-Custom-Header": "value"}'
+                      className="min-h-[100px] font-mono text-sm"
+                      value={customHeadersText}
+                      onChange={(e) => setCustomHeadersText(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Дополнительные HTTP заголовки для запросов к API в формате JSON
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+              
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => setIsEditDialogOpen(false)}>
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={updateProviderMutation.isPending}>
+                  {updateProviderMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Сохранить
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог тестирования провайдера */}
+      <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Тестирование LLM провайдера</DialogTitle>
+            <DialogDescription>
+              Проверьте подключение к API языковой модели.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedProvider && (
+              <div className="flex items-center space-x-2 pb-2">
+                {getProviderIcon(selectedProvider.type)}
+                <span className="font-semibold">{selectedProvider.name}</span>
+                <span className="text-sm text-muted-foreground">({selectedProvider.type})</span>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="testMessage">Тестовое сообщение</Label>
+              <Textarea
+                id="testMessage"
+                placeholder="Привет! Как дела?"
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+              />
+            </div>
+            
+            {testResult && (
+              <div className={`p-4 rounded-md ${testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <div className="flex items-start">
+                  {testResult.success ? (
+                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                  ) : (
+                    <X className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+                  )}
+                  <div>
+                    <h4 className={`font-medium ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                      {testResult.success ? 'Успешное подключение' : 'Ошибка подключения'}
+                    </h4>
+                    <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                      {testResult.message}
+                    </p>
+                    {testResult.success && testResult.model && (
+                      <p className="text-sm text-green-700 mt-1">
+                        Используемая модель: <span className="font-mono">{testResult.model}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTestDialogOpen(false)}>
+              Закрыть
+            </Button>
+            <Button 
+              onClick={handleTestConnection} 
+              disabled={isTestingConnection || !testMessage.trim()}
+            >
+              {isTestingConnection && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Протестировать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// Функция для получения иконки в зависимости от типа провайдера
 function getProviderIcon(type: LLMProviderType) {
   switch (type) {
     case LLMProviderType.OPENAI:
-      return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.5093-2.6067-1.4998z" fill="currentColor" />
-      </svg>;
+      return <CloudLightning className="h-5 w-5 text-green-600" />;
     case LLMProviderType.ANTHROPIC:
-      return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M16.6935 2H7.30647C4.36647 2 2 4.36647 2 7.30647V16.6935C2 19.6335 4.36647 22 7.30647 22H16.6935C19.6335 22 22 19.6335 22 16.6935V7.30647C22 4.36647 19.6335 2 16.6935 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M8 9L12 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M16 9L12 13L16 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>;
+      return <CloudLightning className="h-5 w-5 text-purple-600" />;
     case LLMProviderType.OPENROUTER:
-      return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 16.5V9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M7 14L7 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17 14L17 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M14 12H19C19.5523 12 20 12.4477 20 13V14.5C20 16.433 18.433 18 16.5 18H14C13.4477 18 13 17.5523 13 17V13C13 12.4477 13.4477 12 14 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M10 12H5C4.44772 12 4 12.4477 4 13V14.5C4 16.433 5.567 18 7.5 18H10C10.5523 18 11 17.5523 11 17V13C11 12.4477 10.5523 12 10 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M14.5 12V7.5C14.5 6.67157 13.8284 6 13 6H11C10.1716 6 9.5 6.67157 9.5 7.5V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>;
+      return <CloudLightning className="h-5 w-5 text-blue-600" />;
     case LLMProviderType.VLLM:
-      return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 6.5C3 4.567 4.567 3 6.5 3C8.433 3 10 4.567 10 6.5C10 8.433 8.433 10 6.5 10C4.567 10 3 8.433 3 6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M14 6.5C14 4.567 15.567 3 17.5 3C19.433 3 21 4.567 21 6.5C21 8.433 19.433 10 17.5 10C15.567 10 14 8.433 14 6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3 17.5C3 15.567 4.567 14 6.5 14C8.433 14 10 15.567 10 17.5C10 19.433 8.433 21 6.5 21C4.567 21 3 19.433 3 17.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M14 17.5C14 15.567 15.567 14 17.5 14C19.433 14 21 15.567 21 17.5C21 19.433 19.433 21 17.5 21C15.567 21 14 19.433 14 17.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>;
+      return <CloudLightning className="h-5 w-5 text-orange-600" />;
     case LLMProviderType.PERPLEXITY:
-      return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18.9 6C18.9 8.2091 16.1091 10 12.6 10C9.09086 10 6.3 8.2091 6.3 6C6.3 3.79086 9.09086 2 12.6 2C16.1091 2 18.9 3.79086 18.9 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M18.9 12C18.9 14.2091 16.1091 16 12.6 16C9.09086 16 6.3 14.2091 6.3 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M18.9 18C18.9 20.2091 16.1091 22 12.6 22C9.09086 22 6.3 20.2091 6.3 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>;
+      return <CloudLightning className="h-5 w-5 text-cyan-600" />;
     case LLMProviderType.CUSTOM:
-      return <Settings className="h-5 w-5" />;
+      return <CloudLightning className="h-5 w-5 text-gray-600" />;
+    default:
+      return <CloudLightning className="h-5 w-5" />;
   }
 }
 
-// Функция для получения описания в зависимости от типа провайдера
 function getProviderDescription(type: LLMProviderType) {
   switch (type) {
     case LLMProviderType.OPENAI:
-      return "OpenAI API - доступ к моделям GPT";
+      return 'Платформа ИИ с моделями GPT';
     case LLMProviderType.ANTHROPIC:
-      return "Anthropic API - доступ к моделям Claude";
+      return 'Модели Claude от Anthropic';
     case LLMProviderType.OPENROUTER:
-      return "OpenRouter - единый доступ к множеству моделей";
+      return 'Единый API для доступа к различным LLM';
     case LLMProviderType.VLLM:
-      return "vLLM - локальный инференс для LLM";
+      return 'Самостоятельно размещенные модели с vLLM';
     case LLMProviderType.PERPLEXITY:
-      return "Perplexity API - доступ к моделям с возможностью поиска";
+      return 'ИИ с поиском от Perplexity';
     case LLMProviderType.CUSTOM:
-      return "Пользовательский API с OpenAI-совместимым форматом";
+      return 'Пользовательский LLM провайдер';
+    default:
+      return 'Провайдер языковой модели';
   }
 }
 

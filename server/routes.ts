@@ -35,6 +35,7 @@ import { registerAudioRoutes } from "./audio-api";
 import agentRoutes from "./routes/agent-routes";
 import llmAnalyticsRoutes from "./routes/llm-analytics-routes";
 import userRoutes from "./routes/user-routes";
+import llmProvidersRoutes from "./routes/llm-providers.routes";
 import {
   getTaskRules,
   getTaskRuleById,
@@ -126,6 +127,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Регистрируем маршруты для управления пользователями
   app.use('/api', userRoutes);
+  
+  // Регистрируем маршруты для управления LLM провайдерами
+  app.use('/api/llm-providers', llmProvidersRoutes);
+  
   // CORS middleware для API маршрутов, используемых внешними виджетами и bolt.new
   app.use(['/widget.js', '/api/citizen-requests', '/api/bolt-templates', '/api/widget-integration', '/api/bolt', '/api/transcribe', '/api/process-text', '/api/process-audio'], (req, res, next) => {
     // Разрешить запросы с bolt.new и всех его поддоменов
