@@ -80,7 +80,7 @@ interface CitizenRequest {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   createdAt: Date;
   updatedAt: Date;
-  assignedTo?: number;
+  assignedTo?: number | null;
   aiProcessed?: boolean;
   aiClassification?: string;
   aiSuggestion?: string;
@@ -1161,13 +1161,10 @@ const CitizenRequests = () => {
               onClose={() => setIsViewDetailsOpen(false)}
               availableAgents={availableAgents}
               onProcessWithAgent={(request, agentId, action) => {
-                // Преобразуем тип priority и обеспечиваем наличие updatedAt
-                const typedRequest = {
-                  ...request, 
-                  updatedAt: request.updatedAt || new Date(),
-                  priority: request.priority as 'low' | 'medium' | 'high' | 'urgent'
-                };
-                processRequestWithAgent(typedRequest, agentId, action);
+                // Используем ID запроса вместо передачи всего объекта
+                if (selectedRequest) {
+                  processRequestWithAgent(selectedRequest, agentId, action);
+                }
               }}
             />
           </DialogContent>

@@ -10,23 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Bot, Database, User, MoreHorizontal, CheckCircle2, AlertCircle, RefreshCw, ChevronDown,
          MessageSquare, FileText, Clock, Edit, CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2 } from 'lucide-react';
-
-interface Activity {
-  id: number;
-  userId?: number;
-  userName?: string;
-  actionType: string;
-  description: string;
-  relatedId?: number;
-  relatedType?: string;
-  blockchainHash?: string;
-  entityType?: string;
-  entityId?: number;
-  metadata?: any;
-  action?: string;
-  timestamp?: Date;
-  createdAt: Date;
-}
+import { CitizenRequest, Activity, Agent } from '@shared/types';
 
 interface CitizenRequest {
   id: number;
