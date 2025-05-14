@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { TaskCheckIcon, CalendarIcon, ActivityIcon, FileIcon } from 'lucide-react';
+import { CheckSquare, Calendar, Activity, FileText } from 'lucide-react';
 
 interface StatItem {
   icon: React.ReactNode;
