@@ -18,7 +18,7 @@ import {
   RefreshCw, ChevronDown, MessageSquare, FileText, Clock, Edit, 
   CreditCard, Flag, Info, Plus, Tag, UserCheck, Trash2, Mail, 
   Building, Users, LayoutGrid, CheckSquare, BrainCircuit, History,
-  Loader2, Trash, Cpu, Zap
+  Loader2, Trash, Cpu as CpuIcon, Zap
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -80,27 +80,27 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
   const [aiClassification, setAiClassification] = useState<string | null>(null);
   const [processingAgent, setProcessingAgent] = useState<number | null>(null);
-  
+
   // Форматирование даты
   const formatDate = (dateString: string | Date | undefined) => {
     if (!dateString) return "Не указано";
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     return date.toLocaleString('ru-RU');
   };
-  
+
   if (!isOpen) return null;
-  
+
   // Запрос списка агентов
   const { data: agents = [] } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
     refetchOnWindowFocus: false,
   });
-  
+
   // Выборка агентов для обработки обращений
   const citizenRequestAgents = agents.filter(agent => 
     agent.type === "citizen_requests"
   );
-  
+
   // Получить цвет текста статуса
   const getStatusTextColor = (status: string): string => {
     const statusColors: {[key: string]: string} = {
@@ -113,7 +113,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     };
     return statusColors[status] || 'text-gray-500';
   };
-  
+
   // Получить название статуса
   const getStatusLabel = (status: string): string => {
     const statusLabels: {[key: string]: string} = {
@@ -126,7 +126,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     };
     return statusLabels[status] || status;
   };
-  
+
   // Получить цвет приоритета
   const getPriorityColor = (priority: string): string => {
     const priorityColors: {[key: string]: string} = {
@@ -137,7 +137,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     };
     return priorityColors[priority] || 'bg-gray-500';
   };
-  
+
   // Получить фоновый цвет статуса
   const getStatusBgColor = (status: string): string => {
     const statusColors: {[key: string]: string} = {
@@ -151,7 +151,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     };
     return statusColors[status] || 'bg-gray-400';
   };
-  
+
   // Получить название приоритета
   const getPriorityLabel = (priority: string): string => {
     const priorityLabels: {[key: string]: string} = {
@@ -162,20 +162,20 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     };
     return priorityLabels[priority] || priority;
   };
-  
+
   // Запрос списка активностей
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<Activity[]>({
     queryKey: [`/api/citizen-requests/${request.id}/activities`],
     refetchOnWindowFocus: false
   });
-  
+
   // Устанавливаем флаг загрузки активностей
   useEffect(() => {
     if (!activitiesLoading && activities) {
       setActivitiesLoaded(true);
     }
   }, [activitiesLoading, activities]);
-  
+
   // Получить название типа действия
   const getActionTypeLabel = (actionType: string): string => {
     const actionTypeMap: {[key: string]: string} = {
@@ -192,7 +192,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     };
     return actionTypeMap[actionType] || actionType;
   };
-  
+
   // Получить иконку для типа действия
   const getActionIcon = (actionType: string) => {
     switch (actionType) {
@@ -220,14 +220,14 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         return <Info className="h-3 w-3 text-gray-500" />;
     }
   };
-  
+
   // Обработка изменения статуса
   const handleStatusChange = (newStatus: string) => {
     if (onStatusChange) {
       onStatusChange(request.id, newStatus);
     }
   };
-  
+
   // Обработка изменения агента
   const handleProcessWithAgent = () => {
     if (processingAgent && onProcessWithAgent) {
@@ -242,21 +242,21 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       });
     }
   };
-  
+
   // Обработка автоматической обработки
   const handleAutoProcess = () => {
     if (onAutoProcess) {
       onAutoProcess();
     }
   };
-  
+
   // Отправка комментария
   const handleCommentSubmit = () => {
     if (!comment.trim()) return;
-    
+
     // Отправляем комментарий на сервер
     const commentMutation = apiRequest('POST', `/api/citizen-requests/${request.id}/comment`, { text: comment });
-    
+
     commentMutation
       .then(() => {
         setComment('');
@@ -275,7 +275,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         });
       });
   };
-  
+
   // Сохранение изменений
   const handleSubmit = () => {
     if (onUpdate) {
@@ -283,7 +283,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     }
     onClose();
   };
-  
+
   // Сохранить в блокчейн
   const saveToBlockchain = () => {
     apiRequest('POST', `/api/citizen-requests/${request.id}/blockchain`, {})
@@ -318,7 +318,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             </DialogTitle>
           </div>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-y-auto">
           {/* Секция Детали */}
           <div className="border-b p-4 bg-gray-50">
@@ -327,7 +327,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           <div className="p-6">
             <h4 className="text-lg font-medium mb-3">{request.subject}</h4>
             <p className="text-sm text-gray-700 mb-6 whitespace-pre-line leading-relaxed">{request.description}</p>
-            
+
             <div className="grid md:grid-cols-2 gap-6 mt-4">
               <div>
                 <h5 className="text-sm font-medium mb-2">Статус</h5>
@@ -336,7 +336,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   <span className="text-sm">{getStatusLabel(request.status)}</span>
                 </div>
               </div>
-              
+
               <div>
                 <h5 className="text-sm font-medium mb-2">Приоритет</h5>
                 <div className="flex items-center">
@@ -345,7 +345,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8">
               <h5 className="text-base font-medium mb-3">Информация о заявителе</h5>
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
@@ -378,7 +378,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 )}
               </div>
             </div>
-            
+
             <div className="mt-8">
               <h5 className="text-base font-medium mb-3">Обработка заявки</h5>
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 space-y-3">
@@ -387,13 +387,13 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                   <span className="text-gray-600 font-medium mr-2">Создано:</span>
                   <span>{formatDate(request.createdAt)}</span>
                 </div>
-                
+
                 <div className="flex items-center text-sm">
                   <Clock className="h-4 w-4 text-blue-500 mr-3" />
                   <span className="text-gray-600 font-medium mr-2">Последнее обновление:</span>
                   <span>{formatDate(request.updatedAt)}</span>
                 </div>
-                
+
                 {request.aiProcessed && (
                   <div className="flex items-center text-sm">
                     <Bot className="h-4 w-4 text-blue-500 mr-3" />
@@ -418,7 +418,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 <Bot className="h-5 w-5 text-purple-500 mr-2" />
                 Результаты обработки ИИ
               </h4>
-              
+
               {request.aiProcessed || request.aiClassification || request.aiSuggestion || request.aiResult ? (
                 <div className="space-y-3">
                   {request.aiClassification && (
@@ -429,7 +429,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                       </Badge>
                     </div>
                   )}
-                  
+
                   {request.aiSuggestion && (
                     <div className="mt-4">
                       <p className="text-sm text-gray-600 font-medium mb-2">Рекомендации по обработке</p>
@@ -438,7 +438,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                       </div>
                     </div>
                   )}
-                  
+
                   {request.aiResult && (
                     <div className="mt-4">
                       <p className="text-sm text-gray-600 font-medium mb-2">Подробный анализ</p>
@@ -451,7 +451,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="mt-6 flex justify-end">
                     <Button 
                       variant="outline" 
@@ -474,7 +474,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 </div>
               )}
             </div>
-            
+
             {/* Обработать с помощью ИИ */}
             <div className="border-t pt-6 mt-6">
               <h4 className="text-base font-semibold mb-4 flex items-center">
@@ -497,7 +497,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 <div className="flex flex-wrap gap-3 pt-2">
                   <Button 
                     className="whitespace-nowrap px-4 py-6 h-10 bg-purple-600 hover:bg-purple-700 transition-colors rounded-md"
@@ -514,7 +514,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                       </div>
                     )}
                   </Button>
-                  
+
                   {onAutoProcess && (
                     <Button 
                       variant="outline" 
@@ -543,7 +543,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 <History className="h-5 w-5 text-blue-500 mr-2" />
                 История обращения
               </h4>
-              
+
               {activitiesLoading ? (
                 <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-100">
                   <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3 text-blue-500" />
@@ -564,42 +564,40 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                           {new Date(activity.createdAt).toLocaleString('ru-RU')}
                         </span>
                       </div>
-                      
+
                       {activity.description && (
                         <p className="text-sm text-gray-700 ml-8">{activity.description}</p>
                       )}
-                      
+
                       {/* Комментарии */}
                       {activity.actionType === 'comment' && activity.metadata && (
                         <div className="mt-2 ml-8 p-3 bg-white rounded-lg border border-gray-200">
                           <p className="text-sm text-gray-700 whitespace-pre-line">{activity.metadata.content || activity.metadata.text || activity.description}</p>
                         </div>
                       )}
-                      
+
                       {/* Перемещения между списками */}
                       {activity.actionType === 'status_change' && activity.metadata && (
                         <div className="mt-2 ml-8 p-2 bg-white rounded-lg border border-gray-200">
                           <div className="flex items-center text-xs text-gray-700">
-                            <div className="flex-1 flex items-center">
-                              <div className={`h-2 w-2 rounded-full mr-1 ${getStatusBgColor(activity.metadata.oldStatus || '')}`}></div>
-                              <span>{getStatusLabel(activity.metadata.oldStatus || '')}</span>
-                            </div>
+                            <div className={`h-2 w-2 rounded-full mr-1 ${getStatusBgColor(activity.metadata.oldStatus || '')}`}></div>
+                            <span>{getStatusLabel(activity.metadata.oldStatus || '')}</span>
+                          </div>
                             <RefreshCw className="h-3 w-3 mx-2 text-gray-400" />
-                            <div className="flex-1 flex items-center">
-                              <div className={`h-2 w-2 rounded-full mr-1 ${getStatusBgColor(activity.metadata.newStatus || '')}`}></div>
-                              <span>{getStatusLabel(activity.metadata.newStatus || '')}</span>
-                            </div>
+                          <div className="flex-1 flex items-center">
+                            <div className={`h-2 w-2 rounded-full mr-1 ${getStatusBgColor(activity.metadata.newStatus || '')}`}></div>
+                            <span>{getStatusLabel(activity.metadata.newStatus || '')}</span>
                           </div>
                         </div>
                       )}
-                      
+
                       {activity.userName && (
                         <div className="mt-1 flex items-center ml-8">
                           <User className="h-3 w-3 text-gray-400 mr-1" />
                           <span className="text-xs text-gray-500">{activity.userName}</span>
                         </div>
                       )}
-                      
+
                       {activity.blockchainHash && (
                         <div className="mt-1 flex items-center ml-8">
                           <Database className="h-3 w-3 text-blue-400 mr-1" />
@@ -619,7 +617,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 </div>
               )}
             </div>
-            
+
             {/* Добавить комментарий */}
             <div className="mt-8 pt-6 border-t">
               <h4 className="text-base font-semibold mb-4">Добавить комментарий</h4>
@@ -648,7 +646,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             </div>
           </div>
         </div>
-        
+
         {/* Кнопки действий */}
         <div className="flex justify-between p-5 border-t bg-gray-50 sticky bottom-0">
           <Button 
@@ -659,7 +657,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           >
             Закрыть
           </Button>
-          
+
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -672,7 +670,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 Сохранить в блокчейн
               </div>
             </Button>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -682,7 +680,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
               <RefreshCw className="h-4 w-4 mr-2" />
               Автообработка
             </Button>
-            
+
             {onDelete && (
               <Button
                 variant="destructive"

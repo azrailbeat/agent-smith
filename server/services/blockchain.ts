@@ -384,14 +384,22 @@ export class BlockchainService {
   }
 
   private async calculateHash(record: BlockchainRecord): Promise<string> {
-    const data = JSON.stringify(record.data);
-    const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest(
-      'SHA-256',
-      encoder.encode(data + record.timestamp)
-    );
-    return Array.from(new Uint8Array(hashBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    try {
+      if (!record || !record.data) {
+        throw new Error('Invalid blockchain record data');
+      }
+      const data = JSON.stringify(record.data);
+      const encoder = new TextEncoder();
+      const hashBuffer = await crypto.subtle.digest(
+        'SHA-256',
+        encoder.encode(data + record.timestamp)
+      );
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch (error) {
+      console.error('Error calculating hash:', error);
+      throw error;
+    }
   }
 }
