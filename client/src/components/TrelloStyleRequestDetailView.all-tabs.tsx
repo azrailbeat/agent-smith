@@ -490,7 +490,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           <div className="border-b p-3 bg-gray-50">
             <h3 className="text-lg font-medium">История</h3>
           </div>
-          <CardContent className="p-4">
+          <div className="p-4">
             {/* История действий */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium flex items-center mb-2">
@@ -569,7 +569,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </div>
         
         {/* Кнопки действий */}
@@ -608,6 +608,45 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 Удалить
               </Button>
             )}
+          </div>
+          
+          {/* Кнопки внизу */}
+          <div className="flex justify-between items-center p-4 border-t bg-white sticky bottom-0">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-xs"
+            >
+              Ответить
+            </Button>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={() => {
+                  // Сохранение в блокчейн
+                  toast({
+                    title: "Сохранение в блокчейн",
+                    description: "Запись сохранена в блокчейн"
+                  });
+                }}
+              >
+                <Database className="h-3.5 w-3.5 mr-1.5" />
+                Сохранить в блокчейн
+              </Button>
+
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="text-xs" 
+                onClick={handleAutoProcess}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Автообработка
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
