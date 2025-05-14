@@ -293,11 +293,11 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   return (
     <Dialog open={isOpen} onOpenChange={isOpen ? onClose : undefined}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-4 py-2 border-b sticky top-0 bg-white z-10">
+        <DialogHeader className="px-6 py-3 border-b sticky top-0 bg-white z-10">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg flex items-center gap-2">
+            <DialogTitle className="text-xl flex items-center gap-2">
               Обращение #{request.id} 
-              <Badge className={`${getPriorityColor(request.priority)} text-white ml-2`}>
+              <Badge className={`${getPriorityColor(request.priority)} text-white ml-2 px-3 py-1`}>
                 {getPriorityLabel(request.priority)}
               </Badge>
             </DialogTitle>
@@ -306,12 +306,12 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
         
         <div className="flex-1 overflow-y-auto">
           {/* Секция Детали */}
-          <div className="border-b p-3 bg-gray-50">
+          <div className="border-b p-4 bg-gray-50">
             <h3 className="text-lg font-medium">Детали</h3>
           </div>
-          <div className="p-4">
-            <h4 className="text-base font-medium mb-2">{request.subject}</h4>
-            <p className="text-sm text-gray-700 mb-4 whitespace-pre-line">{request.description}</p>
+          <div className="p-6">
+            <h4 className="text-lg font-medium mb-3">{request.subject}</h4>
+            <p className="text-sm text-gray-700 mb-6 whitespace-pre-line leading-relaxed">{request.description}</p>
             
             <div className="grid md:grid-cols-2 gap-6 mt-4">
               <div>
@@ -331,31 +331,31 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
               </div>
             </div>
             
-            <div className="mt-6">
-              <h5 className="text-sm font-medium mb-2">Информация о заявителе</h5>
-              <div className="bg-gray-50 p-3 rounded-md">
-                <div className="flex items-center text-sm mb-2">
-                  <User className="h-4 w-4 text-gray-500 mr-2" />
+            <div className="mt-8">
+              <h5 className="text-base font-medium mb-3">Информация о заявителе</h5>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <div className="flex items-center text-sm mb-3">
+                  <User className="h-4 w-4 text-blue-500 mr-3" />
                   <span className="font-medium">{request.fullName}</span>
                 </div>
                 {/* Email, если есть */}
                 {request.contactInfo && (
-                  <div className="flex items-center text-sm mb-2">
-                    <Mail className="h-4 w-4 text-gray-500 mr-2" />
+                  <div className="flex items-center text-sm mb-3">
+                    <Mail className="h-4 w-4 text-blue-500 mr-3" />
                     <span>{request.contactInfo}</span>
                   </div>
                 )}
                 {request.citizenInfo && (
                   <>
                     {request.citizenInfo.address && (
-                      <div className="flex items-start text-sm mb-2">
-                        <Building className="h-4 w-4 text-gray-500 mr-2 mt-0.5" />
+                      <div className="flex items-start text-sm mb-3">
+                        <Building className="h-4 w-4 text-blue-500 mr-3 mt-0.5" />
                         <span>{request.citizenInfo.address}</span>
                       </div>
                     )}
                     {request.citizenInfo.iin && (
                       <div className="flex items-center text-sm">
-                        <CreditCard className="h-4 w-4 text-gray-500 mr-2" />
+                        <CreditCard className="h-4 w-4 text-blue-500 mr-3" />
                         <span>ИИН: {request.citizenInfo.iin}</span>
                       </div>
                     )}
@@ -364,26 +364,26 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
               </div>
             </div>
             
-            <div className="mt-6">
-              <h5 className="text-sm font-medium mb-2">Обработка заявки</h5>
-              <div className="space-y-2">
+            <div className="mt-8">
+              <h5 className="text-base font-medium mb-3">Обработка заявки</h5>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 space-y-3">
                 <div className="flex items-center text-sm">
-                  <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-gray-500 mr-1">Создано:</span>
+                  <Calendar className="h-4 w-4 text-blue-500 mr-3" />
+                  <span className="text-gray-600 font-medium mr-2">Создано:</span>
                   <span>{formatDate(request.createdAt)}</span>
                 </div>
                 
                 <div className="flex items-center text-sm">
-                  <Clock className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-gray-500 mr-1">Последнее обновление:</span>
+                  <Clock className="h-4 w-4 text-blue-500 mr-3" />
+                  <span className="text-gray-600 font-medium mr-2">Последнее обновление:</span>
                   <span>{formatDate(request.updatedAt)}</span>
                 </div>
                 
                 {request.aiProcessed && (
                   <div className="flex items-center text-sm">
-                    <Bot className="h-4 w-4 text-purple-500 mr-2" />
-                    <span className="text-gray-500 mr-1">Обработано ИИ:</span>
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 ml-1">
+                    <Bot className="h-4 w-4 text-blue-500 mr-3" />
+                    <span className="text-gray-600 font-medium mr-2">Обработано ИИ:</span>
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 px-2 py-0.5">
                       Успешно
                     </Badge>
                   </div>
@@ -393,14 +393,14 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
           </div>
 
           {/* Секция ИИ обработка */}
-          <div className="border-b p-3 bg-gray-50">
+          <div className="border-b p-4 bg-gray-50">
             <h3 className="text-lg font-medium">ИИ обработка</h3>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             {/* Результаты обработки */}
-            <div className="mb-4">
-              <h4 className="text-sm font-medium flex items-center mb-3">
-                <Bot className="h-4 w-4 text-purple-500 mr-2" />
+            <div className="mb-6">
+              <h4 className="text-base font-semibold flex items-center mb-4">
+                <Bot className="h-5 w-5 text-purple-500 mr-2" />
                 Результаты обработки ИИ
               </h4>
               
@@ -408,27 +408,27 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
                 <div className="space-y-3">
                   {request.aiClassification && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Классификация обращения</p>
-                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                      <p className="text-sm text-gray-600 font-medium mb-2">Классификация обращения</p>
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 px-3 py-1 text-sm">
                         {request.aiClassification}
                       </Badge>
                     </div>
                   )}
                   
                   {request.aiSuggestion && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Рекомендации по обработке</p>
-                      <div className="bg-purple-50 p-3 rounded-md text-sm border border-purple-100">
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600 font-medium mb-2">Рекомендации по обработке</p>
+                      <div className="bg-purple-50 p-4 rounded-lg text-sm border border-purple-100 leading-relaxed">
                         {request.aiSuggestion}
                       </div>
                     </div>
                   )}
                   
                   {request.aiResult && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Подробный анализ</p>
-                      <div className="bg-white border border-gray-200 p-3 rounded-md text-sm">
-                        <pre className="whitespace-pre-wrap font-sans text-xs">
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600 font-medium mb-2">Подробный анализ</p>
+                      <div className="bg-white border border-gray-200 p-4 rounded-lg text-sm shadow-sm">
+                        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
                           {typeof request.aiResult === 'object' 
                             ? JSON.stringify(request.aiResult, null, 2)
                             : request.aiResult}
