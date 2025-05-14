@@ -137,9 +137,9 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       onClick={onClick}
       style={{ minHeight: '100px', maxHeight: '220px' }}
     >
-      <div className="p-3 flex flex-col h-full">
+      <div className="p-4 flex flex-col h-full">
         {/* Заголовок и метки */}
-        <div className="flex justify-between items-start mb-2">
+        <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-1 w-full">
             <Badge className={`${priorityColors[request.priority]} text-[10px] px-1.5 py-0 h-4 mr-0.5 flex-shrink-0`} variant="outline">
               {request.priority || 'medium'}
@@ -236,45 +236,45 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Имя заявителя */}
-        <div className="mb-2">
-          <span className="text-[12px] text-gray-700 block w-full overflow-hidden text-ellipsis whitespace-nowrap">
+        <div className="mb-3">
+          <span className="text-[13px] font-medium text-gray-700 block w-full overflow-hidden text-ellipsis whitespace-nowrap">
             {request.fullName || ""}
           </span>
         </div>
         
         {/* Краткое описание */}
-        <div className="flex-grow overflow-hidden mb-2">
-          <p className="text-xs text-gray-600 line-clamp-2 break-words whitespace-pre-line px-0.5">
+        <div className="flex-grow overflow-hidden mb-3">
+          <p className="text-xs text-gray-600 line-clamp-2 break-words whitespace-pre-line px-0.5 leading-relaxed">
             {(request.description || request.content || "").substring(0, 150)}
           </p>
         </div>
         
         {/* Индикаторы статуса */}
-        <div className="flex flex-wrap gap-1.5 mt-auto">
+        <div className="flex flex-wrap gap-2 mt-auto pt-1">
           {request.aiProcessed && (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] flex items-center px-1 h-4 border-purple-200">
-              <Bot className="h-2.5 w-2.5 mr-0.5" /> ИИ
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] flex items-center px-2 h-5 border-purple-200">
+              <Bot className="h-3 w-3 mr-1" /> ИИ
             </Badge>
           )}
           {request.blockchainHash && (
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px] flex items-center px-1 h-4 border-blue-200">
-              <Database className="h-2.5 w-2.5 mr-0.5" /> Блокчейн
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px] flex items-center px-2 h-5 border-blue-200">
+              <Database className="h-3 w-3 mr-1" /> Блокчейн
             </Badge>
           )}
           {assignedAgent && (
-            <Badge variant="outline" className="bg-green-50 text-green-700 text-[10px] flex items-center px-1 h-4 border-green-200">
-              <User className="h-2.5 w-2.5 mr-0.5" />
+            <Badge variant="outline" className="bg-green-50 text-green-700 text-[10px] flex items-center px-2 h-5 border-green-200">
+              <User className="h-3 w-3 mr-1" />
               {assignedAgent.name.split(' ')[0]}
             </Badge>
           )}
           {request.aiClassification && (
-            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-[10px] border-gray-200 h-4 px-1">
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 text-[10px] border-gray-200 h-5 px-2">
               {request.aiClassification}
             </Badge>
           )}
           
-          <div className="ml-auto text-[10px] text-gray-400 flex items-center">
-            <Clock className="h-2.5 w-2.5 mr-0.5" />
+          <div className="ml-auto text-[11px] text-gray-500 flex items-center bg-gray-50 px-2 py-0.5 rounded">
+            <Clock className="h-3 w-3 mr-1 text-gray-400" />
             {new Date(request.createdAt).toLocaleDateString("ru-RU", {day: '2-digit', month: '2-digit'})}
           </div>
         </div>
