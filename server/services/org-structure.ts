@@ -10,6 +10,118 @@ import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
 import { Department, Position, User, CitizenRequest } from '@shared/schema';
 
 /**
+ * Получает подразделение по ID
+ * @param id ID подразделения
+ * @returns Подразделение или undefined, если не найдено
+ */
+export async function getDepartmentById(id: number): Promise<Department | undefined> {
+  try {
+    const department = await storage.getDepartment(id);
+    return department;
+  } catch (error) {
+    console.error(`Ошибка при получении подразделения с ID ${id}:`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Получает список всех должностей
+ * @returns Список должностей
+ */
+export async function getPositions(): Promise<Position[]> {
+  try {
+    const positions = await storage.getPositions();
+    return positions;
+  } catch (error) {
+    console.error('Ошибка при получении списка должностей:', error);
+    return [];
+  }
+}
+
+/**
+ * Получает должность по ID
+ * @param id ID должности
+ * @returns Должность или undefined, если не найдена
+ */
+export async function getPositionById(id: number): Promise<Position | undefined> {
+  try {
+    const position = await storage.getPosition(id);
+    return position;
+  } catch (error) {
+    console.error(`Ошибка при получении должности с ID ${id}:`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Сохраняет информацию о подразделении
+ * @param department Данные подразделения
+ * @returns Сохраненное подразделение
+ */
+export async function saveDepartment(department: any): Promise<Department> {
+  try {
+    if (department.id) {
+      // Логируем обновление подразделения
+      await logActivity({
+        action: ActivityType.ENTITY_UPDATE,
+        details: `Обновление подразделения: ${department.name}`
+      });
+      
+      // Обновляем подразделение в БД
+      const updatedDepartment = await storage.updateDepartment(department.id, department);
+      return updatedDepartment;
+    } else {
+      // Логируем создание подразделения
+      await logActivity({
+        action: ActivityType.ENTITY_CREATE,
+        details: `Создание подразделения: ${department.name}`
+      });
+      
+      // Создаем подразделение в БД
+      const createdDepartment = await storage.createDepartment(department);
+      return createdDepartment;
+    }
+  } catch (error) {
+    console.error('Ошибка при сохранении подразделения:', error);
+    throw error;
+  }
+}
+
+/**
+ * Сохраняет информацию о должности
+ * @param position Данные должности
+ * @returns Сохраненная должность
+ */
+export async function savePosition(position: any): Promise<Position> {
+  try {
+    if (position.id) {
+      // Логируем обновление должности
+      await logActivity({
+        action: ActivityType.ENTITY_UPDATE,
+        details: `Обновление должности: ${position.name}`
+      });
+      
+      // Обновляем должность в БД
+      const updatedPosition = await storage.updatePosition(position.id, position);
+      return updatedPosition;
+    } else {
+      // Логируем создание должности
+      await logActivity({
+        action: ActivityType.ENTITY_CREATE,
+        details: `Создание должности: ${position.name}`
+      });
+      
+      // Создаем должность в БД
+      const createdPosition = await storage.createPosition(position);
+      return createdPosition;
+    }
+  } catch (error) {
+    console.error('Ошибка при сохранении должности:', error);
+    throw error;
+  }
+}
+
+/**
  * Находит подразделение по названию категории или отдела
  * @param departmentName Название отдела или категории задачи
  * @returns Найденное подразделение или undefined
@@ -490,7 +602,7 @@ export async function saveTaskRule(rule: any): Promise<any> {
 export async function deleteTaskRule(id: number): Promise<boolean> {
   try {
     // Получаем правило перед удалением для логирования
-    const rule = await storage.getTaskRuleById(id);
+    const rule = await storage.getTaskRule(id);
     
     if (!rule) {
       console.error(`Правило маршрутизации с ID ${id} не найдено`);
