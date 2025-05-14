@@ -34,6 +34,9 @@ import { SystemActivityChart } from "@/components/analytics/SystemActivityChart"
 import { TrendChart } from "@/components/analytics/TrendChart";
 import { AIAnalysisPanel } from "@/components/analytics/AIAnalysisPanel";
 import { TaskDistributionChart } from "@/components/analytics/TaskDistributionChart";
+import RecentActivities from "@/components/dashboard/RecentActivities";
+import BlockchainRecordsList from "@/components/dashboard/BlockchainRecordsList";
+import AgentChatInterface from "@/components/dashboard/AgentChatInterface";
 import { StatCard, Task, Activity as ActivityType, User } from "@/lib/types";
 
 export default function DashboardAnalytics() {
@@ -250,12 +253,42 @@ export default function DashboardAnalytics() {
         />
       </div>
       
-      {/* AI Analysis Panel */}
-      <div className="mb-6">
-        <AIAnalysisPanel onAnalyze={handleAIAnalysis} />
+      {/* Нижняя секция с агентом, активностями и блокчейном */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Панель управления с активностями */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="w-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">Активные задачи</CardTitle>
+              <p className="text-sm text-muted-foreground">Нет активных задач</p>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center py-10">
+              <div className="text-center">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mb-4">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-sm font-medium mb-1">У вас нет активных задач в данный момент</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <RecentActivities activities={recentActivities} />
+        </div>
+        
+        {/* Правая колонка */}
+        <div className="space-y-6">
+          {/* Агент и чат */}
+          <AgentChatInterface 
+            agentName="Agent Smith" 
+            agentStatus="в сети"
+          />
+          
+          {/* Блокчейн записи */}
+          <BlockchainRecordsList records={blockchainRecords} />
+        </div>
       </div>
       
-      {/* LLM Аналитика */}
+      {/* Табы в нижней части страницы */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-white border w-full flex justify-start overflow-x-auto hide-scrollbar p-1">
           <TabsTrigger
@@ -279,7 +312,7 @@ export default function DashboardAnalytics() {
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
-          {/* Дополнительные графики и статистика */}
+          <AIAnalysisPanel onAnalyze={handleAIAnalysis} />
         </TabsContent>
 
         <TabsContent value="llm" className="space-y-6">
