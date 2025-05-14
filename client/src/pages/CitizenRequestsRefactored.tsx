@@ -937,8 +937,9 @@ const CitizenRequests = () => {
                               variant={
                                 request.status === 'new' ? 'default' : 
                                 request.status === 'inProgress' || request.status === 'in_progress' ? 'secondary' :
-                                request.status === 'completed' ? 'success' : 'outline'
+                                request.status === 'completed' ? 'default' : 'outline'
                               }
+                              className={request.status === 'completed' ? 'bg-green-500 hover:bg-green-600' : ''}
                             >
                               {getColumnLabel(request.status)}
                             </Badge>

@@ -180,7 +180,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   const fetchActivities = async () => {
     try {
       setIsLoading(true);
-      const result = await apiRequest(`/api/citizen-requests/${request.id}/activities`);
+      const result = await apiRequest('GET', `/api/citizen-requests/${request.id}/activities`);
       setActivities(result);
     } catch (error) {
       console.error('Ошибка загрузки активностей:', error);
@@ -200,7 +200,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     
     try {
       setIsSubmittingComment(true);
-      await apiRequest(`/api/citizen-requests/${request.id}/comments`, 'POST', { text: comment });
+      await apiRequest('POST', `/api/citizen-requests/${request.id}/comments`, { text: comment });
       toast({
         title: 'Комментарий добавлен',
         description: 'Комментарий успешно добавлен к обращению',
@@ -224,7 +224,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await apiRequest(`/api/citizen-requests/${request.id}`, 'DELETE');
+      await apiRequest('DELETE', `/api/citizen-requests/${request.id}`);
       toast({
         title: 'Обращение удалено',
         description: 'Обращение успешно удалено из системы',
