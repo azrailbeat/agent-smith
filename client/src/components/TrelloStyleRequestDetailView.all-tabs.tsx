@@ -613,6 +613,21 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             <Button
               variant="outline"
               size="sm"
+              onClick={() => {
+                // Сохранить в блокчейн
+                toast({
+                  title: "Сохранение в блокчейн",
+                  description: "Данные обращения сохранены в блокчейн"
+                });
+              }}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Сохранить в блокчейн
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleAutoProcess}
               disabled={isProcessing}
             >
@@ -637,37 +652,7 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
             )}
           </div>
           
-          {/* Кнопки внизу */}
-          <div className="flex justify-between items-center p-4 border-t bg-white sticky bottom-0">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs"
-            >
-              Ответить
-            </Button>
 
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs"
-                onClick={() => {
-                  // Сохранение в блокчейн
-                  toast({
-                    title: "Сохранение в блокчейн",
-                    description: "Запись сохранена в блокчейн"
-                  });
-                }}
-              >
-                <Database className="h-3.5 w-3.5 mr-1.5" />
-                Сохранить в блокчейн
-              </Button>
-
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="text-xs" 
                 onClick={handleAutoProcess}
               >
                 <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
