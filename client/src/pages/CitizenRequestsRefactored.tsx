@@ -47,7 +47,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
-import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
+import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard.fixed';
 import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.fixed';
 import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog.fixed';
 import {

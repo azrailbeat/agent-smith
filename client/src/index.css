@@ -9,6 +9,30 @@
   --scrollbar-track: rgba(229, 231, 235, 0.5);
 }
 
+/* Анимация для перетаскивания карточек */
+.kanban-card-moving {
+  transform: rotate(1deg) scale(1.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 10;
+  opacity: 0.9;
+}
+
+/* Анимация после перемещения карточки */
+.kanban-card-flash {
+  animation: card-flash 1s ease-out;
+}
+
+@keyframes card-flash {
+  0% {
+    box-shadow: 0 0 0 2px theme('colors.blue.400');
+    transform: translateY(-2px);
+  }
+  100% {
+    box-shadow: 0 0 0 0 theme('colors.blue.400');
+    transform: translateY(0);
+  }
+}
+
 html {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
