@@ -11,6 +11,10 @@ import Moralis from 'moralis';
 import { storage } from './storage';
 import { logActivity, ActivityType } from './activity-logger';
 
+// Константы для механизма повторных попыток
+const MAX_RETRY_ATTEMPTS = 3; // Максимальное количество попыток
+const RETRY_DELAY_MS = 1000; // Базовая задержка между попытками в миллисекундах
+
 // Типы записей блокчейна
 export enum BlockchainRecordType {
   CITIZEN_REQUEST = 'citizen_request',
