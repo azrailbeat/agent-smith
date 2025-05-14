@@ -39,6 +39,14 @@ export interface CitizenRequest {
   responseText?: string;
   content?: string;
   blockchainHash?: string;
+  // Дополнительные поля, используемые в разных компонентах
+  title?: string;
+  closedAt?: Date;
+  completedAt?: Date;
+  attachments?: string[];
+  category?: string;
+  source?: string;
+  summary?: string;
   citizenInfo?: {
     name?: string;
     contact?: string;
