@@ -32,13 +32,15 @@ import { User } from "./lib/types";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={DashboardAnalytics} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/history" component={HistoryPage} />
-      <Route path="/analytics" component={Analytics} />
+      <Route path="/analytics" component={DashboardAnalytics} />
+      <Route path="/translate" component={Translate} />
       <Route path="/citizen-requests" component={CitizenRequests} />
       <Route path="/meetings" component={Meetings} />
-      <Route path="/org-structure" component={OrganizationalStructure} />
+      <Route path="/documents" component={Documents} />
+      <Route path="/org-structure" component={OrgStructurePage} />
       <Route path="/ai-agents/:id" component={AIAgents} />
       <Route path="/ai-agents" component={AIAgents} />
       <Route path="/knowledge" component={KnowledgeManagement} />
@@ -47,10 +49,14 @@ function Router() {
       <Route path="/users" component={Users} />
       <Route path="/integration-settings">
         {() => {
+          // Перенаправление на страницу настроек с вкладкой интеграций
           window.location.href = '/settings';
           return null;
         }}
       </Route>
+      <Route path="/dao-voting" component={DAOVoting} />
+      <Route path="/about" component={AboutSystem} />
+      <Route path="/embed" component={EmbedForm} />
       <Route component={NotFound} />
     </Switch>
   );
