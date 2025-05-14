@@ -48,8 +48,8 @@ import {
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import IntegrationSettings from '@/components/integration/IntegrationSettings';
 import TrelloStyleRequestCard from '@/components/TrelloStyleRequestCard';
-import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView';
-import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog';
+import TrelloStyleRequestDetailView from '@/components/TrelloStyleRequestDetailView.fixed';
+import AutoProcessingDialog, { AutoProcessSettings } from '@/components/AutoProcessingDialog.fixed';
 import {
   ChevronDown,
   Plus,
