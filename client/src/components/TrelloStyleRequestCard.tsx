@@ -305,7 +305,7 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
       {...dragHandleProps}
       className={`mb-2 bg-white rounded-md border-l-[3px] ${priorityBorderColors[request.priority] || 'border-l-gray-300'} border border-gray-200 ${isDragging ? "kanban-card-moving shadow-lg" : isJustMoved ? "kanban-card-flash shadow-md" : "shadow-sm"} hover:shadow-md transition-all duration-200 max-w-full overflow-hidden`}
       onClick={onClick}
-      style={{ maxHeight: '350px', minHeight: '100px' }}
+      style={{ minHeight: '100px' }}
     >
       <div className="p-3 flex flex-col overflow-hidden">
         {/* Заголовок и метки */}
@@ -413,15 +413,12 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
         </div>
         
         {/* Краткое описание */}
-        <div className="mb-3 overflow-hidden" style={{ maxHeight: '6em' }}>
-          <p className="text-xs text-gray-600 h-auto overflow-hidden" style={{ 
-            display: '-webkit-box', 
-            WebkitLineClamp: 4, 
-            WebkitBoxOrient: 'vertical',
-            wordBreak: 'break-word',
-            textOverflow: 'ellipsis'
+        <div className="mb-3">
+          <p className="text-xs text-gray-600 whitespace-pre-wrap" style={{ 
+            display: 'block',
+            wordBreak: 'break-word'
           }}>
-            {(request.description || request.content || "Без описания").substring(0, 150)}
+            {(request.description || request.content || "Без описания").substring(0, 250)}
           </p>
         </div>
         
@@ -457,15 +454,11 @@ const TrelloStyleRequestCard: React.FC<TrelloStyleRequestCardProps> = ({
               <Bot className="h-3 w-3 mr-1 flex-shrink-0" /> 
               <span className="truncate">Рекомендация:</span>
             </div>
-            <div className="overflow-hidden" style={{ 
-              display: '-webkit-box', 
-              WebkitLineClamp: 3, 
-              WebkitBoxOrient: 'vertical', 
-              maxHeight: '3.9em',
-              wordBreak: 'break-word',
-              textOverflow: 'ellipsis'
+            <div className="whitespace-pre-wrap" style={{ 
+              display: 'block',
+              wordBreak: 'break-word'
             }}>
-              {request.aiSuggestion.substring(0, 120)}
+              {request.aiSuggestion}
             </div>
           </div>
         )}
