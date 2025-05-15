@@ -9,7 +9,7 @@ import { storage } from '../storage';
 import { insertCitizenRequestSchema } from '@shared/schema';
 import { logActivity, ActivityType } from '../activity-logger';
 import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
-import { processNewCitizenRequest, generateResponseForRequest } from '../services/citizen-request-processor';
+import { processNewCitizenRequest, generateResponseForRequest, synchronizeRequestsFromEOtinish } from '../services/citizen-request-processor';
 import { processRequestByOrgStructure } from '../services/org-structure';
 import multer from 'multer';
 import fs from 'fs';
@@ -385,9 +385,7 @@ router.post('/sync-from-eotinish', async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string || '50');
     
     // Запускаем синхронизацию из citizen-request-processor
-    const result = await processNewCitizenRequest(0).then(() => {
-      return { success: true, message: 'Синхронизация запущена', total: limit, imported: 0 };
-    });
+    const result = await synchronizeRequestsFromEOtinish(limit);
     
     res.json(result);
   } catch (error) {

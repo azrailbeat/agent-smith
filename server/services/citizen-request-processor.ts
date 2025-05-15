@@ -592,3 +592,6 @@ function mapEOtinishStatus(eotinishStatus: string): string {
   // Возвращаем соответствующий статус или new по умолчанию
   return statusMapping[normalizedStatus] || 'new';
 }
+
+// Экспортируем функции для использования в других модулях
+export { synchronizeRequestsFromEOtinish, processNewCitizenRequest, generateResponseForRequest };
