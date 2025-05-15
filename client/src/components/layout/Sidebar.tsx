@@ -121,6 +121,11 @@ const Sidebar = ({
           icon: <BookOpen size={20} />
         },
         {
+          name: "База знаний компании",
+          path: "/company-knowledge",
+          icon: <Database size={20} />
+        },
+        {
           name: "Документы",
           path: "/documents",
           icon: <FileCheck size={20} />

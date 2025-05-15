@@ -99,7 +99,11 @@ const ruleSchema = z.object({
   priority: z.number().min(1).max(100),
 });
 
-export default function OrgStructureManagement() {
+interface OrgStructureManagementProps {
+  standalone?: boolean;
+}
+
+export default function OrgStructureManagement({ standalone = true }: OrgStructureManagementProps) {
   const [activeTab, setActiveTab] = useState("structure");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -457,18 +461,24 @@ export default function OrgStructureManagement() {
     );
   };
 
+  const containerClass = standalone ? "container py-6" : "";
+  
   return (
-    <div className="container py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Организационная структура</h1>
-        <Button onClick={() => setIsAddDepartmentOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Добавить подразделение
-        </Button>
-      </div>
-      
-      <div className="text-sm text-muted-foreground mb-6">
-        Управление структурой организации, подразделениями и распределением задач
-      </div>
+    <div className={containerClass}>
+      {standalone && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Организационная структура</h1>
+            <Button onClick={() => setIsAddDepartmentOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Добавить подразделение
+            </Button>
+          </div>
+          
+          <div className="text-sm text-muted-foreground mb-6">
+            Управление структурой организации, подразделениями и распределением задач
+          </div>
+        </>
+      )}
 
       <Tabs
         value={activeTab}

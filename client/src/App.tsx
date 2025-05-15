@@ -27,6 +27,7 @@ import KnowledgeManagement from "@/pages/KnowledgeManagement";
 import EmbedForm from "@/pages/EmbedForm";
 import IntegrationSettings from "@/pages/IntegrationSettings";
 import Users from "@/pages/Users";
+import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
 import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
 
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/ai-agents/:id" component={AIAgents} />
       <Route path="/ai-agents" component={AIAgents} />
       <Route path="/knowledge" component={KnowledgeManagement} />
+      <Route path="/company-knowledge" component={UnifiedCompanyKnowledge} />
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />
       <Route path="/users" component={Users} />
