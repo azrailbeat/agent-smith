@@ -97,7 +97,7 @@ const DraggableOrgStructure: React.FC<DraggableOrgStructureProps> = ({
   // Мутация для обновления принадлежности сотрудника к отделу
   const moveEmployeeMutation = useMutation({
     mutationFn: async ({ employeeId, newDepartmentId, newPositionId }: { employeeId: number, newDepartmentId: number, newPositionId: number }) => {
-      return apiRequest('PATCH', `/api/employees/${employeeId}`, {
+      return apiRequest('PATCH', `/api/users/${employeeId}`, {
         departmentId: newDepartmentId,
         positionId: newPositionId
       });
@@ -107,7 +107,7 @@ const DraggableOrgStructure: React.FC<DraggableOrgStructureProps> = ({
         title: 'Сотрудник перемещен',
         description: 'Сотрудник успешно перемещен в новый отдел и назначен на должность.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
       onUpdate();
     },
