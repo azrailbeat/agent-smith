@@ -45,7 +45,13 @@ function Router() {
       <Route path="/org-structure" component={OrgStructurePage} />
       <Route path="/ai-agents/:id" component={AIAgents} />
       <Route path="/ai-agents" component={AIAgents} />
-      <Route path="/knowledge" component={KnowledgeManagement} />
+      <Route path="/knowledge">
+        {() => {
+          // Перенаправление на новую объединенную страницу
+          window.location.href = '/company-knowledge';
+          return null;
+        }}
+      </Route>
       <Route path="/company-knowledge" component={UnifiedCompanyKnowledge} />
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />

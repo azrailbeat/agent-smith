@@ -116,14 +116,9 @@ const Sidebar = ({
           icon: <Bot size={20} />
         },
         {
-          name: "Базы знаний",
-          path: "/knowledge",
-          icon: <BookOpen size={20} />
-        },
-        {
-          name: "Организация и База знаний",
+          name: "Управление орг. структурой",
           path: "/company-knowledge",
-          icon: <Database size={20} />
+          icon: <Building size={20} />
         },
         {
           name: "Документы",
