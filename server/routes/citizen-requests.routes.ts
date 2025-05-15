@@ -57,6 +57,10 @@ const upload = multer({
 
 const router = express.Router();
 
+// Увеличиваем лимит размера тела запроса для этих маршрутов
+router.use(express.json({ limit: '50mb' }));
+router.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 /**
  * Получение списка всех обращений граждан
  * GET /api/citizen-requests

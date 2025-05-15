@@ -4,7 +4,14 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Увеличиваем таймаут для запросов до 5 минут
+app.use((req, res, next) => {
+  req.setTimeout(300000); // 5 минут в миллисекундах
+  res.setTimeout(300000);
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();

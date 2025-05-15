@@ -37,6 +37,7 @@ import llmAnalyticsRoutes from "./routes/llm-analytics-routes";
 import userRoutes from "./routes/user-routes";
 import llmProvidersRoutes from "./routes/llm-providers.routes";
 import jobDescriptionsRoutes from "./routes/job-descriptions.routes";
+import citizenRequestsRouter from "./routes/citizen-requests.routes";
 import {
   getTaskRules,
   getTaskRuleById,
@@ -131,6 +132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Регистрируем маршруты для управления LLM провайдерами
   app.use('/api/llm-providers', llmProvidersRoutes);
+  
+  // Регистрируем маршруты для обращений граждан
+  app.use('/api/citizen-requests', citizenRequestsRouter);
   
   // CORS middleware для API маршрутов, используемых внешними виджетами и bolt.new
   app.use(['/widget.js', '/api/citizen-requests', '/api/citizen-requests/import-from-file', '/api/bolt-templates', '/api/widget-integration', '/api/bolt', '/api/transcribe', '/api/process-text', '/api/process-audio'], (req, res, next) => {

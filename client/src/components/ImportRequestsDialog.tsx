@@ -97,7 +97,7 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
         // Установка таймаута для запроса
         const timeoutId = setTimeout(() => {
           abortController.abort();
-        }, 120000); // 2 минуты таймаут для больших файлов
+        }, 300000); // 5 минут таймаут для больших файлов
         
         try {
           response = await fetch('/api/citizen-requests/import-from-file', {
