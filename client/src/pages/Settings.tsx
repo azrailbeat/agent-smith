@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Card, 
@@ -25,6 +26,7 @@ import { MonitoringSettings } from '@/components/settings/MonitoringSettings';
 import { PerplexitySettings } from '@/components/settings/PerplexitySettings';
 import LlmProviderSettings from '@/components/settings/LlmProviderSettings';
 import OrgStructureManagement from '@/pages/OrgStructureManagement';
+import RbacManagement from '@/pages/RbacManagement';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -39,12 +41,9 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-8 rounded-full bg-muted/50">
+        <TabsList className="grid w-full grid-cols-3 mb-8 rounded-full bg-muted/50">
           <TabsTrigger value="general" className="rounded-full">Общие</TabsTrigger>
-          <TabsTrigger value="ai-models" className="rounded-full">AI Модели</TabsTrigger>
-          <TabsTrigger value="org-structure" className="rounded-full">Орг. структура</TabsTrigger>
           <TabsTrigger value="integrations" className="rounded-full">Интеграции</TabsTrigger>
-          <TabsTrigger value="monitoring" className="rounded-full">Мониторинг</TabsTrigger>
           <TabsTrigger value="security" className="rounded-full">Безопасность</TabsTrigger>
         </TabsList>
 
@@ -245,12 +244,22 @@ export default function Settings() {
                 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Авторизация</CardTitle>
+                    <CardTitle className="flex items-center">
+                      <Key className="mr-2 h-4 w-4" />
+                      Авторизация и RBAC
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Управление ролями и правами доступа
-                    </p>
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm text-muted-foreground">
+                        Управление ролями, правами доступа и пользователями системы
+                      </p>
+                      <div className="flex justify-end">
+                        <Button variant="outline" size="sm" onClick={() => window.location.href = "/rbac"}>
+                          Управление RBAC
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
                 

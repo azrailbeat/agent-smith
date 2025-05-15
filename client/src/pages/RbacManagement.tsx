@@ -908,7 +908,7 @@ export default function RbacManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.active ? "success" : "destructive"}>
+                      <Badge variant={user.active ? "outline" : "destructive"} className={user.active ? "bg-green-100 text-green-800" : ""}>
                         {user.active ? 'Активен' : 'Неактивен'}
                       </Badge>
                     </TableCell>

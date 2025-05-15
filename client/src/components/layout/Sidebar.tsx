@@ -28,6 +28,7 @@ import {
   XCircle,
   FileStack,
   HelpCircle,
+  Key,
   Lock,
   Cpu,
   Database,
@@ -330,6 +331,12 @@ const Sidebar = ({
                     <DropdownMenuItem>
                       <Shield className="mr-2 h-4 w-4" />
                       <span>Безопасность</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/settings?tab=security">
+                    <DropdownMenuItem>
+                      <Key className="mr-2 h-4 w-4" />
+                      <span>Управление доступом</span>
                     </DropdownMenuItem>
                   </Link>
                   <DropdownMenuSeparator />

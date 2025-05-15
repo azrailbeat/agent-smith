@@ -28,6 +28,7 @@ import EmbedForm from "@/pages/EmbedForm";
 import IntegrationSettings from "@/pages/IntegrationSettings";
 import Users from "@/pages/Users";
 import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
+import RbacManagement from "@/pages/RbacManagement";
 import React, { useState, useEffect } from "react";
 import { User } from "./lib/types";
 
@@ -45,7 +46,7 @@ function Router() {
       <Route path="/org-structure" component={() => <OrgStructureManagement standalone={true} />} />
       <Route path="/ai-agents/:id" component={AIAgents} />
       <Route path="/ai-agents" component={AIAgents} />
-      <Route path="/rbac" component={AIAgents} />
+      <Route path="/rbac" component={RbacManagement} />
       <Route path="/knowledge" component={UnifiedCompanyKnowledge} />
       <Route path="/company-knowledge" component={UnifiedCompanyKnowledge} />
       <Route path="/knowledge-base" component={UnifiedCompanyKnowledge} />
