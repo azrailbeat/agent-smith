@@ -96,7 +96,7 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
           response = await fetch('/api/citizen-requests/import-from-file', {
             method: 'POST',
             body: formData,
-            // Не добавляем credentials: 'include', это может мешать передаче файла
+            credentials: 'include' // Восстанавливаем credentials для работы аутентификации
             // Не устанавливаем Content-Type для multipart/form-data, 
             // браузер это сделает автоматически с правильной границей (boundary)
           });
