@@ -11,7 +11,11 @@ import {
   CitizenRequest, InsertCitizenRequest,
   InsertAgentResult,
   AgentKnowledgeBase, InsertAgentKnowledgeBase,
-  KnowledgeDocument, InsertKnowledgeDocument
+  KnowledgeDocument, InsertKnowledgeDocument,
+  // Новые сущности
+  RawRequest, InsertRawRequest,
+  TaskCard, InsertTaskCard,
+  TaskCardHistory, InsertTaskCardHistory
 } from "@shared/schema";
 
 // Import the DatabaseStorage class
@@ -28,6 +32,42 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
   deleteUser(id: number): Promise<boolean>;
+  
+  // Raw Requests operations (eOtinish raw data)
+  getRawRequests(options?: {
+    offset?: number;
+    limit?: number;
+    processed?: boolean;
+  }): Promise<RawRequest[]>;
+  getRawRequest(id: number): Promise<RawRequest | undefined>;
+  getRawRequestBySourceId(sourceId: string): Promise<RawRequest | undefined>;
+  getUnprocessedRawRequests(): Promise<RawRequest[]>;
+  createRawRequest(request: InsertRawRequest): Promise<RawRequest>;
+  updateRawRequest(id: number, request: Partial<RawRequest>): Promise<RawRequest | undefined>;
+  deleteRawRequest(id: number): Promise<boolean>;
+  
+  // Task Cards operations
+  getTaskCards(options?: {
+    offset?: number;
+    limit?: number;
+    status?: string;
+    assignedTo?: number;
+    departmentId?: number;
+  }): Promise<TaskCard[]>;
+  getTaskCard(id: number): Promise<TaskCard | undefined>;
+  getTaskCardsByRawRequestId(rawRequestId: number): Promise<TaskCard[]>;
+  createTaskCard(card: InsertTaskCard): Promise<TaskCard>;
+  updateTaskCard(id: number, card: Partial<TaskCard>): Promise<TaskCard | undefined>;
+  deleteTaskCard(id: number): Promise<boolean>;
+  countTaskCards(options?: {
+    status?: string;
+    assignedTo?: number;
+    departmentId?: number;
+  }): Promise<number>;
+  
+  // Task Card History operations
+  getTaskCardHistory(cardId: number): Promise<TaskCardHistory[]>;
+  createTaskCardHistory(history: InsertTaskCardHistory): Promise<TaskCardHistory>;
   
   // Task operations
   getTasks(): Promise<Task[]>;
@@ -88,7 +128,7 @@ export interface IStorage {
   updateAgent(id: number, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
   deleteAgent(id: number): Promise<boolean>;
   
-  // Citizen Request operations
+  // Citizen Request operations (legacy - для обратной совместимости)
   getCitizenRequests(filters?: any): Promise<CitizenRequest[]>;
   countCitizenRequests(filters?: any): Promise<number>;
   getCitizenRequest(id: number): Promise<CitizenRequest | undefined>;
