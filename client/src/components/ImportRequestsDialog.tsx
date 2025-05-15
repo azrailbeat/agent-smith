@@ -89,10 +89,16 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
         }, 300);
         
         // Создаем объект запроса вручную, а не через apiRequest
+        console.log('Отправка запроса на импорт файла...');
         const response = await fetch('/api/citizen-requests/import-from-file', {
           method: 'POST',
           body: formData,
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            // Не устанавливаем Content-Type для multipart/form-data, 
+            // браузер это сделает автоматически с правильной границей (boundary)
+          }
         });
         
         // Останавливаем интервал прогресса

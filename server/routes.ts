@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/llm-providers', llmProvidersRoutes);
   
   // CORS middleware для API маршрутов, используемых внешними виджетами и bolt.new
-  app.use(['/widget.js', '/api/citizen-requests', '/api/bolt-templates', '/api/widget-integration', '/api/bolt', '/api/transcribe', '/api/process-text', '/api/process-audio'], (req, res, next) => {
+  app.use(['/widget.js', '/api/citizen-requests', '/api/citizen-requests/import-from-file', '/api/bolt-templates', '/api/widget-integration', '/api/bolt', '/api/transcribe', '/api/process-text', '/api/process-audio'], (req, res, next) => {
     // Разрешить запросы с bolt.new и всех его поддоменов
     const origin = req.headers.origin;
     if (origin && (origin.includes('bolt.new') || origin.includes('localhost'))) {
