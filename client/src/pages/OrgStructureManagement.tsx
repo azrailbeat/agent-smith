@@ -100,6 +100,7 @@ const ruleSchema = z.object({
   priority: z.number().min(1).max(100),
 });
 
+// Определяем интерфейс для props
 interface OrgStructureManagementProps {
   standalone?: boolean;
 }

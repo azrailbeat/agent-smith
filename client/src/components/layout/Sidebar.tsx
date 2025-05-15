@@ -101,26 +101,18 @@ const Sidebar = ({
     {
       title: "Управление",
       items: [
-        {
-          name: "Орг. структура",
-          path: "/org-structure",
-          icon: <Building2 size={20} />
-        },
+
         {
           name: "Пользователи",
           path: "/users",
           icon: <Users size={20} />
         },
         {
-          name: "ИИ агенты",
-          path: "/ai-agents",
-          icon: <Bot size={20} />
+          name: "База знаний",
+          path: "/knowledge-base",
+          icon: <Database size={20} />
         },
-        {
-          name: "Управление орг. структурой",
-          path: "/company-knowledge",
-          icon: <Building size={20} />
-        },
+
         {
           name: "Документы",
           path: "/documents",

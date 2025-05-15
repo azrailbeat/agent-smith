@@ -18,7 +18,7 @@ import Meetings from "@/pages/Meetings";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 import AboutSystem from "@/pages/AboutSystem";
-import OrgStructurePage from "@/pages/OrgStructure";
+import OrgStructureManagement from "@/pages/OrgStructureManagement";
 import Documents from "@/pages/Documents";
 import AIAgents from "@/pages/AIAgents";
 import DAOVoting from "@/pages/DAOVoting";
@@ -42,7 +42,7 @@ function Router() {
       <Route path="/citizen-requests" component={CitizenRequests} />
       <Route path="/meetings" component={Meetings} />
       <Route path="/documents" component={Documents} />
-      <Route path="/org-structure" component={OrgStructurePage} />
+      <Route path="/org-structure" component={() => <OrgStructureManagement standalone={true} />} />
       <Route path="/ai-agents/:id" component={AIAgents} />
       <Route path="/ai-agents" component={AIAgents} />
       <Route path="/knowledge">
