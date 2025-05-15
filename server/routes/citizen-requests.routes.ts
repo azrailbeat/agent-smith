@@ -491,6 +491,8 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
  * POST /api/citizen-requests/import-from-file
  */
 router.post('/import-from-file', upload.single('file'), async (req: Request, res: Response) => {
+  // Устанавливаем большее время для обработки запроса
+  req.setTimeout(300000); // 5 минут таймаута для сервера
   console.log('============== Импорт обращений граждан из файла ==============');
   console.log('Headers:', req.headers);
   console.log('Content-Type:', req.get('Content-Type'));
@@ -544,14 +546,12 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
         
         // Увеличиваем лимит памяти для обработки больших файлов
         const workbookOptions = {
-          type: 'buffer',
           cellFormula: false, // Отключаем формулы для экономии памяти
           cellHTML: false,    // Отключаем HTML для экономии памяти
           cellStyles: false,  // Отключаем стили для экономии памяти 
           sheetStubs: true,   // Заполняем пустые ячейки
           cellDates: true,    // Обрабатываем даты
           bookVBA: false,     // Отключаем VBA для экономии памяти
-          bookNanoXLSX: false, // Отключаем nanoXLSX для экономии памяти
           WTF: false,         // Без отладочных данных
         };
         

@@ -105,8 +105,11 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
             body: formData,
             credentials: 'include', // Восстанавливаем credentials для работы аутентификации
             signal: abortController.signal, // Добавляем signal для возможности отмены запроса
-            // Не устанавливаем Content-Type для multipart/form-data, 
-            // браузер это сделает автоматически с правильной границей (boundary)
+            headers: {
+              // Не устанавливаем Content-Type для multipart/form-data, 
+              // браузер это сделает автоматически с правильной границей (boundary)
+              'Accept': 'application/json',
+            },
           });
           
           // Очищаем таймаут, если запрос успешно завершился
