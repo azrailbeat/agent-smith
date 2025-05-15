@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Building, User, Plus, Edit, PenSquare, Search, Mail, Settings, Users } from "lucide-react";
+import { Building, User, Plus, Edit, PenSquare, Search, Mail, Settings, Users, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import { Label } from "@/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import RulesContainer from "@/components/org-structure/RulesContainer";
 
 // Определение типов данных
 interface Department {
@@ -550,62 +551,16 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
         <TabsContent value="rules" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Правила распределения задач</h2>
-            <Button onClick={() => setIsAddRuleOpen(true)}>
+            <Button onClick={() => setIsAddRuleOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               <Plus className="mr-2 h-4 w-4" /> Добавить правило
             </Button>
           </div>
-
-          {isLoadingRules ? (
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          ) : rules.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Нет правил распределения</h3>
-                <p className="text-muted-foreground mb-4">Создайте правила для автоматического распределения задач</p>
-                <Button onClick={() => setIsAddRuleOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" /> Добавить правило
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {rules.map(rule => {
-                const department = departments.find(d => d.id === rule.departmentId);
-                const position = rule.positionId ? positions.find(p => p.id === rule.positionId) : null;
-                
-                return (
-                  <Card key={rule.id}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">{rule.name}</CardTitle>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {department && (
-                          <Badge variant="outline" className="flex items-center">
-                            <Building className="h-3 w-3 mr-1" /> {department.name}
-                          </Badge>
-                        )}
-                        {position && (
-                          <Badge variant="outline" className="flex items-center">
-                            <User className="h-3 w-3 mr-1" /> {position.name}
-                          </Badge>
-                        )}
-                        <Badge variant="secondary" className="flex items-center">
-                          Приоритет: {rule.priority}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        {rule.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+          
+          <Card>
+            <CardContent className="p-6">
+              <RulesContainer onAddRule={() => setIsAddRuleOpen(true)} />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
