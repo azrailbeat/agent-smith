@@ -39,6 +39,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import RulesContainer from "@/components/org-structure/RulesContainer";
+import DraggableOrgStructure from "@/components/org-structure/DraggableOrgStructure";
 
 // Определение типов данных
 interface Department {
@@ -541,8 +542,26 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
                   </div>
                 ))
               ) : (
-                // Древовидная структура в обычном режиме
-                departmentTree.map(department => renderDepartment(department))
+                // Компонент с drag-and-drop
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl">Управление организационной структурой</CardTitle>
+                    <CardDescription>
+                      Перетащите сотрудников между отделами для изменения их принадлежности и должности
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <DraggableOrgStructure 
+                      departments={departments} 
+                      positions={positions} 
+                      employees={employees} 
+                      onUpdate={() => {
+                        queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+                        queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               )
             )}
           </div>
