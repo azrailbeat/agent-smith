@@ -119,11 +119,7 @@ const Sidebar = ({
           path: "/org-structure",
           icon: <Building size={20} />
         },
-        {
-          name: "RBAC",
-          path: "/rbac",
-          icon: <Shield size={20} />
-        },
+
 
         {
           name: "Документы",
