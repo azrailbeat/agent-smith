@@ -24,7 +24,7 @@ export default function UnifiedCompanyKnowledge() {
   return (
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">База знаний компании</h1>
+        <h1 className="text-3xl font-bold">Организация и База знаний</h1>
         <div className="flex gap-2">
           {activeTab === "knowledge" ? (
             <>

@@ -121,7 +121,7 @@ const Sidebar = ({
           icon: <BookOpen size={20} />
         },
         {
-          name: "База знаний компании",
+          name: "Организация и База знаний",
           path: "/company-knowledge",
           icon: <Database size={20} />
         },
