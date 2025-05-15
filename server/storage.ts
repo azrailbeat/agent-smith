@@ -1444,8 +1444,127 @@ export class MemStorage implements IStorage {
   }
   
   // Citizen Request methods
-  async getCitizenRequests(): Promise<CitizenRequest[]> {
-    return Array.from(this.citizenRequests.values());
+  async getCitizenRequests(filters?: any): Promise<CitizenRequest[]> {
+    let requests = Array.from(this.citizenRequests.values());
+    
+    // Применяем фильтры, если они есть
+    if (filters) {
+      // Фильтр по статусу
+      if (filters.status) {
+        requests = requests.filter(req => req.status === filters.status);
+      }
+      
+      // Фильтр по отделу
+      if (filters.departmentId) {
+        requests = requests.filter(req => req.departmentId === filters.departmentId);
+      }
+      
+      // Фильтр по назначенному сотруднику
+      if (filters.assignedTo) {
+        requests = requests.filter(req => req.assignedTo === filters.assignedTo);
+      }
+      
+      // Фильтр по приоритету
+      if (filters.priority) {
+        requests = requests.filter(req => req.priority === filters.priority);
+      }
+      
+      // Поиск по тексту
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        requests = requests.filter(req => 
+          (req.subject && req.subject.toLowerCase().includes(searchLower)) ||
+          (req.description && req.description.toLowerCase().includes(searchLower)) ||
+          (req.fullName && req.fullName.toLowerCase().includes(searchLower))
+        );
+      }
+      
+      // Фильтр по временному диапазону
+      if (filters.fromDate) {
+        const fromDate = new Date(filters.fromDate);
+        requests = requests.filter(req => req.createdAt && new Date(req.createdAt) >= fromDate);
+      }
+      
+      if (filters.toDate) {
+        const toDate = new Date(filters.toDate);
+        requests = requests.filter(req => req.createdAt && new Date(req.createdAt) <= toDate);
+      }
+      
+      // Сортировка
+      if (filters.sortBy) {
+        const sortOrder = filters.sortOrder === 'asc' ? 1 : -1;
+        const sortField = filters.sortBy;
+        
+        requests = requests.sort((a, b) => {
+          if (a[sortField] === b[sortField]) return 0;
+          if (a[sortField] === null || a[sortField] === undefined) return sortOrder * -1;
+          if (b[sortField] === null || b[sortField] === undefined) return sortOrder;
+          
+          if (a[sortField] < b[sortField]) return -1 * sortOrder;
+          return 1 * sortOrder;
+        });
+      }
+      
+      // Пагинация
+      if (filters.offset !== undefined && filters.limit !== undefined) {
+        const offset = parseInt(filters.offset);
+        const limit = parseInt(filters.limit);
+        
+        requests = requests.slice(offset, offset + limit);
+      }
+    }
+    
+    return requests;
+  }
+  
+  async countCitizenRequests(filters?: any): Promise<number> {
+    let requests = Array.from(this.citizenRequests.values());
+    
+    // Применяем фильтры, если они есть (те же, что и в getCitizenRequests, но без сортировки и пагинации)
+    if (filters) {
+      // Фильтр по статусу
+      if (filters.status) {
+        requests = requests.filter(req => req.status === filters.status);
+      }
+      
+      // Фильтр по отделу
+      if (filters.departmentId) {
+        requests = requests.filter(req => req.departmentId === filters.departmentId);
+      }
+      
+      // Фильтр по назначенному сотруднику
+      if (filters.assignedTo) {
+        requests = requests.filter(req => req.assignedTo === filters.assignedTo);
+      }
+      
+      // Фильтр по приоритету
+      if (filters.priority) {
+        requests = requests.filter(req => req.priority === filters.priority);
+      }
+      
+      // Поиск по тексту
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        requests = requests.filter(req => 
+          (req.subject && req.subject.toLowerCase().includes(searchLower)) ||
+          (req.description && req.description.toLowerCase().includes(searchLower)) ||
+          (req.fullName && req.fullName.toLowerCase().includes(searchLower))
+        );
+      }
+      
+      // Фильтр по временному диапазону
+      if (filters.fromDate) {
+        const fromDate = new Date(filters.fromDate);
+        requests = requests.filter(req => req.createdAt && new Date(req.createdAt) >= fromDate);
+      }
+      
+      if (filters.toDate) {
+        const toDate = new Date(filters.toDate);
+        requests = requests.filter(req => req.createdAt && new Date(req.createdAt) <= toDate);
+      }
+    }
+    
+    return requests.length;
   }
   
   async getCitizenRequest(id: number): Promise<CitizenRequest | undefined> {

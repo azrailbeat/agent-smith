@@ -474,28 +474,58 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
  */
 router.post('/import-from-file', upload.single('file'), async (req: Request, res: Response) => {
   try {
+    console.log('Получен запрос на импорт файла');
+    
     if (!req.file) {
+      console.error('Файл отсутствует в запросе');
       return res.status(400).json({ error: 'Файл не был загружен' });
     }
 
+    console.log('Файл получен:', req.file.originalname);
+    
     const filePath = req.file.path;
     const originalFilename = req.file.originalname;
     let records: any[] = [];
 
     // Обработка в зависимости от типа файла
-    if (originalFilename.endsWith('.csv')) {
-      // Обработка CSV
-      const content = fs.readFileSync(filePath, 'utf8');
-      records = csvParse(content, {
-        columns: true,
-        skip_empty_lines: true
-      });
-    } else {
-      // Обработка Excel (xls, xlsx)
-      const workbook = xlsx.readFile(filePath);
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      records = xlsx.utils.sheet_to_json(worksheet);
+    try {
+      if (originalFilename.toLowerCase().endsWith('.csv')) {
+        // Обработка CSV
+        console.log('Обрабатываем CSV файл');
+        const content = fs.readFileSync(filePath, 'utf8');
+        records = csvParse(content, {
+          columns: true,
+          skip_empty_lines: true
+        });
+      } else if (originalFilename.toLowerCase().endsWith('.xlsx') || originalFilename.toLowerCase().endsWith('.xls')) {
+        // Обработка Excel (xls, xlsx)
+        console.log('Обрабатываем Excel файл');
+        const workbook = xlsx.readFile(filePath);
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          throw new Error('Excel файл не содержит листов');
+        }
+        const worksheet = workbook.Sheets[firstSheetName];
+        if (!worksheet) {
+          throw new Error('Не удалось получить доступ к листу Excel');
+        }
+        records = xlsx.utils.sheet_to_json(worksheet);
+      } else {
+        throw new Error(`Неподдерживаемый формат файла: ${originalFilename}`);
+      }
+      
+      console.log(`Обнаружено ${records.length} записей`);
+    } catch (fileError: any) {
+      console.error('Ошибка при чтении или обработке файла:', fileError);
+      
+      // Удаляем загруженный файл в случае ошибки
+      try {
+        fs.unlinkSync(filePath);
+      } catch (unlinkError) {
+        console.error('Ошибка при удалении временного файла:', unlinkError);
+      }
+      
+      return res.status(400).json({ error: `Ошибка при обработке файла: ${fileError.message}` });
     }
 
     // Маппинг и валидация данных
@@ -609,8 +639,13 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
       }
     }
 
-    // Удаляем загруженный файл
-    fs.unlinkSync(filePath);
+    // Удаляем загруженный файл в конце обработки
+    try {
+      fs.unlinkSync(filePath);
+      console.log('Временный файл удален');
+    } catch (unlinkError) {
+      console.error('Ошибка при удалении временного файла:', unlinkError);
+    }
 
     // Логируем импорт обращений
     await logActivity({
