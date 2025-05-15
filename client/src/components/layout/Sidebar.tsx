@@ -28,6 +28,7 @@ import {
   XCircle,
   FileStack,
   HelpCircle,
+  Lock,
   Cpu,
   Database,
   BookOpen,
@@ -108,9 +109,19 @@ const Sidebar = ({
           icon: <Users size={20} />
         },
         {
-          name: "База знаний",
-          path: "/knowledge-base",
-          icon: <Database size={20} />
+          name: "ИИ агенты",
+          path: "/ai-agents",
+          icon: <Bot size={20} />
+        },
+        {
+          name: "Орг. структура",
+          path: "/org-structure",
+          icon: <Building size={20} />
+        },
+        {
+          name: "RBAC",
+          path: "/rbac",
+          icon: <Shield size={20} />
         },
 
         {

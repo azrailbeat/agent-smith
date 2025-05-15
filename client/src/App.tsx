@@ -43,34 +43,11 @@ function Router() {
       <Route path="/meetings" component={Meetings} />
       <Route path="/documents" component={Documents} />
       <Route path="/org-structure" component={() => <OrgStructureManagement standalone={true} />} />
-      <Route path="/ai-agents/:id">
-        {() => {
-          // Перенаправление на страницу базы знаний
-          window.location.href = '/knowledge-base';
-          return null;
-        }}
-      </Route>
-      <Route path="/ai-agents">
-        {() => {
-          // Перенаправление на страницу базы знаний
-          window.location.href = '/knowledge-base';
-          return null;
-        }}
-      </Route>
-      <Route path="/knowledge">
-        {() => {
-          // Перенаправление на новую объединенную страницу
-          window.location.href = '/knowledge-base';
-          return null;
-        }}
-      </Route>
-      <Route path="/company-knowledge">
-        {() => {
-          // Перенаправление на новую объединенную страницу
-          window.location.href = '/knowledge-base';
-          return null;
-        }}
-      </Route>
+      <Route path="/ai-agents/:id" component={AIAgents} />
+      <Route path="/ai-agents" component={AIAgents} />
+      <Route path="/rbac" component={AIAgents} />
+      <Route path="/knowledge" component={UnifiedCompanyKnowledge} />
+      <Route path="/company-knowledge" component={UnifiedCompanyKnowledge} />
       <Route path="/knowledge-base" component={UnifiedCompanyKnowledge} />
       <Route path="/profile" component={UserProfile} />
       <Route path="/settings" component={Settings} />
