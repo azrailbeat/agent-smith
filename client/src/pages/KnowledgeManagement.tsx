@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -32,8 +33,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, FileText, Plus, Settings, Trash2 } from 'lucide-react';
+import { AlertCircle, FileText, Plus, Settings, Trash2, Upload, Download, FolderTree, BookOpen, Building, User, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
 
 interface KnowledgeBase {
   id: number;
@@ -66,13 +68,52 @@ interface Agent {
   type: string;
 }
 
+// Определение новых типов для интеграции с организационной структурой
+interface Department {
+  id: number;
+  name: string;
+  description: string | null;
+  parentId: number | null;
+}
+
+interface Position {
+  id: number;
+  name: string;
+  departmentId: number;
+  level: number;
+}
+
+interface JobDescription {
+  id: number;
+  title: string;
+  positionId: number;
+  departmentId: number;
+  content: string;
+  fileUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface User {
+  id: number;
+  username: string;
+  fullName?: string;
+  email?: string;
+  departmentId?: number;
+  positionId?: number;
+}
+
 export default function KnowledgeManagement() {
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<KnowledgeBase | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
+  const [selectedJobDescription, setSelectedJobDescription] = useState<JobDescription | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [createDocumentDialogOpen, setCreateDocumentDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('bases');
+  const [uploadJobDialogOpen, setUploadJobDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('company');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,6 +134,26 @@ export default function KnowledgeManagement() {
     enabled: !!selectedKnowledgeBase,
     queryFn: () => 
       apiRequest(`/api/knowledge-documents?knowledgeBaseId=${selectedKnowledgeBase?.id}`),
+  });
+  
+  // Получение списка отделов
+  const { data: departments = [], isLoading: loadingDepartments } = useQuery<Department[]>({
+    queryKey: ['/api/departments'],
+  });
+  
+  // Получение списка должностей
+  const { data: positions = [], isLoading: loadingPositions } = useQuery<Position[]>({
+    queryKey: ['/api/positions'],
+  });
+  
+  // Получение должностных инструкций
+  const { data: jobDescriptions = [], isLoading: loadingJobs } = useQuery<JobDescription[]>({
+    queryKey: ['/api/job-descriptions'],
+  });
+  
+  // Получение пользователей
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['/api/users'],
   });
 
   // Создание новой базы знаний
@@ -221,20 +282,96 @@ export default function KnowledgeManagement() {
     createDocumentMutation.mutate(newDocument);
   };
 
+  // Загрузка должностной инструкции
+  const uploadJobDescriptionMutation = useMutation({
+    mutationFn: async (data: FormData) => 
+      apiRequest('/api/job-descriptions/upload', 'POST', data, {
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/job-descriptions'] });
+      setUploadJobDialogOpen(false);
+      setUploadProgress(0);
+      toast({
+        title: 'Документ загружен',
+        description: 'Должностная инструкция успешно загружена',
+      });
+    },
+    onError: (error: any) => {
+      setUploadProgress(0);
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось загрузить должностную инструкцию: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Обработчик загрузки файла
+  const handleFileUpload = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!fileInputRef.current?.files?.length) {
+      toast({
+        title: 'Ошибка',
+        description: 'Выберите файл для загрузки',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    uploadJobDescriptionMutation.mutate(formData);
+  };
+
+  // Удаление должностной инструкции
+  const deleteJobDescriptionMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest(`/api/job-descriptions/${id}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/job-descriptions'] });
+      toast({
+        title: 'Документ удален',
+        description: 'Должностная инструкция успешно удалена',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось удалить должностную инструкцию: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Управление базами знаний для агентов</h1>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Создать базу знаний
-        </Button>
+        <h1 className="text-3xl font-bold">База знаний компании</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setUploadJobDialogOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" /> Загрузить должностную инструкцию
+          </Button>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Создать базу знаний
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="bases" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="company" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="bases">Базы знаний</TabsTrigger>
+          <TabsTrigger value="company">
+            <Building className="mr-2 h-4 w-4" /> Организационная структура
+          </TabsTrigger>
+          <TabsTrigger value="bases">
+            <BookOpen className="mr-2 h-4 w-4" /> Базы знаний
+          </TabsTrigger>
           {selectedKnowledgeBase && (
-            <TabsTrigger value="documents">Документы</TabsTrigger>
+            <TabsTrigger value="documents">
+              <FileText className="mr-2 h-4 w-4" /> Документы
+            </TabsTrigger>
           )}
         </TabsList>
 
@@ -379,7 +516,308 @@ export default function KnowledgeManagement() {
             </>
           )}
         </TabsContent>
+        <TabsContent value="company">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="md:col-span-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Должностные инструкции и профильные документы</CardTitle>
+                  <CardDescription>
+                    Управление должностными инструкциями и профильными документами для сотрудников компании
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingJobs ? (
+                    <div className="py-8 text-center">
+                      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Загрузка документов...</p>
+                    </div>
+                  ) : jobDescriptions.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <FolderTree className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">В базе знаний нет должностных инструкций</p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => setUploadJobDialogOpen(true)}
+                      >
+                        <Upload className="mr-2 h-4 w-4" /> Загрузить документы
+                      </Button>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-4">
+                        {departments.map((department) => {
+                          const deptJobs = jobDescriptions.filter(job => job.departmentId === department.id);
+                          
+                          if (deptJobs.length === 0) return null;
+                          
+                          return (
+                            <div key={department.id} className="mb-6">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Building className="h-5 w-5 text-primary" />
+                                <h3 className="text-lg font-medium">{department.name}</h3>
+                              </div>
+                              <div className="pl-4 border-l-2 border-muted">
+                                {deptJobs.map((job) => {
+                                  const position = positions.find(p => p.id === job.positionId);
+                                  
+                                  return (
+                                    <Card key={job.id} className="mb-3">
+                                      <CardHeader className="p-4 pb-2">
+                                        <div className="flex justify-between items-start">
+                                          <div>
+                                            <h4 className="font-medium">{job.title}</h4>
+                                            <p className="text-sm text-muted-foreground">
+                                              Должность: {position?.name || 'Не указана'}
+                                            </p>
+                                          </div>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon"
+                                            onClick={() => {
+                                              if (confirm('Вы уверены, что хотите удалить эту должностную инструкцию?')) {
+                                                deleteJobDescriptionMutation.mutate(job.id);
+                                              }
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent className="p-4 pt-0">
+                                        <div className="text-sm mt-2">
+                                          {job.content.length > 150 
+                                            ? `${job.content.substring(0, 150)}...` 
+                                            : job.content}
+                                        </div>
+                                      </CardContent>
+                                      <CardFooter className="p-4 pt-0 flex justify-between">
+                                        <span className="text-xs text-muted-foreground">
+                                          Создан: {new Date(job.createdAt).toLocaleDateString()}
+                                        </span>
+                                        {job.fileUrl && (
+                                          <Button variant="outline" size="sm" asChild>
+                                            <a href={job.fileUrl} target="_blank" rel="noopener noreferrer">
+                                              <Download className="mr-2 h-4 w-4" /> Скачать
+                                            </a>
+                                          </Button>
+                                        )}
+                                      </CardFooter>
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="md:col-span-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Структура компании</CardTitle>
+                  <CardDescription>
+                    Департаменты и должности в организационной структуре
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingDepartments || loadingPositions ? (
+                    <div className="py-8 text-center">
+                      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Загрузка структуры...</p>
+                    </div>
+                  ) : departments.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <p className="text-muted-foreground">Организационная структура не настроена</p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        asChild
+                      >
+                        <a href="/org-structure">
+                          <Settings className="mr-2 h-4 w-4" /> Настроить структуру
+                        </a>
+                      </Button>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-4">
+                        {departments.map((department) => {
+                          const deptPositions = positions.filter(p => p.departmentId === department.id);
+                          
+                          return (
+                            <div key={department.id} className="mb-4">
+                              <div className="flex items-center mb-2">
+                                <Building className="h-5 w-5 text-primary mr-2" />
+                                <h3 className="font-medium">{department.name}</h3>
+                              </div>
+                              
+                              {deptPositions.length > 0 ? (
+                                <div className="pl-4 border-l-2 border-muted">
+                                  {deptPositions.map((position) => {
+                                    const posUsers = users.filter(u => u.positionId === position.id);
+                                    
+                                    return (
+                                      <div key={position.id} className="mb-3">
+                                        <div className="flex items-center mb-1">
+                                          <Briefcase className="h-4 w-4 text-muted-foreground mr-2" />
+                                          <span>{position.name}</span>
+                                        </div>
+                                        
+                                        {posUsers.length > 0 && (
+                                          <div className="pl-4 text-sm">
+                                            {posUsers.map((user) => (
+                                              <div key={user.id} className="flex items-center mb-1">
+                                                <User className="h-3 w-3 text-muted-foreground mr-2" />
+                                                <span>{user.fullName || user.username}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="pl-4 text-sm text-muted-foreground">
+                                  Нет настроенных должностей
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline" asChild className="w-full">
+                    <a href="/org-structure">
+                      <Settings className="mr-2 h-4 w-4" /> Управление структурой
+                    </a>
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      {/* Диалог загрузки должностной инструкции */}
+      <Dialog open={uploadJobDialogOpen} onOpenChange={setUploadJobDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Загрузка должностной инструкции</DialogTitle>
+            <DialogDescription>
+              Загрузите файлы должностных инструкций и профильных документов для сотрудников
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleFileUpload}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Название
+                </Label>
+                <Input
+                  id="title"
+                  name="title"
+                  className="col-span-3"
+                  placeholder="Должностная инструкция руководителя"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="departmentId" className="text-right">
+                  Отдел
+                </Label>
+                <Select name="departmentId" defaultValue="">
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Выберите отдел" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="positionId" className="text-right">
+                  Должность
+                </Label>
+                <Select name="positionId" defaultValue="">
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Выберите должность" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {positions.map((pos) => (
+                      <SelectItem key={pos.id} value={pos.id.toString()}>
+                        {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="content" className="text-right">
+                  Краткое описание
+                </Label>
+                <Textarea
+                  id="content"
+                  name="content"
+                  className="col-span-3"
+                  rows={3}
+                  placeholder="Краткое описание должностной инструкции"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="file" className="text-right">
+                  Файл
+                </Label>
+                <Input
+                  id="file"
+                  name="file"
+                  type="file"
+                  ref={fileInputRef}
+                  className="col-span-3"
+                  accept=".pdf,.doc,.docx,.txt"
+                  required
+                />
+              </div>
+              
+              {uploadProgress > 0 && (
+                <div className="mt-2">
+                  <Label className="mb-1 block">Прогресс загрузки</Label>
+                  <Progress value={uploadProgress} className="w-full" />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={uploadJobDescriptionMutation.isPending}>
+                {uploadJobDescriptionMutation.isPending ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    Загрузка...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" /> Загрузить
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Диалог создания базы знаний */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

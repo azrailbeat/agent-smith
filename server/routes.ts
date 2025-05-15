@@ -1879,7 +1879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aiProcessed: true
         });
         
-      } else if (actionType === "respond") {
+      } else if (selectedAction === "respond") {
         // Генерация ответа на обращение
         const result = await generateResponse(processText, agent, options.classification || processType);
         
@@ -1917,7 +1917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aiSuggestion: result.response
         });
         
-      } else if (actionType === "summarize") {
+      } else if (selectedAction === "summarize") {
         // Генерация краткого резюме обращения
         const result = await summarizeRequest(processText, agent);
         
@@ -1943,7 +1943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           summary: result.summary,
           keyPoints: result.keyPoints || []
         });
-      } else if (actionType === "blockchain" || actionType === "record") {
+      } else if (selectedAction === "blockchain" || selectedAction === "record") {
         // Запись обращения в блокчейн
         // Проверяем, что у обращения есть необходимые данные
         if (!request.summary && !request.aiSuggestion) {
@@ -2012,7 +2012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: blockchainError.message || "Ошибка при записи в блокчейн"
           });
         }
-      } else if (actionType === "full") {
+      } else if (selectedAction === "full") {
         // Полная обработка - выполняем все три действия последовательно
         
         // 1. Классификация
