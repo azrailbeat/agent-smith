@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import RuleCard from './RuleCard';
+import { departments as mockDepartments, positions as mockPositions, distributionRules as mockRules } from '@/shared/mock_data';
 
 interface Rule {
   id: number;
@@ -33,58 +34,21 @@ const RulesContainer: React.FC<RulesContainerProps> = ({ onAddRule }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // Загрузка правил с сервера
-  const { data: rules = [], isLoading: isLoadingRules } = useQuery({
+  const { data: rules = mockRules, isLoading: isLoadingRules } = useQuery({
     queryKey: ['/api/org-structure/rules'],
-    initialData: [
-      {
-        id: 1,
-        name: 'Запросы по ИТ-поддержке',
-        description: 'Распределение запросов, связанных с технической поддержкой',
-        departmentId: 3,
-        positionId: null,
-        priority: 80
-      },
-      {
-        id: 2,
-        name: 'Юридические вопросы',
-        description: 'Распределение запросов по правовым вопросам',
-        departmentId: 5,
-        positionId: null,
-        priority: 75
-      },
-      {
-        id: 3,
-        name: 'Кадровые вопросы',
-        description: 'Распределение запросов по трудоустройству и кадровой работе',
-        departmentId: 4,
-        positionId: null,
-        priority: 70
-      }
-    ]
+    initialData: mockRules
   });
   
   // Загрузка отделов
-  const { data: departments = [], isLoading: isLoadingDepts } = useQuery({
+  const { data: departments = mockDepartments, isLoading: isLoadingDepts } = useQuery({
     queryKey: ['/api/departments'],
-    initialData: [
-      { id: 1, name: 'Руководство' },
-      { id: 2, name: 'Канцелярия' },
-      { id: 3, name: 'ИТ отдел' },
-      { id: 4, name: 'Отдел кадров' },
-      { id: 5, name: 'Юридический отдел' }
-    ]
+    initialData: mockDepartments
   });
   
   // Загрузка должностей
-  const { data: positions = [], isLoading: isLoadingPositions } = useQuery({
+  const { data: positions = mockPositions, isLoading: isLoadingPositions } = useQuery({
     queryKey: ['/api/positions'],
-    initialData: [
-      { id: 1, name: 'Директор', departmentId: 1 },
-      { id: 2, name: 'Заместитель директора', departmentId: 1 },
-      { id: 3, name: 'Руководитель ИТ отдела', departmentId: 3 },
-      { id: 4, name: 'Инженер', departmentId: 3 },
-      { id: 5, name: 'Юрист', departmentId: 5 }
-    ]
+    initialData: mockPositions
   });
   
   // Фильтрация правил по поисковому запросу
