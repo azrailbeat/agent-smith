@@ -1801,15 +1801,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Получаем параметры запроса
-      const { agentId, actionType, text, requestType, options = {} } = req.body;
+      const { agentId, action, actionType, text, requestType, options = {} } = req.body;
       
       if (!agentId) {
         return res.status(400).json({ error: "Agent ID is required" });
       }
 
-      if (!actionType) {
-        return res.status(400).json({ error: "Action type is required" });
+      // Поддерживаем оба параметра: 'action' и 'actionType' для обратной совместимости
+      const selectedAction = action || actionType;
+      if (!selectedAction) {
+        return res.status(400).json({ error: "Action parameter is required (either 'action' or 'actionType')" });
       }
+      
+      // Выводим полученные параметры для отладки
+      console.log("Processing request with parameters:", { 
+        requestId: id,
+        agentId, 
+        action, 
+        actionType,
+        selectedAction
+      });
 
       // Получаем агента
       const agent = await storage.getAgent(agentId);
@@ -1829,7 +1840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processType = requestType || request.requestType || 'general';
       
       // Обрабатываем в зависимости от типа действия
-      if (actionType === "classify") {
+      if (selectedAction === "classify") {
         // Классификация обращения
         const result = await classifyRequest(processText, agent, processType);
         
