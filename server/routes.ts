@@ -36,6 +36,7 @@ import agentRoutes from "./routes/agent-routes";
 import llmAnalyticsRoutes from "./routes/llm-analytics-routes";
 import userRoutes from "./routes/user-routes";
 import llmProvidersRoutes from "./routes/llm-providers.routes";
+import jobDescriptionsRoutes from "./routes/job-descriptions.routes";
 import {
   getTaskRules,
   getTaskRuleById,
