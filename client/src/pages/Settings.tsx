@@ -17,12 +17,14 @@ import {
   Shield, 
   Key,
   Cpu,
-  Brain
+  Brain,
+  Building
 } from 'lucide-react';
 import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings';
 import { MonitoringSettings } from '@/components/settings/MonitoringSettings';
 import { PerplexitySettings } from '@/components/settings/PerplexitySettings';
 import LlmProviderSettings from '@/components/settings/LlmProviderSettings';
+import OrgStructureManagement from '@/pages/OrgStructureManagement';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -37,9 +39,10 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-8 rounded-full bg-muted/50">
+        <TabsList className="grid w-full grid-cols-6 mb-8 rounded-full bg-muted/50">
           <TabsTrigger value="general" className="rounded-full">Общие</TabsTrigger>
           <TabsTrigger value="ai-models" className="rounded-full">AI Модели</TabsTrigger>
+          <TabsTrigger value="org-structure" className="rounded-full">Орг. структура</TabsTrigger>
           <TabsTrigger value="integrations" className="rounded-full">Интеграции</TabsTrigger>
           <TabsTrigger value="monitoring" className="rounded-full">Мониторинг</TabsTrigger>
           <TabsTrigger value="security" className="rounded-full">Безопасность</TabsTrigger>
@@ -190,6 +193,18 @@ export default function Settings() {
               <PerplexitySettings />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Вкладка организационной структуры */}
+        <TabsContent value="org-structure" className="space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold flex items-center">
+              <Building className="mr-2 h-6 w-6" />
+              Управление организационной структурой
+            </h2>
+          </div>
+          
+          <OrgStructureManagement standalone={false} />
         </TabsContent>
 
         {/* Вкладка интеграций */}
