@@ -487,6 +487,11 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
  * POST /api/citizen-requests/import-from-file
  */
 router.post('/import-from-file', upload.single('file'), async (req: Request, res: Response) => {
+  console.log('============== Импорт обращений граждан из файла ==============');
+  console.log('Headers:', req.headers);
+  console.log('Content-Type:', req.get('Content-Type'));
+  console.log('Body:', Object.keys(req.body || {}));
+  
   try {
     console.log('Получен запрос на импорт файла');
     
@@ -496,6 +501,13 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
     }
 
     console.log('Файл получен:', req.file.originalname);
+    console.log('Сведения о файле:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      path: req.file.path,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
     
     const filePath = req.file.path;
     const originalFilename = req.file.originalname;
