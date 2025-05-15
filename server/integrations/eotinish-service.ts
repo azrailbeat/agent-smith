@@ -38,7 +38,7 @@ function getEOtinishConfig(): EOtinishAPIConfig {
  * @param lastSyncDate Дата последней синхронизации
  * @returns Массив полученных обращений
  */
-export async function fetchNewRequestsFromEOtinish(lastSyncDate?: Date): Promise<any[]> {
+export async function fetchNewRequestsFromEOtinish(lastSyncDate?: Date, limit: number = 50): Promise<any[]> {
   try {
     const config = getEOtinishConfig();
     
@@ -46,6 +46,7 @@ export async function fetchNewRequestsFromEOtinish(lastSyncDate?: Date): Promise
     const params = {
       org_id: config.orgId,
       date_from: lastSyncDate ? lastSyncDate.toISOString() : undefined,
+      limit: limit // Добавляем лимит запрашиваемых записей
     };
     
     // Выполняем запрос к API
@@ -142,6 +143,7 @@ export async function saveRawRequestsToDatabase(requests: any[]): Promise<{
  */
 export async function synchronizeRequestsFromEOtinish(options: {
   lastSyncDate?: Date;
+  limit?: number;
 } = {}): Promise<{
   success: boolean;
   total: number;
@@ -151,8 +153,8 @@ export async function synchronizeRequestsFromEOtinish(options: {
   errorDetails: any[];
 }> {
   try {
-    // Получаем новые обращения из API
-    const requests = await fetchNewRequestsFromEOtinish(options.lastSyncDate);
+    // Получаем новые обращения из API с учетом лимита
+    const requests = await fetchNewRequestsFromEOtinish(options.lastSyncDate, options.limit);
     
     // Сохраняем полученные обращения в базу данных
     const result = await saveRawRequestsToDatabase(requests);

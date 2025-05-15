@@ -39,7 +39,7 @@ export async function synchronizeRequestsFromEOtinish(limit: number = 50): Promi
     await logActivity({
       action: ActivityType.SYSTEM_EVENT,
       entityType: 'eotinish_sync',
-      details: `Выполнена синхронизация с eOtinish. Получено ${syncResult.imported} обращений.`,
+      details: `Выполнена синхронизация с eOtinish. Получено ${syncResult.created + syncResult.updated} обращений.`,
       metadata: syncResult
     });
     
