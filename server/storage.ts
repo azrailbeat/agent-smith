@@ -201,6 +201,42 @@ export interface IStorage {
   createKnowledgeDocument(document: InsertKnowledgeDocument): Promise<KnowledgeDocument>;
   updateKnowledgeDocument(id: number, data: Partial<InsertKnowledgeDocument>): Promise<KnowledgeDocument | undefined>;
   deleteKnowledgeDocument(id: number): Promise<boolean>;
+  
+  // RawRequest operations
+  getRawRequests(options?: { 
+    offset?: number;
+    limit?: number;
+    processed?: boolean;
+    source?: string;
+  }): Promise<RawRequest[]>;
+  getRawRequest(id: number): Promise<RawRequest | undefined>;
+  getRawRequestBySourceId(sourceId: string, source: string): Promise<RawRequest | undefined>;
+  getUnprocessedRawRequests(): Promise<RawRequest[]>;
+  createRawRequest(rawRequest: InsertRawRequest): Promise<RawRequest>;
+  updateRawRequest(id: number, data: Partial<InsertRawRequest>): Promise<RawRequest | undefined>;
+  markRawRequestProcessed(id: number, taskCardId: number): Promise<RawRequest | undefined>;
+  
+  // TaskCard operations
+  getTaskCards(options?: { 
+    offset?: number;
+    limit?: number;
+    status?: string;
+    assignedTo?: number;
+    departmentId?: number;
+  }): Promise<TaskCard[]>;
+  getTaskCard(id: number): Promise<TaskCard | undefined>;
+  getTaskCardByExternalId(externalId: string): Promise<TaskCard | undefined>;
+  createTaskCard(taskCard: InsertTaskCard): Promise<TaskCard>;
+  updateTaskCard(id: number, data: Partial<InsertTaskCard>): Promise<TaskCard | undefined>;
+  countTaskCards(options?: { 
+    status?: string;
+    assignedTo?: number;
+    departmentId?: number;
+  }): Promise<number>;
+  
+  // TaskCardHistory operations
+  getTaskCardHistory(cardId: number): Promise<TaskCardHistory[]>;
+  createTaskCardHistory(history: InsertTaskCardHistory): Promise<TaskCardHistory>;
 }
 
 // In-memory storage implementation
@@ -231,6 +267,11 @@ export class MemStorage implements IStorage {
   private systemSettings: Map<string, any>;
   private plankaLinks: Map<number, any>;
   
+  // Новые сущности для eOtinish
+  private rawRequests: Map<number, RawRequest>;
+  private taskCards: Map<number, TaskCard>;
+  private taskCardHistory: Map<number, TaskCardHistory[]>;
+  
   private userIdCounter: number;
   private taskIdCounter: number;
   private documentIdCounter: number;
@@ -246,6 +287,11 @@ export class MemStorage implements IStorage {
   private positionIdCounter: number;
   private taskRuleIdCounter: number;
   private plankaLinkIdCounter: number;
+  
+  // Счетчики для новых сущностей
+  private rawRequestIdCounter: number;
+  private taskCardIdCounter: number;
+  private taskCardHistoryIdCounter: number;
   
   constructor() {
     this.users = new Map();
@@ -265,6 +311,11 @@ export class MemStorage implements IStorage {
     this.systemSettings = new Map();
     this.plankaLinks = new Map();
     
+    // Инициализация новых Map для eOtinish
+    this.rawRequests = new Map();
+    this.taskCards = new Map();
+    this.taskCardHistory = new Map();
+    
     this.userIdCounter = 1;
     this.taskIdCounter = 1;
     this.documentIdCounter = 1;
@@ -278,6 +329,11 @@ export class MemStorage implements IStorage {
     this.citizenRequestIdCounter = 1;
     this.departmentIdCounter = 1;
     this.positionIdCounter = 1;
+    
+    // Инициализация новых счетчиков для eOtinish
+    this.rawRequestIdCounter = 1;
+    this.taskCardIdCounter = 1;
+    this.taskCardHistoryIdCounter = 1;
     this.taskRuleIdCounter = 1;
     this.plankaLinkIdCounter = 1;
     
