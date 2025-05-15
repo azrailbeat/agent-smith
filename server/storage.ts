@@ -91,6 +91,7 @@ export interface IStorage {
   // Citizen Request operations
   getCitizenRequests(): Promise<CitizenRequest[]>;
   getCitizenRequest(id: number): Promise<CitizenRequest | undefined>;
+  getCitizenRequestByExternalId(externalId: string, externalSource?: string): Promise<CitizenRequest | undefined>;
   createCitizenRequest(request: InsertCitizenRequest): Promise<CitizenRequest>;
   updateCitizenRequest(id: number, request: Partial<InsertCitizenRequest>): Promise<CitizenRequest | undefined>;
   deleteCitizenRequest(id: number): Promise<boolean>;
@@ -1448,6 +1449,13 @@ export class MemStorage implements IStorage {
   
   async getCitizenRequest(id: number): Promise<CitizenRequest | undefined> {
     return this.citizenRequests.get(id);
+  }
+  
+  async getCitizenRequestByExternalId(externalId: string, externalSource?: string): Promise<CitizenRequest | undefined> {
+    return Array.from(this.citizenRequests.values()).find(
+      (req) => req.externalId === externalId && 
+              (!externalSource || req.externalSource === externalSource)
+    );
   }
   
   async createCitizenRequest(insertRequest: InsertCitizenRequest): Promise<CitizenRequest> {
