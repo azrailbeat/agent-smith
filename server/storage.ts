@@ -237,6 +237,15 @@ export interface IStorage {
   // TaskCardHistory operations
   getTaskCardHistory(cardId: number): Promise<TaskCardHistory[]>;
   createTaskCardHistory(history: InsertTaskCardHistory): Promise<TaskCardHistory>;
+  
+  // JobDescription operations
+  getJobDescriptions(): Promise<any[]>;
+  getJobDescription(id: number): Promise<any | undefined>;
+  getJobDescriptionsByDepartment(departmentId: number): Promise<any[]>;
+  getJobDescriptionsByPosition(positionId: number): Promise<any[]>;
+  createJobDescription(jobDescription: any): Promise<any>;
+  updateJobDescription(id: number, jobDescription: any): Promise<any | undefined>;
+  deleteJobDescription(id: number): Promise<boolean>;
 }
 
 // In-memory storage implementation

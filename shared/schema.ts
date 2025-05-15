@@ -536,6 +536,41 @@ export const insertAgentKnowledgeBaseSchema = createInsertSchema(agentKnowledgeB
 export type AgentKnowledgeBase = typeof agentKnowledgeBases.$inferSelect;
 export type InsertAgentKnowledgeBase = z.infer<typeof insertAgentKnowledgeBaseSchema>;
 
+// Модель для должностных инструкций
+export const jobDescriptions = pgTable("job_descriptions", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  positionId: integer("position_id").references(() => positions.id).notNull(),
+  departmentId: integer("department_id").references(() => departments.id).notNull(),
+  content: text("content").notNull(),
+  fileUrl: text("file_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertJobDescriptionSchema = createInsertSchema(jobDescriptions).pick({
+  title: true,
+  positionId: true,
+  departmentId: true,
+  content: true,
+  fileUrl: true,
+});
+
+export type JobDescription = typeof jobDescriptions.$inferSelect;
+export type InsertJobDescription = z.infer<typeof insertJobDescriptionSchema>;
+
+// Связи должностных инструкций с позициями и отделами
+export const jobDescriptionsRelations = relations(jobDescriptions, ({ one }) => ({
+  position: one(positions, {
+    fields: [jobDescriptions.positionId],
+    references: [positions.id],
+  }),
+  department: one(departments, {
+    fields: [jobDescriptions.departmentId],
+    references: [departments.id],
+  }),
+}));
+
 // Документы в базе знаний
 export const knowledgeDocuments = pgTable("knowledge_documents", {
   id: serial("id").primaryKey(),
