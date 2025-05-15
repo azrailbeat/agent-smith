@@ -200,11 +200,13 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
     mutationFn: ({ requestId, actionType }: { requestId: number, actionType: string }) => {
       return apiRequest('POST', `/api/citizen-requests/${requestId}/process-with-agent`, { 
         agentId: citizenRequestAgents[0]?.id || 640, 
-        actionType 
+        action: actionType // Исправлено: параметр 'action' вместо 'actionType'
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/citizen-requests"] });
+      // Логируем успешный ответ для отладки
+      console.log("AI processing successful response:", data);
       toast({
         title: "Обращение обработано",
         description: "Обращение успешно обработано ИИ агентом",
@@ -384,10 +386,25 @@ const TrelloStyleRequestDetailView: React.FC<TrelloStyleRequestDetailViewProps> 
       if (onProcess) {
         await onProcess(request.id, selectedAction);
       } else {
-        await processWithAgentMutation.mutate({ requestId: request.id, actionType: selectedAction });
+        console.log("Отправка запроса на обработку ИИ:", {
+          requestId: request.id,
+          agentId: citizenRequestAgents[0]?.id || 640,
+          actionType: selectedAction
+        });
+        
+        // Используем мутацию через Promise для корректной обработки ошибок
+        await processWithAgentMutation.mutateAsync({ 
+          requestId: request.id, 
+          actionType: selectedAction 
+        });
       }
     } catch (error) {
       console.error('Error processing with agent:', error);
+      toast({
+        title: "Ошибка обработки",
+        description: error instanceof Error ? error.message : "Не удалось обработать обращение с помощью ИИ",
+        variant: "destructive",
+      });
       setIsProcessing(false);
     }
   };
