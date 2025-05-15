@@ -12,12 +12,49 @@ import { processRequestByOrgStructure } from './org-structure';
 import { recordToBlockchain, BlockchainRecordType } from '../blockchain';
 import { enrichPromptWithRAG } from './vector-store';
 import axios from 'axios';
+import { eOtinishService } from '../integrations/eotinish-service';
 
 // Интерфейс для интеграции с eOtinish.kz
 interface EOtinishAPIConfig {
   apiUrl: string;
   apiToken: string;
   orgId: string;
+}
+
+/**
+ * Синхронизирует обращения из системы eOtinish
+ * @param limit Максимальное количество обращений для синхронизации
+ * @returns Результат синхронизации
+ */
+export async function synchronizeRequestsFromEOtinish(limit: number = 50): Promise<any> {
+  console.log(`Запуск синхронизации с eOtinish (лимит: ${limit})`);
+  
+  try {
+    // Используем сервис eOtinish для получения обращений
+    const syncResult = await eOtinishService.syncFromEOtinish(limit);
+    
+    // Логирование активности
+    await logActivity({
+      action: ActivityType.SYSTEM_EVENT,
+      entityType: 'eotinish_sync',
+      details: `Выполнена синхронизация с eOtinish. Получено ${syncResult.imported} обращений.`,
+      metadata: syncResult
+    });
+    
+    return syncResult;
+  } catch (error) {
+    console.error('Ошибка при синхронизации с eOtinish:', error);
+    
+    // Логирование ошибки
+    await logActivity({
+      action: ActivityType.SYSTEM_ERROR,
+      entityType: 'eotinish_sync',
+      details: `Ошибка при синхронизации с eOtinish: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+      metadata: { error: String(error) }
+    });
+    
+    throw error;
+  }
 }
 
 /**
