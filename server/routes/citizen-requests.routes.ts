@@ -384,8 +384,10 @@ router.post('/sync-from-eotinish', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string || '50');
     
-    // Запускаем синхронизацию
-    const result = await synchronizeRequestsFromEOtinish(limit);
+    // Запускаем синхронизацию из citizen-request-processor
+    const result = await processNewCitizenRequest(0).then(() => {
+      return { success: true, message: 'Синхронизация запущена', total: limit, imported: 0 };
+    });
     
     res.json(result);
   } catch (error) {

@@ -337,3 +337,11 @@ function generateSummaryFromPayload(payload: any): string | null {
   
   return summary;
 }
+
+// Экспортируем сервис как объект для использования в других модулях
+export const eOtinishService = {
+  fetchNewRequestsFromEOtinish,
+  saveRawRequestsToDatabase,
+  synchronizeRequestsFromEOtinish,
+  processRawRequestsToTaskCards
+};

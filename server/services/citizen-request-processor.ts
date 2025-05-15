@@ -31,7 +31,9 @@ export async function synchronizeRequestsFromEOtinish(limit: number = 50): Promi
   
   try {
     // Используем сервис eOtinish для получения обращений
-    const syncResult = await eOtinishService.syncFromEOtinish(limit);
+    const syncResult = await eOtinishService.synchronizeRequestsFromEOtinish({
+      limit
+    });
     
     // Логирование активности
     await logActivity({
