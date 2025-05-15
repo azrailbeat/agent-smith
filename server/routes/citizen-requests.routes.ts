@@ -17,22 +17,36 @@ import path from 'path';
 import { parse as csvParse } from 'csv-parse/sync';
 import xlsx from 'xlsx';
 
+// Создаем директорию для загрузки файлов, если она не существует
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log(`Создана директория для загрузки файлов: ${uploadsDir}`);
+}
+
 // Настройка multer для загрузки файлов
 const upload = multer({
-  dest: 'uploads/',
+  dest: uploadsDir,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB макс. размер файла
   },
   fileFilter: (req, file, cb) => {
+    console.log(`Получен файл: ${file.originalname}, тип: ${file.mimetype}`);
     // Проверка типа файла (только CSV или Excel)
     if (
       file.mimetype === 'text/csv' ||
       file.mimetype === 'application/vnd.ms-excel' ||
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      // Дополнительные MIME-типы для поддержки разных браузеров
+      file.mimetype === 'application/csv' ||
+      file.mimetype === 'text/comma-separated-values' ||
+      file.mimetype === 'application/excel' ||
+      file.mimetype === 'application/x-csv'
     ) {
       cb(null, true);
     } else {
-      cb(new Error('Поддерживаются только файлы CSV и Excel'));
+      console.log(`Отклонен файл с неверным типом: ${file.mimetype}`);
+      cb(new Error(`Поддерживаются только файлы CSV и Excel. Получен: ${file.mimetype}`));
     }
   }
 });

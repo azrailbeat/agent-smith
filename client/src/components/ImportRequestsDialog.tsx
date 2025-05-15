@@ -161,6 +161,31 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
     
     // Сбрасываем состояние импорта при выборе нового файла
     if (file) {
+      // Проверяем формат файла
+      console.log(`Выбран файл: ${file.name}, тип: ${file.type}, размер: ${file.size} байт`);
+      
+      const isValidType = file.type === 'text/csv' || 
+                         file.type === 'application/vnd.ms-excel' || 
+                         file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                         file.name.endsWith('.csv') ||
+                         file.name.endsWith('.xls') ||
+                         file.name.endsWith('.xlsx');
+                         
+      if (!isValidType) {
+        toast({
+          title: 'Неверный формат файла',
+          description: 'Пожалуйста, выберите файл CSV или Excel (.xls, .xlsx)',
+          variant: 'destructive',
+        });
+        
+        // Сбрасываем выбранный файл
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        setSelectedFile(null);
+        return;
+      }
+      
       setImportStatus('idle');
       setUploadProgress(0);
       setImportResult(null);
@@ -184,9 +209,17 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
     setUploadProgress(0);
     setUploadError(null);
     
+    // Вывод дополнительной диагностики
+    console.log('Начинаем импорт файла:', selectedFile.name);
+    console.log('Тип файла:', selectedFile.type);
+    console.log('Размер файла:', selectedFile.size, 'байт');
+    
     // Создаем FormData для отправки файла
     const formData = new FormData();
     formData.append('file', selectedFile);
+    
+    // Проверяем, что файл добавлен в FormData
+    console.log('Файл добавлен в FormData:', formData.has('file'));
     
     // Запускаем мутацию
     importMutation.mutate(formData);
