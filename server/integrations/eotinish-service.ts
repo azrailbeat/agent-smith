@@ -62,7 +62,10 @@ export async function fetchNewRequestsFromEOtinish(lastSyncDate?: Date, limit: n
       throw new Error('Некорректный формат ответа от API eOtinish');
     }
     
-    return response.data.items;
+    const items = response.data.items;
+    
+    // Дополнительно ограничиваем количество возвращаемых элементов, если API не поддерживает параметр limit
+    return items.slice(0, limit);
   } catch (error) {
     console.error('Ошибка при получении обращений из eOtinish:', error);
     throw error;
