@@ -546,7 +546,8 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
       responsibleOrg: ['responsibleOrg', 'org', 'organization', 'организация'],
       externalId: ['externalId', 'id', 'external_id', 'внешний_идентификатор'],
       externalSource: ['externalSource', 'source', 'источник'],
-      externalRegNum: ['externalRegNum', 'regNum', 'reg_num', 'номер']
+      externalRegNum: ['externalRegNum', 'regNum', 'reg_num', 'номер'],
+      deadline: ['deadline', 'due_date', 'dueDate', 'срок_исполнения', 'срок']
     };
 
     // Определение функции для получения значения поля с учетом маппинга
@@ -579,7 +580,8 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
         responsibleOrg: getFieldValue(record, importMapping.responsibleOrg) || null,
         externalId: getFieldValue(record, importMapping.externalId) || null,
         externalSource: getFieldValue(record, importMapping.externalSource) || 'import',
-        externalRegNum: getFieldValue(record, importMapping.externalRegNum) || null
+        externalRegNum: getFieldValue(record, importMapping.externalRegNum) || null,
+        deadline: getFieldValue(record, importMapping.deadline) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // По умолчанию срок - 30 дней
       };
 
       // Добавляем данные гражданина, если доступны
