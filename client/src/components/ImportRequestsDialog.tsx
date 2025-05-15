@@ -96,12 +96,9 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
           response = await fetch('/api/citizen-requests/import-from-file', {
             method: 'POST',
             body: formData,
-            credentials: 'include',
-            headers: {
-              'Accept': 'application/json',
-              // Не устанавливаем Content-Type для multipart/form-data, 
-              // браузер это сделает автоматически с правильной границей (boundary)
-            }
+            // Не добавляем credentials: 'include', это может мешать передаче файла
+            // Не устанавливаем Content-Type для multipart/form-data, 
+            // браузер это сделает автоматически с правильной границей (boundary)
           });
           
           console.log('Получен ответ от сервера, статус:', response.status);
