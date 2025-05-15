@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -19,9 +19,20 @@ import {
   Key
 } from 'lucide-react';
 import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings';
+import { useLocation } from 'wouter';
 
 export default function Settings() {
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState('general');
+  
+  // Обработка tab параметра из URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['general', 'integrations', 'security'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location]);
 
   return (
     <div className="container mx-auto py-6">
@@ -186,20 +197,26 @@ export default function Settings() {
                   </CardContent>
                 </Card>
                 
-                <Card>
-                  <CardHeader>
+                <Card className="border-2 border-blue-100 shadow-md">
+                  <CardHeader className="bg-blue-50/50">
                     <CardTitle className="flex items-center">
-                      <Key className="mr-2 h-4 w-4" />
-                      Авторизация и RBAC
+                      <Shield className="mr-2 h-5 w-5 text-blue-600" />
+                      Управление доступом (RBAC)
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-3">
+                  <CardContent className="pt-4">
+                    <div className="flex flex-col gap-4">
                       <p className="text-sm text-muted-foreground">
-                        Управление ролями, правами доступа и пользователями системы
+                        Управление ролями, правами доступа и разграничение полномочий пользователей в системе.
+                        Интеграция с организационной структурой.
                       </p>
+                      <ul className="text-sm text-slate-600 space-y-1 pl-6 list-disc">
+                        <li>Управление ролями и разрешениями</li>
+                        <li>Разграничение доступа к функциям</li>
+                        <li>Назначение ролей пользователям</li>
+                      </ul>
                       <div className="flex justify-end">
-                        <Button variant="outline" size="sm" onClick={() => window.location.href = "/rbac"}>
+                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => window.location.href = "/rbac"}>
                           Управление RBAC
                         </Button>
                       </div>

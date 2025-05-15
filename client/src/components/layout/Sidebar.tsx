@@ -323,18 +323,13 @@ const Sidebar = ({
                       <span>Настройки</span>
                     </DropdownMenuItem>
                   </Link>
-                  <Link href="/security">
-                    <DropdownMenuItem>
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>Безопасность</span>
-                    </DropdownMenuItem>
-                  </Link>
                   <Link href="/settings?tab=security">
                     <DropdownMenuItem>
-                      <Key className="mr-2 h-4 w-4" />
-                      <span>Управление доступом</span>
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Безопасность и доступ</span>
                     </DropdownMenuItem>
                   </Link>
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
                     <LogOut className="mr-2 h-4 w-4" />

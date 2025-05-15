@@ -663,7 +663,7 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
                     <FormLabel>Родительский отдел</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
-                      defaultValue={field.value?.toString() || ""}
+                      defaultValue={field.value?.toString() || "none"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -671,8 +671,8 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Нет родительского отдела</SelectItem>
-                        {departments.map((department) => (
+                        <SelectItem value="none">Нет родительского отдела</SelectItem>
+                        {departments && departments.map((department) => (
                           <SelectItem key={department.id} value={department.id.toString()}>
                             {department.name}
                           </SelectItem>
@@ -746,7 +746,7 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
                     <FormLabel>Отдел</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value ? field.value.toString() : ""}
+                      defaultValue={field.value ? field.value.toString() : "1"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -754,7 +754,7 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {departments.map((department) => (
+                        {departments && departments.map((department) => (
                           <SelectItem key={department.id} value={department.id.toString()}>
                             {department.name}
                           </SelectItem>

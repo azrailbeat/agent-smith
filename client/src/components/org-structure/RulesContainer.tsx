@@ -2,19 +2,27 @@ import React, { useState } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
+import { Search } from "lucide-react";
 import RuleCard from './RuleCard';
 
 interface Rule {
   id: number;
-  title: string;
+  name: string;
   description: string;
   departmentId: number;
-  positionId?: number | null;
-  sourceType: string;
-  keywords: string[];
-  createdAt: string;
-  isActive: boolean;
+  positionId: number | null;
+  priority: number;
+}
+
+interface Department {
+  id: number;
+  name: string;
+}
+
+interface Position {
+  id: number;
+  name: string;
+  departmentId: number;
 }
 
 interface RulesContainerProps {
@@ -25,51 +33,65 @@ const RulesContainer: React.FC<RulesContainerProps> = ({ onAddRule }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // Загрузка правил с сервера
-  const { data: rules = [], isLoading } = useQuery({
+  const { data: rules = [], isLoading: isLoadingRules } = useQuery({
     queryKey: ['/api/org-structure/rules'],
     initialData: [
       {
         id: 1,
-        title: 'Запросы по ИТ-поддержке',
+        name: 'Запросы по ИТ-поддержке',
         description: 'Распределение запросов, связанных с технической поддержкой',
         departmentId: 3,
         positionId: null,
-        sourceType: 'Обращение гражданина',
-        keywords: ['ит', 'техподдержка', 'компьютер', 'принтер'],
-        createdAt: '05.05.2025',
-        isActive: true
+        priority: 80
       },
       {
         id: 2,
-        title: 'Юридические вопросы',
+        name: 'Юридические вопросы',
         description: 'Распределение запросов по правовым вопросам',
         departmentId: 5,
         positionId: null,
-        sourceType: 'Обращение гражданина',
-        keywords: ['закон', 'документ', 'право', 'юрист'],
-        createdAt: '05.05.2025',
-        isActive: true
+        priority: 75
       },
       {
         id: 3,
-        title: 'Кадровые вопросы',
+        name: 'Кадровые вопросы',
         description: 'Распределение запросов по трудоустройству и кадровой работе',
         departmentId: 4,
         positionId: null,
-        sourceType: 'Обращение гражданина',
-        keywords: ['работа', 'кадры', 'сотрудник', 'зарплата'],
-        createdAt: '05.05.2025',
-        isActive: true
+        priority: 70
       }
+    ]
+  });
+  
+  // Загрузка отделов
+  const { data: departments = [], isLoading: isLoadingDepts } = useQuery({
+    queryKey: ['/api/departments'],
+    initialData: [
+      { id: 1, name: 'Руководство' },
+      { id: 2, name: 'Канцелярия' },
+      { id: 3, name: 'ИТ отдел' },
+      { id: 4, name: 'Отдел кадров' },
+      { id: 5, name: 'Юридический отдел' }
+    ]
+  });
+  
+  // Загрузка должностей
+  const { data: positions = [], isLoading: isLoadingPositions } = useQuery({
+    queryKey: ['/api/positions'],
+    initialData: [
+      { id: 1, name: 'Директор', departmentId: 1 },
+      { id: 2, name: 'Заместитель директора', departmentId: 1 },
+      { id: 3, name: 'Руководитель ИТ отдела', departmentId: 3 },
+      { id: 4, name: 'Инженер', departmentId: 3 },
+      { id: 5, name: 'Юрист', departmentId: 5 }
     ]
   });
   
   // Фильтрация правил по поисковому запросу
   const filteredRules = searchTerm 
     ? rules.filter(rule => 
-        rule.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        rule.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rule.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()))
+        rule.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        rule.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : rules;
 
@@ -82,6 +104,21 @@ const RulesContainer: React.FC<RulesContainerProps> = ({ onAddRule }) => {
     console.log(`Удаление правила с ID: ${id}`);
     // Здесь будет логика удаления
   };
+  
+  // Получение имени отдела по ID
+  const getDepartmentName = (departmentId: number): string => {
+    const department = departments.find(d => d.id === departmentId);
+    return department ? department.name : 'Отдел не найден';
+  };
+  
+  // Получение имени должности по ID
+  const getPositionName = (positionId: number | null): string | undefined => {
+    if (!positionId) return undefined;
+    const position = positions.find(p => p.id === positionId);
+    return position ? position.name : undefined;
+  };
+  
+  const isLoading = isLoadingRules || isLoadingDepts || isLoadingPositions;
 
   return (
     <div>
@@ -110,20 +147,15 @@ const RulesContainer: React.FC<RulesContainerProps> = ({ onAddRule }) => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {filteredRules.map((rule) => (
             <RuleCard
               key={rule.id}
-              title={rule.title}
-              description={rule.description}
-              departmentId={rule.departmentId}
-              positionId={rule.positionId || undefined}
-              sourceType={rule.sourceType}
-              keywords={rule.keywords}
-              createdAt={rule.createdAt}
-              isActive={rule.isActive}
-              onEdit={() => handleEditRule(rule.id)}
-              onDelete={() => handleDeleteRule(rule.id)}
+              rule={rule}
+              departmentName={getDepartmentName(rule.departmentId)}
+              positionName={getPositionName(rule.positionId)}
+              onEdit={handleEditRule}
+              onDelete={handleDeleteRule}
             />
           ))}
         </div>
