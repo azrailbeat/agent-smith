@@ -548,19 +548,14 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
         // Обработка Excel (xls, xlsx)
         console.log('Обрабатываем Excel файл', originalFilename, 'размер:', req.file.size, 'байт');
         
-        // Увеличиваем лимит памяти для обработки больших файлов
-        const workbookOptions = {
-          cellFormula: false, // Отключаем формулы для экономии памяти
-          cellHTML: false,    // Отключаем HTML для экономии памяти
-          cellStyles: false,  // Отключаем стили для экономии памяти 
-          sheetStubs: true,   // Заполняем пустые ячейки
-          cellDates: true,    // Обрабатываем даты
-          bookVBA: false,     // Отключаем VBA для экономии памяти
-          WTF: false,         // Без отладочных данных
-        };
-        
-        // Читаем файл с оптимизированными настройками
-        const workbook = xlsx.readFile(filePath, workbookOptions);
+        // Максимально упрощаем опции для экономии памяти при больших файлах
+        // Используем минимальный набор необходимых опций
+        const workbook = xlsx.readFile(filePath, {
+          cellDates: true,    // Только это действительно нужно - правильно обрабатывать даты
+          raw: true,          // Получаем необработанные значения
+          sheetRows: 0,       // Без ограничений по строкам
+          sheets: 0           // Загружаем только первый лист для экономии памяти
+        });
         
         // Выбираем первый лист
         const firstSheetName = workbook.SheetNames[0];
@@ -572,17 +567,13 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
           throw new Error('Не удалось получить доступ к листу Excel');
         }
         
-        // Обработка в блоках для экономии памяти при очень больших файлах
-        const sheetToJsonOptions = {
-          header: 1,          // Первая строка как заголовок
-          defval: '',         // Значение по умолчанию для пустых ячеек
-          raw: false,         // Преобразовать в JS-типы
-          dateNF: 'yyyy-mm-dd', // Формат даты
-          blankrows: false    // Пропускать пустые строки
-        };
-        
-        // Получаем данные листа
-        const rawData = xlsx.utils.sheet_to_json(worksheet, sheetToJsonOptions);
+        // Минимизируем опции для экономии памяти
+        // Получаем данные листа напрямую
+        const rawData = xlsx.utils.sheet_to_json(worksheet, {
+          header: 1,        // Первая строка как заголовок
+          raw: true,        // Получаем необработанные значения
+          blankrows: false  // Пропускаем пустые строки - это важно для больших файлов
+        });
         
         // Убеждаемся, что у нас есть строки
         if (rawData.length < 2) {
@@ -704,6 +695,17 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
     // Сохраняем обращения в базу данных
     let createdRequests = [];
     let errors = [];
+    
+    // Периодически очищаем память при обработке больших файлов
+    if (typeof global.gc === 'function') {
+      try {
+        // Принудительный вызов сборщика мусора если возможно
+        global.gc();
+        console.log("Выполнена принудительная сборка мусора");
+      } catch (gcError) {
+        console.log("Не удалось вызвать сборщик мусора:", gcError);
+      }
+    }
 
     for (const request of citizenRequests) {
       try {
