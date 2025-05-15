@@ -503,7 +503,7 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
   console.log('Body:', Object.keys(req.body || {}));
   
   // Обработка ошибок multer (например, если файл слишком большой)
-  const fileError = req.fileValidationError || (req as any).multerError;
+  const fileError = (req as any).fileValidationError || (req as any).multerError;
   if (fileError) {
     console.error('Ошибка валидации файла:', fileError);
     return res.status(400).json({ 
@@ -697,10 +697,10 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
     let errors = [];
     
     // Периодически очищаем память при обработке больших файлов
-    if (typeof global.gc === 'function') {
+    if (typeof process.gc === 'function') {
       try {
         // Принудительный вызов сборщика мусора если возможно
-        global.gc();
+        process.gc();
         console.log("Выполнена принудительная сборка мусора");
       } catch (gcError) {
         console.log("Не удалось вызвать сборщик мусора:", gcError);
