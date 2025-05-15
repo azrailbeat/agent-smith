@@ -536,7 +536,15 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
 
     // Обработка в зависимости от типа файла
     try {
-      if (originalFilename.toLowerCase().endsWith('.csv')) {
+      const mimeType = req.file.mimetype.toLowerCase();
+      const fileExt = originalFilename.toLowerCase().split('.').pop() || '';
+      console.log('MIME тип файла:', mimeType);
+      console.log('Расширение файла:', fileExt);
+      
+      // Проверяем MIME типы и расширения для CSV
+      if (fileExt === 'csv' || 
+          mimeType === 'text/csv' || 
+          mimeType === 'application/csv') {
         // Обработка CSV
         console.log('Обрабатываем CSV файл');
         const content = fs.readFileSync(filePath, 'utf8');
@@ -544,9 +552,21 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
           columns: true,
           skip_empty_lines: true
         });
-      } else if (originalFilename.toLowerCase().endsWith('.xlsx') || originalFilename.toLowerCase().endsWith('.xls')) {
+      } else if (
+        // Проверяем различные расширения и MIME типы для Excel
+        fileExt === 'xlsx' || 
+        fileExt === 'xls' || 
+        mimeType === 'application/vnd.ms-excel' || 
+        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        mimeType === 'application/excel' ||
+        mimeType === 'application/x-excel' ||
+        // Нестандартные MIME типы, которые могут отправляться некоторыми системами
+        mimeType === 'application/msexcel' ||
+        mimeType === 'application/x-msexcel' ||
+        mimeType === 'application/octet-stream'
+      ) {
         // Обработка Excel (xls, xlsx)
-        console.log('Обрабатываем Excel файл', originalFilename, 'размер:', req.file.size, 'байт');
+        console.log('Обрабатываем Excel файл', originalFilename, 'размер:', req.file.size, 'байт', 'MIME тип:', mimeType);
         
         // Максимально упрощаем опции для экономии памяти при больших файлах
         // Используем минимальный набор необходимых опций

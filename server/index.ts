@@ -4,8 +4,10 @@ import { setupVite, serveStatic, log } from "./vite";
 
 // Объявляем глобальный интерфейс для доступа к сборщику мусора
 declare global {
-  interface NodeJS {
-    gc: () => void;
+  namespace NodeJS {
+    interface Process {
+      gc?: () => void;
+    }
   }
 }
 

@@ -594,4 +594,4 @@ function mapEOtinishStatus(eotinishStatus: string): string {
 }
 
 // Экспортируем функции для использования в других модулях
-export { synchronizeRequestsFromEOtinish, processNewCitizenRequest, generateResponseForRequest };
+// Функции уже экспортированы выше
