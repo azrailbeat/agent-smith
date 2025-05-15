@@ -13,6 +13,7 @@ import {
   Calendar,
   MessageSquare,
   ChevronLeft,
+  Building,
   ChevronRight,
   Users,
   FileCheck,
