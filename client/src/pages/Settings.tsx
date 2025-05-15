@@ -16,17 +16,9 @@ import {
   Globe, 
   BarChart4, 
   Shield, 
-  Key,
-  Cpu,
-  Brain,
-  Building
+  Key
 } from 'lucide-react';
 import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings';
-import { MonitoringSettings } from '@/components/settings/MonitoringSettings';
-import { PerplexitySettings } from '@/components/settings/PerplexitySettings';
-import LlmProviderSettings from '@/components/settings/LlmProviderSettings';
-import OrgStructureManagement from '@/pages/OrgStructureManagement';
-import RbacManagement from '@/pages/RbacManagement';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -116,8 +108,7 @@ export default function Settings() {
                 </Card>
               </div>
               
-              {/* Настройки Perplexity API */}
-              <PerplexitySettings />
+              {/* Информация о системе */}
               
               <Card>
                 <CardHeader>
@@ -160,61 +151,14 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Вкладка AI моделей */}
-        <TabsContent value="ai-models" className="space-y-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold flex items-center">
-              <Brain className="mr-2 h-6 w-6" />
-              Настройки моделей искусственного интеллекта
-            </h2>
-          </div>
-          
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Настройки LLM провайдеров</CardTitle>
-              <CardDescription>
-                Управление провайдерами языковых моделей (LLM) для Agent Smith
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LlmProviderSettings />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Настройки Perplexity API</CardTitle>
-              <CardDescription>
-                Устаревший интерфейс настроек Perplexity (рекомендуется использовать LLM провайдеры выше)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PerplexitySettings />
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Вкладка организационной структуры */}
-        <TabsContent value="org-structure" className="space-y-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold flex items-center">
-              <Building className="mr-2 h-6 w-6" />
-              Управление организационной структурой
-            </h2>
-          </div>
-          
-          <OrgStructureManagement standalone={false} />
-        </TabsContent>
 
         {/* Вкладка интеграций */}
         <TabsContent value="integrations">
           <IntegrationsSettings />
         </TabsContent>
 
-        {/* Вкладка мониторинга */}
-        <TabsContent value="monitoring">
-          <MonitoringSettings />
-        </TabsContent>
+
 
         {/* Вкладка безопасности */}
         <TabsContent value="security" className="space-y-6">
