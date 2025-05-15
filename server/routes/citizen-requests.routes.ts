@@ -28,7 +28,7 @@ if (!fs.existsSync(uploadsDir)) {
 const upload = multer({
   dest: uploadsDir,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB макс. размер файла
+    fileSize: 50 * 1024 * 1024, // 50MB макс. размер файла (увеличено с 10MB)
   },
   fileFilter: (req, file, cb) => {
     console.log(`Получен файл: ${file.originalname}, тип: ${file.mimetype}`);
@@ -41,7 +41,11 @@ const upload = multer({
       file.mimetype === 'application/csv' ||
       file.mimetype === 'text/comma-separated-values' ||
       file.mimetype === 'application/excel' ||
-      file.mimetype === 'application/x-csv'
+      file.mimetype === 'application/x-csv' ||
+      // Поддержка файлов с нестандартными MIME-типами по расширению
+      file.originalname.toLowerCase().endsWith('.csv') ||
+      file.originalname.toLowerCase().endsWith('.xls') ||
+      file.originalname.toLowerCase().endsWith('.xlsx')
     ) {
       cb(null, true);
     } else {
@@ -492,6 +496,17 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
   console.log('Content-Type:', req.get('Content-Type'));
   console.log('Body:', Object.keys(req.body || {}));
   
+  // Обработка ошибок multer (например, если файл слишком большой)
+  const fileError = req.fileValidationError || (req as any).multerError;
+  if (fileError) {
+    console.error('Ошибка валидации файла:', fileError);
+    return res.status(400).json({ 
+      error: fileError instanceof Error 
+        ? fileError.message 
+        : 'Ошибка валидации файла' 
+    });
+  }
+  
   try {
     console.log('Получен запрос на импорт файла');
     
@@ -525,8 +540,25 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
         });
       } else if (originalFilename.toLowerCase().endsWith('.xlsx') || originalFilename.toLowerCase().endsWith('.xls')) {
         // Обработка Excel (xls, xlsx)
-        console.log('Обрабатываем Excel файл');
-        const workbook = xlsx.readFile(filePath);
+        console.log('Обрабатываем Excel файл', originalFilename, 'размер:', req.file.size, 'байт');
+        
+        // Увеличиваем лимит памяти для обработки больших файлов
+        const workbookOptions = {
+          type: 'buffer',
+          cellFormula: false, // Отключаем формулы для экономии памяти
+          cellHTML: false,    // Отключаем HTML для экономии памяти
+          cellStyles: false,  // Отключаем стили для экономии памяти 
+          sheetStubs: true,   // Заполняем пустые ячейки
+          cellDates: true,    // Обрабатываем даты
+          bookVBA: false,     // Отключаем VBA для экономии памяти
+          bookNanoXLSX: false, // Отключаем nanoXLSX для экономии памяти
+          WTF: false,         // Без отладочных данных
+        };
+        
+        // Читаем файл с оптимизированными настройками
+        const workbook = xlsx.readFile(filePath, workbookOptions);
+        
+        // Выбираем первый лист
         const firstSheetName = workbook.SheetNames[0];
         if (!firstSheetName) {
           throw new Error('Excel файл не содержит листов');
@@ -535,7 +567,47 @@ router.post('/import-from-file', upload.single('file'), async (req: Request, res
         if (!worksheet) {
           throw new Error('Не удалось получить доступ к листу Excel');
         }
-        records = xlsx.utils.sheet_to_json(worksheet);
+        
+        // Обработка в блоках для экономии памяти при очень больших файлах
+        const sheetToJsonOptions = {
+          header: 1,          // Первая строка как заголовок
+          defval: '',         // Значение по умолчанию для пустых ячеек
+          raw: false,         // Преобразовать в JS-типы
+          dateNF: 'yyyy-mm-dd', // Формат даты
+          blankrows: false    // Пропускать пустые строки
+        };
+        
+        // Получаем данные листа
+        const rawData = xlsx.utils.sheet_to_json(worksheet, sheetToJsonOptions);
+        
+        // Убеждаемся, что у нас есть строки
+        if (rawData.length < 2) {
+          throw new Error('Excel файл не содержит данных или заголовков');
+        }
+        
+        // Первая строка - заголовки
+        const headers = rawData[0];
+        
+        // Преобразуем строки в объекты с заголовками
+        records = [];
+        for (let i = 1; i < rawData.length; i++) {
+          const row = rawData[i];
+          const record: Record<string, any> = {};
+          
+          // Собираем объект с полями
+          for (let j = 0; j < headers.length; j++) {
+            if (headers[j]) { // Пропускаем пустые заголовки
+              record[headers[j]] = row[j] || '';
+            }
+          }
+          
+          // Добавляем запись только если у нее есть непустые поля
+          if (Object.keys(record).length > 0) {
+            records.push(record);
+          }
+        }
+        
+        console.log(`Обработано ${records.length} записей из Excel файла`);
       } else {
         throw new Error(`Неподдерживаемый формат файла: ${originalFilename}`);
       }

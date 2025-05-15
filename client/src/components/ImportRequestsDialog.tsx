@@ -92,14 +92,25 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
         console.log('Отправка запроса на импорт файла...');
         
         let response;
+        let abortController = new AbortController();
+        
+        // Установка таймаута для запроса
+        const timeoutId = setTimeout(() => {
+          abortController.abort();
+        }, 120000); // 2 минуты таймаут для больших файлов
+        
         try {
           response = await fetch('/api/citizen-requests/import-from-file', {
             method: 'POST',
             body: formData,
-            credentials: 'include' // Восстанавливаем credentials для работы аутентификации
+            credentials: 'include', // Восстанавливаем credentials для работы аутентификации
+            signal: abortController.signal, // Добавляем signal для возможности отмены запроса
             // Не устанавливаем Content-Type для multipart/form-data, 
             // браузер это сделает автоматически с правильной границей (boundary)
           });
+          
+          // Очищаем таймаут, если запрос успешно завершился
+          clearTimeout(timeoutId);
           
           console.log('Получен ответ от сервера, статус:', response.status);
           
@@ -129,7 +140,16 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
           
           const result = await response.json();
           return result as ImportResult;
-        } catch (fetchError) {
+        } catch (fetchError: any) {
+          // Очищаем таймаут в случае ошибки
+          clearTimeout(timeoutId);
+          
+          // Проверяем, была ли ошибка из-за превышения времени ожидания
+          if (fetchError.name === 'AbortError') {
+            console.log('Запрос отменен из-за таймаута');
+            throw new Error('Превышено время ожидания ответа от сервера. Возможно, файл слишком большой или сервер перегружен.');
+          }
+          
           console.log('Ошибка сетевого запроса:', fetchError);
           throw fetchError;
         }
