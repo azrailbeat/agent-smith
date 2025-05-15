@@ -88,8 +88,11 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
           });
         }, 300);
         
-        const response = await apiRequest<ImportResult>('POST', '/api/citizen-requests/import-from-file', formData, {
-          rawResponse: true
+        // Создаем объект запроса вручную, а не через apiRequest
+        const response = await fetch('/api/citizen-requests/import-from-file', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
         });
         
         // Останавливаем интервал прогресса
@@ -99,8 +102,15 @@ const ImportRequestsDialog: React.FC<ImportRequestsDialogProps> = ({
         setUploadProgress(100);
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Ошибка при импорте обращений');
+          let errorMessage = 'Ошибка при импорте обращений';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            // Если не удалось распарсить JSON, используем текст ответа
+            errorMessage = await response.text() || errorMessage;
+          }
+          throw new Error(errorMessage);
         }
         
         const result = await response.json();

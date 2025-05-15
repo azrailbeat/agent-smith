@@ -89,7 +89,8 @@ export interface IStorage {
   deleteAgent(id: number): Promise<boolean>;
   
   // Citizen Request operations
-  getCitizenRequests(): Promise<CitizenRequest[]>;
+  getCitizenRequests(filters?: any): Promise<CitizenRequest[]>;
+  countCitizenRequests(filters?: any): Promise<number>;
   getCitizenRequest(id: number): Promise<CitizenRequest | undefined>;
   getCitizenRequestByExternalId(externalId: string, externalSource?: string): Promise<CitizenRequest | undefined>;
   createCitizenRequest(request: InsertCitizenRequest): Promise<CitizenRequest>;
