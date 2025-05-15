@@ -96,6 +96,8 @@ export const positions = pgTable("positions", {
   level: integer("level").default(0), // Организационный уровень (0 - руководитель, 1 - зам и т.д.)
   canApprove: boolean("can_approve").default(false),
   canAssign: boolean("can_assign").default(false),
+  // Связь с AI-агентом для автоматизации
+  agentId: integer("agent_id").references(() => agents.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -106,6 +108,7 @@ export const insertPositionSchema = createInsertSchema(positions).pick({
   level: true,
   canApprove: true,
   canAssign: true,
+  agentId: true,
 });
 
 // Users schema
@@ -314,6 +317,8 @@ export const insertSystemStatusSchema = createInsertSchema(systemStatus).pick({
 });
 
 // Relations definitions
+// Relations между positions и departments, agents определены ниже
+
 export const usersRelations = relations(users, ({ many }) => ({
   createdTasks: many(tasks, { relationName: "user_created_tasks" }),
   assignedTasks: many(tasks, { relationName: "user_assigned_tasks" }),
@@ -650,6 +655,10 @@ export const positionsRelations = relations(positions, ({ one, many }) => ({
   department: one(departments, {
     fields: [positions.departmentId],
     references: [departments.id],
+  }),
+  agent: one(agents, {
+    fields: [positions.agentId],
+    references: [agents.id],
   }),
 }));
 

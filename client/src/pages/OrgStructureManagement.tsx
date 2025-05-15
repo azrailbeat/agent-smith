@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Building, User, Plus, Edit, PenSquare, Search, Mail, Settings, Users, FileText } from "lucide-react";
+import { Building, User, Plus, Edit, PenSquare, Search, Mail, Settings, Users, FileText, Bot } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,12 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import RulesContainer from "@/components/org-structure/RulesContainer";
 import DraggableOrgStructure from "@/components/org-structure/DraggableOrgStructure";
+import AssignAgentDialog from "@/components/org-structure/AssignAgentDialog";
+
+// Расширенный интерфейс Position с полем agentId для назначения ИИ агентов
+interface PositionWithAgent extends Position {
+  agentId?: number | null;
+}
 
 // Определение типов данных
 interface Department {
@@ -123,7 +129,15 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
   const [isAddPositionOpen, setIsAddPositionOpen] = useState(false);
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [isAddRuleOpen, setIsAddRuleOpen] = useState(false);
+  const [isAssignAgentOpen, setIsAssignAgentOpen] = useState(false);
   const [selectedDepartmentForPosition, setSelectedDepartmentForPosition] = useState<number | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<{
+    id: number;
+    name: string;
+    departmentId: number;
+    departmentName: string;
+    agentId: number | null;
+  } | null>(null);
 
   // Получение данных
   const { data: departments = [], isLoading: isLoadingDepts } = useQuery({
@@ -413,9 +427,27 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
                   <div key={position.id} className="flex items-center p-2 bg-muted/50 rounded">
                     <User className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-sm">{position.name}</span>
-                    <Badge variant="outline" className="ml-auto text-xs">
+                    <Badge variant="outline" className="ml-auto text-xs mr-2">
                       Уровень: {position.level}
                     </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6" 
+                      onClick={() => {
+                        const dept = departments.find(d => d.id === position.departmentId);
+                        setSelectedPosition({
+                          id: position.id,
+                          name: position.name,
+                          departmentId: position.departmentId,
+                          departmentName: dept ? dept.name : "Отдел",
+                          agentId: position.agentId || null
+                        });
+                        setIsAssignAgentOpen(true);
+                      }}
+                    >
+                      <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -998,6 +1030,21 @@ export default function OrgStructureManagement({ standalone = true }: OrgStructu
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Диалог назначения ИИ агента на должность */}
+      {selectedPosition && (
+        <AssignAgentDialog
+          isOpen={isAssignAgentOpen}
+          onClose={() => {
+            setIsAssignAgentOpen(false);
+            setSelectedPosition(null);
+          }}
+          positionId={selectedPosition.id}
+          positionName={selectedPosition.name}
+          departmentName={selectedPosition.departmentName}
+          currentAgentId={selectedPosition.agentId}
+        />
+      )}
     </div>
   );
 }

@@ -22,20 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Info } from 'lucide-react';
 
-interface Agent {
-  id: number;
-  name: string;
-  type: string;
-  description: string;
-  isActive: boolean;
-}
-
-interface Position {
-  id: number;
-  name: string;
-  departmentId: number;
-  level: number;
-}
+import { Agent, Position } from "@shared/schema";
 
 interface AssignAgentDialogProps {
   isOpen: boolean;
@@ -59,7 +46,7 @@ const AssignAgentDialog: React.FC<AssignAgentDialogProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(currentAgentId || null);
 
   // Загрузка списка агентов
-  const { data: agents = [], isLoading: isLoadingAgents } = useQuery({
+  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<Agent[]>({
     queryKey: ['/api/agents'],
     enabled: isOpen,
   });
@@ -102,7 +89,7 @@ const AssignAgentDialog: React.FC<AssignAgentDialogProps> = ({
   }, [isOpen, currentAgentId]);
 
   // Получение выбранного агента
-  const selectedAgent = agents.find((agent: Agent) => agent.id === selectedAgentId);
+  const selectedAgent = agents.find((agent) => agent.id === selectedAgentId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -126,7 +113,7 @@ const AssignAgentDialog: React.FC<AssignAgentDialogProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Нет агента (человек)</SelectItem>
-                {agents.map((agent: Agent) => (
+                {agents.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id.toString()}>
                     {agent.name} ({agent.type})
                   </SelectItem>
