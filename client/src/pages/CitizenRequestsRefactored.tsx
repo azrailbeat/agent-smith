@@ -190,19 +190,29 @@ const CitizenRequests = () => {
   });
   
   // Загрузка списка обращений
-  const { data: citizenRequests = [], isLoading } = useQuery<CitizenRequest[]>({
+  const { data: citizenRequests = [], isLoading, isError } = useQuery<CitizenRequest[]>({
     queryKey: ["/api/citizen-requests"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/citizen-requests");
-        if (!response.ok) throw new Error("Ошибка при загрузке обращений");
+        // Добавляем параметры для сортировки и пагинации
+        const response = await fetch("/api/citizen-requests?sortBy=createdAt&sortOrder=desc&limit=100");
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Ошибка при загрузке обращений. Статус:", response.status, "Текст:", errorText);
+          throw new Error(`Ошибка при загрузке обращений: ${response.status} ${errorText}`);
+        }
+        
         return await response.json();
       } catch (error) {
         console.error("Ошибка при загрузке обращений:", error);
-        // Возвращаем пустой массив в случае ошибки
-        return [];
+        // Генерируем ошибку, чтобы React Query выполнил повторный запрос
+        throw error;
       }
     },
+    // Добавляем опции для повторных попыток и интервала повторных запросов
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Загрузка списка агентов
@@ -218,6 +228,17 @@ const CitizenRequests = () => {
       // Оставляем только первое вхождение каждого имени агента
       index === self.findIndex(a => a.name === agent.name)
     );
+    
+  // Показываем сообщение об ошибке, если не удалось загрузить обращения
+  React.useEffect(() => {
+    if (isError) {
+      toast({
+        title: "Ошибка загрузки данных",
+        description: "Не удалось загрузить список обращений. Пожалуйста, попробуйте обновить страницу.",
+        variant: "destructive",
+      });
+    }
+  }, [isError, toast]);
 
   // Мутация для создания обращения
   const createRequestMutation = useMutation({

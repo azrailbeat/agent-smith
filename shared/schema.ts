@@ -673,6 +673,79 @@ export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Position = typeof positions.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
 
+// Raw Requests из eOtinish (сырые данные)
+export const rawRequests = pgTable("raw_requests", {
+  id: serial("id").primaryKey(),
+  sourceId: text("source_id").unique(), // Внешний ID из eOtinish
+  payload: jsonb("payload").notNull(), // Полный JSON из API
+  ingestedAt: timestamp("ingested_at").defaultNow(),
+  processed: boolean("processed").default(false), // Обработано ли в task_cards
+  error: text("error"), // Ошибка при обработке
+});
+
+export const insertRawRequestSchema = createInsertSchema(rawRequests).pick({
+  sourceId: true,
+  payload: true,
+});
+
+export type RawRequest = typeof rawRequests.$inferSelect;
+export type InsertRawRequest = z.infer<typeof insertRawRequestSchema>;
+
+// Task Cards - карточки запросов для канбана
+export const taskCards = pgTable("task_cards", {
+  id: serial("id").primaryKey(),
+  rawRequestId: integer("raw_request_id").references(() => rawRequests.id),
+  status: text("status").notNull().default("new"), // new, in_progress, awaiting_confirmation, done
+  assignedTo: integer("assigned_to"), // User ID
+  departmentId: integer("department_id").references(() => departments.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  
+  // Основная информация о запросе
+  title: text("title").notNull(), // Тема запроса 
+  fullName: text("full_name").notNull(), // ФИО заявителя
+  contactInfo: text("contact_info").notNull(), // Контактная информация
+  requestType: text("request_type").notNull(), // Тип обращения
+  description: text("description").notNull(), // Текст обращения
+  priority: text("priority").default("medium"), // Приоритет
+  
+  // Поля для AI обработки
+  aiProcessed: boolean("ai_processed").default(false),
+  aiClassification: text("ai_classification"), // Результат классификации
+  aiSuggestion: text("ai_suggestion"), // Предложения от AI
+  responseText: text("response_text"), // Сгенерированный ответ
+  
+  // Поля для отслеживания статуса
+  startedAt: timestamp("started_at"), // Когда взято в работу
+  completedAt: timestamp("completed_at"), // Когда выполнено
+  confirmedAt: timestamp("confirmed_at"), // Когда подтверждено
+  deadline: timestamp("deadline"), // Крайний срок
+  overdue: boolean("overdue").default(false), // Просрочено
+  
+  // Блокчейн и история
+  blockchainHash: text("blockchain_hash"), // Хэш записи в блокчейне
+  
+  // Вложения и метаданные
+  attachments: text("attachments").array(),
+  metadata: jsonb("metadata"), // Доп. информация
+  summary: text("summary"), // Краткое содержание (AI)
+});
+
+export const insertTaskCardSchema = createInsertSchema(taskCards)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    aiProcessed: true,
+    startedAt: true,
+    completedAt: true,
+    confirmedAt: true,
+  });
+
+export type TaskCard = typeof taskCards.$inferSelect;
+export type InsertTaskCard = z.infer<typeof insertTaskCardSchema>;
+
+// Для обратной совместимости оставляем таблицу citizen_requests
 // Citizen Requests schema
 export const citizenRequests = pgTable("citizen_requests", {
   id: serial("id").primaryKey(),
@@ -720,6 +793,64 @@ export const citizenRequests = pgTable("citizen_requests", {
   citizenInfo: jsonb("citizen_info"), // Доп. информация о гражданине
   summary: text("summary"), // Краткое содержание обращения (AI)
 });
+
+// История изменений статусов карточек
+export const taskCardHistory = pgTable("task_card_history", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").references(() => taskCards.id).notNull(),
+  previousStatus: text("previous_status"),
+  newStatus: text("new_status").notNull(),
+  userId: integer("user_id"),
+  timestamp: timestamp("timestamp").defaultNow(),
+  comment: text("comment"),
+  metadata: jsonb("metadata"),
+  blockchainHash: text("blockchain_hash"),
+});
+
+export const insertTaskCardHistorySchema = createInsertSchema(taskCardHistory).pick({
+  cardId: true,
+  previousStatus: true,
+  newStatus: true,
+  userId: true,
+  comment: true,
+  metadata: true,
+  blockchainHash: true,
+});
+
+export type TaskCardHistory = typeof taskCardHistory.$inferSelect;
+export type InsertTaskCardHistory = z.infer<typeof insertTaskCardHistorySchema>;
+
+// Добавляем отношения для новых таблиц
+export const rawRequestsRelations = relations(rawRequests, ({ many }) => ({
+  taskCards: many(taskCards),
+}));
+
+export const taskCardsRelations = relations(taskCards, ({ one, many }) => ({
+  rawRequest: one(rawRequests, {
+    fields: [taskCards.rawRequestId],
+    references: [rawRequests.id],
+  }),
+  assignedUser: one(users, {
+    fields: [taskCards.assignedTo],
+    references: [users.id],
+  }),
+  department: one(departments, {
+    fields: [taskCards.departmentId],
+    references: [departments.id],
+  }),
+  history: many(taskCardHistory),
+}));
+
+export const taskCardHistoryRelations = relations(taskCardHistory, ({ one }) => ({
+  taskCard: one(taskCards, {
+    fields: [taskCardHistory.cardId],
+    references: [taskCards.id],
+  }),
+  user: one(users, {
+    fields: [taskCardHistory.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertCitizenRequestSchema = createInsertSchema(citizenRequests)
   .omit({
