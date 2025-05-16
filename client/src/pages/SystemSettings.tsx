@@ -765,9 +765,53 @@ const IntegrationsSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Состояние для проверки API ключей
+  const [integrationStatus, setIntegrationStatus] = useState({
+    openai: false,
+    anthropic: false,
+    yandexGpt: false,
+    yandexSpeech: false,
+    eOtinish: false,
+    egov: false,
+    hyperledger: false,
+    supabase: false
+  });
+  
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  
   const { data: settings, isLoading } = useQuery<SystemSettings>({
     queryKey: ['/api/system/settings'],
   });
+  
+  // Функция для проверки статуса интеграций
+  const checkIntegrationStatus = async () => {
+    setIsCheckingStatus(true);
+    try {
+      const response = await fetch('/api/system/check-integrations');
+      if (response.ok) {
+        const status = await response.json();
+        setIntegrationStatus(status);
+        toast({
+          title: "Проверка интеграций завершена",
+          description: "Статус подключений обновлен"
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при проверке статуса интеграций:', error);
+      toast({
+        title: "Ошибка проверки",
+        description: "Не удалось проверить статус интеграций",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+  
+  // Проверяем статусы при загрузке компонента
+  React.useEffect(() => {
+    checkIntegrationStatus();
+  }, []);
   
   const updateSettingsMutation = useMutation({
     mutationFn: (newSettings: Partial<SystemSettings>) => {
@@ -779,6 +823,8 @@ const IntegrationsSettings = () => {
         title: 'Настройки интеграций обновлены',
         description: 'Изменения были успешно сохранены',
       });
+      // Проверяем статус после обновления настроек
+      checkIntegrationStatus();
     },
     onError: (error) => {
       toast({

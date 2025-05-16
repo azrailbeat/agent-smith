@@ -19,8 +19,42 @@ import {
   IntegrationSettings,
   SystemSettings
 } from './services/system-settings';
+import { testOpenAIConnection } from './services/openai';
 
 export function registerSystemRoutes(app: express.Express): void {
+  /**
+   * Проверка API ключей и интеграций
+   */
+  app.get('/api/system/check-integrations', async (req: Request, res: Response) => {
+    try {
+      const results = {
+        openai: false,
+        anthropic: false,
+        yandexGpt: false,
+        yandexSpeech: false,
+        eOtinish: false,
+        hyperledger: false,
+        supabase: false
+      };
+      
+      // Проверка OpenAI API ключа
+      const openaiSettings = getIntegrationSettings('openai');
+      if (openaiSettings?.enabled && openaiSettings?.settings?.apiKey) {
+        results.openai = await testOpenAIConnection(openaiSettings.settings.apiKey);
+      } else if (process.env.OPENAI_API_KEY) {
+        results.openai = await testOpenAIConnection();
+      }
+      
+      // Здесь будут добавлены проверки для других интеграций
+      // ...
+      
+      res.json(results);
+    } catch (error) {
+      console.error('Error checking integrations:', error);
+      res.status(500).json({ error: 'Failed to check integrations', details: error.message });
+    }
+  });
+  
   /**
    * Настройки интеграций
    */
