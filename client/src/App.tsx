@@ -15,7 +15,7 @@ import DashboardAnalytics from "@/pages/DashboardAnalytics";
 import Translate from "@/pages/Translate";
 import CitizenRequests from "@/pages/CitizenRequestsRefactored";
 import Meetings from "@/pages/Meetings";
-import Settings from "@/pages/Settings";
+import SystemSettings from "@/pages/SystemSettings";
 import NotFound from "@/pages/not-found";
 import AboutSystem from "@/pages/AboutSystem";
 import OrgStructureManagement2 from "@/pages/OrgStructureManagement2";
@@ -51,7 +51,7 @@ function Router() {
       <Route path="/company-knowledge" component={UnifiedCompanyKnowledge} />
       <Route path="/knowledge-base" component={UnifiedCompanyKnowledge} />
       <Route path="/profile" component={UserProfile} />
-      <Route path="/settings" component={Settings} />
+      <Route path="/settings" component={SystemSettings} />
       <Route path="/users" component={Users} />
       <Route path="/integration-settings">
         {() => {
