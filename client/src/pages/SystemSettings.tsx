@@ -16,6 +16,16 @@ interface SystemSettings {
     defaultLanguage: string;
     enableActivityLogging: boolean;
     enableBlockchainIntegration: boolean;
+    supportedLanguages?: string[];
+    vectorStore?: string;
+    fileStorage?: string;
+    enableBackups?: boolean;
+    analytics?: {
+      collectUsageMetrics: boolean;
+      reportInterval: string;
+    };
+    apiBaseUrl?: string;
+    apiEnabled?: boolean;
   };
   security: {
     enableLocalAuth: boolean;
@@ -29,14 +39,41 @@ interface SystemSettings {
       requireSpecialChars: boolean;
     };
     sessionTimeout: number;
+    ldapSettings?: {
+      serverUrl: string;
+      baseDn: string;
+      bindDn: string;
+      bindCredentials: string;
+    };
+    twoFactorMethod?: string;
+    rbacIntegrateWithOrgStructure?: boolean;
+    encryption?: {
+      algorithm: string;
+      keyRotationInterval: string;
+      enableAtRest: boolean;
+      enableInTransit: boolean;
+    };
+    audit?: {
+      retentionPeriod: string;
+      enableExport: boolean;
+    };
   };
   integrations: {
     openai: {
       enabled: boolean;
       apiKey: string;
       defaultModel: string;
+      baseUrl?: string;
+      testMode?: boolean;
+      temperature?: number;
     };
     anthropic: {
+      enabled: boolean;
+      apiKey: string;
+      defaultModel: string;
+      temperature?: number;
+    };
+    yandexGpt?: {
       enabled: boolean;
       apiKey: string;
       defaultModel: string;
@@ -44,16 +81,36 @@ interface SystemSettings {
     yandexSpeech: {
       enabled: boolean;
       apiKey: string;
+      defaultVoice?: string;
+      enableSTT?: boolean;
+      enableTTS?: boolean;
     };
-    eOtinish: {
+    eOtinish?: {
       enabled: boolean;
       apiEndpoint: string;
       authToken: string;
+      syncInterval?: string;
+      autoProcess?: boolean;
     };
-    hyperledger: {
+    egov?: {
+      enabled: boolean;
+      apiEndpoint: string;
+      certificate?: string;
+    };
+    hyperledger?: {
       enabled: boolean;
       nodeUrl: string;
       privateKey: string;
+      contractAddress?: string;
+      network?: string;
+      storeMeetings?: boolean;
+      storeRequests?: boolean;
+      storeVoting?: boolean;
+    };
+    supabase?: {
+      enabled: boolean;
+      url: string;
+      apiKey: string;
     };
   };
 }
