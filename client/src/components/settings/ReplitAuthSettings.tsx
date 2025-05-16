@@ -1,133 +1,123 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { Badge } from '@/components/ui/badge';
-import { Info, Check, RefreshCw } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface ReplitAuthSettingsProps {
-  settings: any;
+  settings: {
+    enabled: boolean;
+    primaryAuthMethod: boolean;
+    autoCreateUsers: boolean;
+    defaultRoles: string[];
+  };
+  onSettingsChange: (newSettings: any) => void;
 }
 
-export default function ReplitAuthSettings({ settings }: ReplitAuthSettingsProps) {
+export default function ReplitAuthSettings({ 
+  settings, 
+  onSettingsChange 
+}: ReplitAuthSettingsProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  // Мутация для обновления настроек Replit Auth
-  const updateSettingsMutation = useMutation({
-    mutationFn: (newSettings: any) => {
-      return apiRequest('PATCH', '/api/system/settings', newSettings);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/system/settings'] });
-      toast({
-        title: 'Настройки аутентификации обновлены',
-        description: 'Изменения были успешно сохранены',
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось обновить настройки аутентификации',
-        variant: 'destructive',
-      });
-    },
-  });
+  const [localSettings, setLocalSettings] = useState(settings);
 
-  // Проверка статуса интеграции с Replit
-  const checkReplitAuthMutation = useMutation({
-    mutationFn: () => {
-      return apiRequest('GET', '/api/system/check-replit-auth');
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: data.success 
-          ? 'Успешно подключено к Replit Auth' 
-          : 'Ошибка подключения к Replit Auth',
-        description: data.message,
-        variant: data.success ? 'default' : 'destructive',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось проверить подключение к Replit Auth',
-        variant: 'destructive',
-      });
-    },
-  });
+  const handleSwitchChange = (field: string) => (checked: boolean) => {
+    const updatedSettings = { ...localSettings, [field]: checked };
+    setLocalSettings(updatedSettings);
+    onSettingsChange(updatedSettings);
 
-  // Функция обновления настроек авторизации
-  const updateReplitAuthSettings = (enabled: boolean) => {
-    const security = settings.security || {};
-    
-    updateSettingsMutation.mutate({
-      security: {
-        ...security,
-        enableReplitAuth: enabled,
-      }
+    toast({
+      title: "Настройки Replit Auth обновлены",
+      description: `${field === 'enabled' 
+        ? `Аутентификация Replit ${checked ? 'включена' : 'отключена'}`
+        : field === 'primaryAuthMethod'
+        ? `Replit Auth ${checked ? 'установлена' : 'не установлена'} как основной метод входа в систему`
+        : `Автоматическое создание пользователей ${checked ? 'включено' : 'отключено'}`
+      }`,
     });
   };
 
-  // Получение значения из вложенной структуры с проверкой существования
-  const isReplitAuthEnabled = settings?.security?.enableReplitAuth || false;
-  
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
-          <CardTitle>Аутентификация через Replit</CardTitle>
-          <Badge variant={isReplitAuthEnabled ? 'default' : 'outline'}>
-            {isReplitAuthEnabled ? 'Активно' : 'Не активно'}
-          </Badge>
-        </div>
+      <CardHeader>
+        <CardTitle>Replit Auth</CardTitle>
         <CardDescription>
-          Интеграция аутентификации через Replit для единого входа пользователей
+          Настройки аутентификации через Replit. Позволяет пользователям входить
+          в систему с использованием аккаунта Replit.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex justify-between items-center">
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
           <div>
-            <div className="font-medium">Авторизация через Replit</div>
-            <div className="text-sm text-muted-foreground">
-              Позволяет пользователям входить в систему с помощью аккаунта Replit
-            </div>
+            <Label htmlFor="enable-replit-auth" className="font-medium">
+              Включить Replit Auth
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Разрешить пользователям входить через Replit
+            </p>
           </div>
           <Switch
-            checked={isReplitAuthEnabled}
-            onCheckedChange={updateReplitAuthSettings}
+            id="enable-replit-auth"
+            checked={localSettings.enabled}
+            onCheckedChange={handleSwitchChange('enabled')}
           />
         </div>
 
-        <div className="flex items-center gap-2 mt-4">
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="primary-auth-method" className="font-medium">
+              Использовать как основной метод аутентификации
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Установить Replit Auth как предпочтительный метод входа в систему
+            </p>
+          </div>
+          <Switch
+            id="primary-auth-method"
+            checked={localSettings.primaryAuthMethod}
+            disabled={!localSettings.enabled}
+            onCheckedChange={handleSwitchChange('primaryAuthMethod')}
+          />
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="auto-create-users" className="font-medium">
+              Автоматически создавать пользователей
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Создавать новых пользователей при первом входе через Replit
+            </p>
+          </div>
+          <Switch
+            id="auto-create-users"
+            checked={localSettings.autoCreateUsers}
+            disabled={!localSettings.enabled}
+            onCheckedChange={handleSwitchChange('autoCreateUsers')}
+          />
+        </div>
+
+        <div className="pt-4">
           <Button 
             variant="outline" 
-            size="sm"
-            onClick={() => checkReplitAuthMutation.mutate()}
-            disabled={checkReplitAuthMutation.isPending}
+            className="w-full"
+            disabled={!localSettings.enabled}
+            onClick={() => {
+              window.open('/api/login', '_blank');
+              toast({
+                title: "Тестирование аутентификации",
+                description: "Открываем страницу входа через Replit в новой вкладке",
+              });
+            }}
           >
-            {checkReplitAuthMutation.isPending ? (
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            Проверить соединение
+            Тестировать аутентификацию Replit
           </Button>
-        </div>
-        
-        <div className="bg-muted p-3 rounded-md flex items-start mt-3">
-          <Info className="h-5 w-5 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-muted-foreground">
-            <p>Для работы аутентификации Replit требуется наличие следующих переменных окружения:</p>
-            <ul className="list-disc pl-4 mt-1">
-              <li>REPLIT_DOMAINS - доменное имя вашего проекта Replit</li>
-              <li>REPL_ID - идентификатор вашего проекта Replit</li>
-              <li>SESSION_SECRET - секретный ключ для подписи сессий</li>
-            </ul>
-          </div>
         </div>
       </CardContent>
     </Card>
