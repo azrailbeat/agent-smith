@@ -110,6 +110,75 @@ router.get('/', async (req: Request, res: Response) => {
       toDate
     });
     
+    // Если нет реальных обращений, используем тестовые данные
+    if (totalCount === 0) {
+      const { testCitizenRequests } = await import('../data/test-citizen-requests');
+      
+      // Фильтрация тестовых данных согласно запросу
+      let filteredRequests = [...testCitizenRequests];
+      
+      // Применяем фильтры
+      if (status) {
+        filteredRequests = filteredRequests.filter(req => req.status === status);
+      }
+      
+      if (departmentId) {
+        filteredRequests = filteredRequests.filter(req => req.departmentId === departmentId);
+      }
+      
+      if (assignedTo) {
+        filteredRequests = filteredRequests.filter(req => req.assignedTo === assignedTo);
+      }
+      
+      if (priority) {
+        filteredRequests = filteredRequests.filter(req => req.priority === priority);
+      }
+      
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredRequests = filteredRequests.filter(req => 
+          req.fullName.toLowerCase().includes(searchLower) ||
+          req.subject.toLowerCase().includes(searchLower) ||
+          req.description.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Сортировка
+      filteredRequests.sort((a, b) => {
+        const aValue = a[sortBy as keyof typeof a];
+        const bValue = b[sortBy as keyof typeof b];
+        
+        if (aValue instanceof Date && bValue instanceof Date) {
+          return sortOrder === 'asc' 
+            ? aValue.getTime() - bValue.getTime() 
+            : bValue.getTime() - aValue.getTime();
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortOrder === 'asc'
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+        
+        return 0;
+      });
+      
+      // Пагинация
+      const paginatedRequests = filteredRequests.slice(offset, offset + limit);
+      
+      console.log(`Возвращаем тестовые данные обращений (всего: ${filteredRequests.length}, отображаемых: ${paginatedRequests.length})`);
+      
+      return res.json({
+        data: paginatedRequests,
+        pagination: {
+          total: filteredRequests.length,
+          limit,
+          offset,
+          hasMore: offset + paginatedRequests.length < filteredRequests.length
+        }
+      });
+    }
+    
     res.json({
       data: citizenRequests,
       pagination: {
