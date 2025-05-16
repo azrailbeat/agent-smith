@@ -766,53 +766,12 @@ const IntegrationsSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Состояние для проверки API ключей
-  const [integrationStatus, setIntegrationStatus] = useState({
-    openai: false,
-    anthropic: false,
-    yandexGpt: false,
-    yandexSpeech: false,
-    eOtinish: false,
-    egov: false,
-    hyperledger: false,
-    supabase: false
-  });
-  
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  // Используем хук для отслеживания статуса интеграций
+  const { integrationStatus, checkIntegrationStatus, isChecking: isCheckingStatus } = useIntegrationStatus();
   
   const { data: settings, isLoading } = useQuery<SystemSettings>({
     queryKey: ['/api/system/settings'],
   });
-  
-  // Функция для проверки статуса интеграций
-  const checkIntegrationStatus = async () => {
-    setIsCheckingStatus(true);
-    try {
-      const response = await fetch('/api/system/check-integrations');
-      if (response.ok) {
-        const status = await response.json();
-        setIntegrationStatus(status);
-        toast({
-          title: "Проверка интеграций завершена",
-          description: "Статус подключений обновлен"
-        });
-      }
-    } catch (error) {
-      console.error('Ошибка при проверке статуса интеграций:', error);
-      toast({
-        title: "Ошибка проверки",
-        description: "Не удалось проверить статус интеграций",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCheckingStatus(false);
-    }
-  };
-  
-  // Проверяем статусы при загрузке компонента
-  React.useEffect(() => {
-    checkIntegrationStatus();
-  }, []);
   
   const updateSettingsMutation = useMutation({
     mutationFn: (newSettings: Partial<SystemSettings>) => {
@@ -837,7 +796,7 @@ const IntegrationsSettings = () => {
   });
   
   // Состояние для отслеживания активной вкладки интеграций
-  const [activeIntegrationTab, setActiveIntegrationTab] = useState<string>('email');
+  const [activeIntegrationTab, setActiveIntegrationTab] = useState<string>('api-eotinish');
   
   if (isLoading) {
     return <div className="flex items-center justify-center h-64">
@@ -862,12 +821,10 @@ const IntegrationsSettings = () => {
             <Button 
               variant="outline" 
               className="flex items-center gap-2"
-              onClick={() => {
-                const { checkIntegrationStatus } = useIntegrationStatus();
-                checkIntegrationStatus(true);
-              }}
+              onClick={checkIntegrationStatus}
+              disabled={isCheckingStatus}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${isCheckingStatus ? 'animate-spin' : ''}`} />
               Проверить все подключения
             </Button>
           </div>
@@ -1242,8 +1199,137 @@ const IntegrationsSettings = () => {
             </div>
           )}
           
+          {/* Раздел Active Directory */}
+          {activeIntegrationTab === 'active-directory' && (
+            <div className="mt-4 space-y-4">
+              <h3 className="text-lg font-medium">Настройки Active Directory</h3>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="ad-server" className="text-sm font-medium">
+                    Сервер Active Directory
+                  </label>
+                  <input
+                    id="ad-server"
+                    type="text"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    placeholder="ldap://dc.example.com"
+                    value={settings?.security?.ldapSettings?.serverUrl || ''}
+                    onChange={(e) => {
+                      updateSettingsMutation.mutate({
+                        security: {
+                          ...settings?.security,
+                          ldapSettings: {
+                            ...settings?.security?.ldapSettings,
+                            serverUrl: e.target.value,
+                            baseDn: settings?.security?.ldapSettings?.baseDn || '',
+                            bindDn: settings?.security?.ldapSettings?.bindDn || '',
+                            bindCredentials: settings?.security?.ldapSettings?.bindCredentials || ''
+                          }
+                        }
+                      });
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="ad-baseDn" className="text-sm font-medium">
+                    Базовый DN
+                  </label>
+                  <input
+                    id="ad-baseDn"
+                    type="text"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    placeholder="DC=example,DC=com"
+                    value={settings?.security?.ldapSettings?.baseDn || ''}
+                    onChange={(e) => {
+                      updateSettingsMutation.mutate({
+                        security: {
+                          ...settings?.security,
+                          ldapSettings: {
+                            ...settings?.security?.ldapSettings,
+                            baseDn: e.target.value,
+                            serverUrl: settings?.security?.ldapSettings?.serverUrl || '',
+                            bindDn: settings?.security?.ldapSettings?.bindDn || '',
+                            bindCredentials: settings?.security?.ldapSettings?.bindCredentials || ''
+                          }
+                        }
+                      });
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="ad-bindDn" className="text-sm font-medium">
+                    Bind DN (учетная запись для подключения)
+                  </label>
+                  <input
+                    id="ad-bindDn"
+                    type="text"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    placeholder="CN=admin,CN=Users,DC=example,DC=com"
+                    value={settings?.security?.ldapSettings?.bindDn || ''}
+                    onChange={(e) => {
+                      updateSettingsMutation.mutate({
+                        security: {
+                          ...settings?.security,
+                          ldapSettings: {
+                            ...settings?.security?.ldapSettings,
+                            bindDn: e.target.value,
+                            serverUrl: settings?.security?.ldapSettings?.serverUrl || '',
+                            baseDn: settings?.security?.ldapSettings?.baseDn || '',
+                            bindCredentials: settings?.security?.ldapSettings?.bindCredentials || ''
+                          }
+                        }
+                      });
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="ad-bindCredentials" className="text-sm font-medium">
+                    Пароль для подключения
+                  </label>
+                  <input
+                    id="ad-bindCredentials"
+                    type="password"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    placeholder="••••••••"
+                    value={settings?.security?.ldapSettings?.bindCredentials || ''}
+                    onChange={(e) => {
+                      updateSettingsMutation.mutate({
+                        security: {
+                          ...settings?.security,
+                          ldapSettings: {
+                            ...settings?.security?.ldapSettings,
+                            bindCredentials: e.target.value,
+                            serverUrl: settings?.security?.ldapSettings?.serverUrl || '',
+                            baseDn: settings?.security?.ldapSettings?.baseDn || '',
+                            bindDn: settings?.security?.ldapSettings?.bindDn || ''
+                          }
+                        }
+                      });
+                    }}
+                  />
+                </div>
+                
+                <div className="pt-2">
+                  <Button variant="outline" className="w-full">
+                    Проверить подключение к Active Directory
+                  </Button>
+                </div>
+                
+                <div className="pt-2">
+                  <Button className="w-full">
+                    Синхронизировать пользователей и группы
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Другие категории интеграций */}
-          {activeIntegrationTab !== 'email' && activeIntegrationTab !== 'api-eotinish' && (
+          {activeIntegrationTab !== 'email' && activeIntegrationTab !== 'api-eotinish' && activeIntegrationTab !== 'active-directory' && (
             <div className="mt-4">
               <h3 className="text-lg font-medium">Настройки для {activeIntegrationTab}</h3>
               <p className="text-muted-foreground">
