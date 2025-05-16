@@ -849,13 +849,28 @@ const IntegrationsSettings = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl flex items-center">
-            <Link2 className="mr-2 h-5 w-5" />
-            Настройки интеграций
-          </CardTitle>
-          <CardDescription>
-            Управление внешними интеграциями и подключениями к API
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl flex items-center">
+                <Link2 className="mr-2 h-5 w-5" />
+                Настройки интеграций
+              </CardTitle>
+              <CardDescription>
+                Управление внешними интеграциями и подключениями к API
+              </CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => {
+                const { checkIntegrationStatus } = useIntegrationStatus();
+                checkIntegrationStatus(true);
+              }}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Проверить все подключения
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Вкладки для разных типов интеграций */}
