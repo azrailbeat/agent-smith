@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { User as UserType } from "@/lib/types";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Mic,
   BarChart2,
@@ -53,7 +54,6 @@ import {
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
-  currentUser: UserType;
   isMobile?: boolean;
   visible?: boolean;
 }
@@ -62,15 +62,21 @@ const Sidebar = ({
   collapsed, 
   onToggle, 
   isMobile = false,
-  visible = true,
-  currentUser = {
-    id: 1,
-    username: "admin",
-    fullName: "Пользователь",
-    department: "Не указан",
-    role: "user",
-  } 
+  visible = true
 }: SidebarProps) => {
+  const { user } = useAuth();
+  
+  // Проверяем аутентификацию пользователя
+  const isAuthenticated = !!user;
+  
+  // Создаем объект с данными пользователя, в зависимости от аутентификации
+  const currentUser = user || {
+    id: "guest",
+    username: "guest",
+    fullName: "Гость",
+    department: "Не указан",
+    role: "guest",
+  };
   const [location] = useLocation();
   
   // Группы для навигации
@@ -331,10 +337,13 @@ const Sidebar = ({
                   </Link>
 
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Выйти</span>
-                  </DropdownMenuItem>
+                  {/* Ссылка для выхода из системы */}
+                  <a href="/api/logout" className="w-full">
+                    <DropdownMenuItem>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Выйти</span>
+                    </DropdownMenuItem>
+                  </a>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

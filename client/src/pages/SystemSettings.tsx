@@ -174,6 +174,7 @@ const SecuritySettings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Локальная аутентификация */}
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-medium">Локальная аутентификация</div>
@@ -195,6 +196,34 @@ const SecuritySettings = () => {
                         });
                       }}
                     />
+                  </div>
+                </div>
+                
+                {/* Импортируем компонент настроек Replit Auth */}
+                <div className="mt-6">
+                  {/* Компонент для Replit Auth */}
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">Replit Auth</div>
+                      <div className="text-sm text-muted-foreground">
+                        Аутентификация через сервис Replit Identity
+                      </div>
+                    </div>
+                    <div className="flex items-center h-5">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        checked={settings?.security.enableReplitAuth}
+                        onChange={(e) => {
+                          updateSettingsMutation.mutate({
+                            security: {
+                              ...settings?.security,
+                              enableReplitAuth: e.target.checked,
+                            }
+                          });
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
                 

@@ -1,76 +1,61 @@
-import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { useQuery } from '@tanstack/react-query';
+import { useToast } from './use-toast';
 
-// Определение типа пользователя
-export interface AuthUser {
-  id: number;
-  username: string;
+interface User {
+  id: string;
   email?: string;
   firstName?: string;
   lastName?: string;
   profileImageUrl?: string;
-  role: string;
-  departmentId?: number;
-  isAuthenticated: boolean;
+  roles?: string[];
+  department?: string;
+  position?: string;
 }
 
-/**
- * Хук для получения и управления состоянием аутентификации пользователя
- */
 export function useAuth() {
-  const { 
-    data: user, 
-    isLoading, 
-    error 
-  } = useQuery<AuthUser>({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-    staleTime: 1000 * 60 * 5, // 5 минут
-    refetchOnWindowFocus: true,
+  const { toast } = useToast();
+  
+  // Запрос на получение данных аутентифицированного пользователя
+  const { data: user, isLoading, error } = useQuery<User>({
+    queryKey: ['/api/auth/user'],
+    retry: false, // Не повторять запрос при ошибке
+    refetchOnWindowFocus: false, // Не обновлять при фокусе окна
+    staleTime: 1000 * 60 * 5, // Данные считаются актуальными в течение 5 минут
   });
 
-  // Проверяем, авторизован ли пользователь
-  const isAuthenticated = !!user?.isAuthenticated;
-
-  // Проверяем, имеет ли пользователь указанную роль
-  const hasRole = (roles: string | string[]) => {
-    if (!isAuthenticated || !user || !user.role) return false;
-    
-    const allowedRoles = Array.isArray(roles) ? roles : [roles];
-    return allowedRoles.includes(user.role);
-  };
-
-  // Проверяем, является ли пользователь администратором
-  const isAdmin = isAuthenticated && user?.role && ['admin', 'superadmin'].includes(user.role);
-
-  // Функция для выхода из системы
-  const logout = async () => {
-    try {
-      window.location.href = '/api/auth/logout';
-    } catch (error) {
-      console.error('Ошибка при выходе из системы:', error);
+  // Проверка, имеет ли пользователь указанную роль
+  const hasRole = (requiredRoles: string | string[]): boolean => {
+    if (!user || !user.roles || user.roles.length === 0) {
+      return false;
     }
+
+    if (typeof requiredRoles === 'string') {
+      return user.roles.includes(requiredRoles);
+    }
+
+    // Если хотя бы одна из требуемых ролей присутствует у пользователя
+    return requiredRoles.some(role => user.roles?.includes(role));
   };
 
-  // Функция для входа в систему
-  const login = () => {
-    window.location.href = '/api/auth/login';
+  // Проверка, может ли пользователь выполнять действие
+  const canPerformAction = (action: string): boolean => {
+    // Здесь может быть более сложная логика проверки прав на действие
+    // Например, на основе матрицы прав доступа
+    // Пока просто проверяем наличие администраторской роли
+    return hasRole('admin');
   };
 
-  // Инвалидация кеша аутентификации
-  const invalidateAuth = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+  // Выход из системы
+  const logout = () => {
+    window.location.href = '/api/auth/logout';
   };
 
   return {
     user,
     isLoading,
-    error,
-    isAuthenticated,
+    isAuthenticated: !!user,
     hasRole,
-    isAdmin,
-    login,
+    canPerformAction,
     logout,
-    invalidateAuth
   };
 }

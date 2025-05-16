@@ -30,29 +30,137 @@ import Users from "@/pages/Users";
 import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
 import RbacManagement from "@/pages/RbacManagement";
 import React, { useState, useEffect } from "react";
-import { User } from "./lib/types";
+import { useAuth } from "@/hooks/use-auth";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 function Router() {
   return (
     <Switch>
+      {/* Общедоступные маршруты */}
       <Route path="/" component={DashboardAnalytics} />
-      <Route path="/tasks" component={Tasks} />
-      <Route path="/history" component={HistoryPage} />
-      <Route path="/analytics" component={DashboardAnalytics} />
-      <Route path="/translate" component={Translate} />
-      <Route path="/citizen-requests" component={CitizenRequests} />
-      <Route path="/meetings" component={Meetings} />
-      <Route path="/documents" component={Documents} />
-      <Route path="/org-structure" component={OrgStructureManagement2} />
-      <Route path="/ai-agents/:id" component={AIAgents} />
-      <Route path="/ai-agents" component={AIAgents} />
-      <Route path="/rbac" component={RbacManagement} />
-      <Route path="/knowledge" component={UnifiedCompanyKnowledge} />
-      <Route path="/company-knowledge" component={UnifiedCompanyKnowledge} />
-      <Route path="/knowledge-base" component={UnifiedCompanyKnowledge} />
-      <Route path="/profile" component={UserProfile} />
-      <Route path="/settings" component={SystemSettings} />
-      <Route path="/users" component={Users} />
+      <Route path="/about" component={AboutSystem} />
+      <Route path="/embed" component={EmbedForm} />
+      
+      {/* Защищенные маршруты - требуют аутентификации */}
+      <Route path="/tasks">
+        {() => (
+          <ProtectedRoute>
+            <Tasks />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/history">
+        {() => (
+          <ProtectedRoute>
+            <HistoryPage />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/analytics">
+        {() => (
+          <ProtectedRoute>
+            <DashboardAnalytics />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/translate">
+        {() => (
+          <ProtectedRoute>
+            <Translate />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/citizen-requests">
+        {() => (
+          <ProtectedRoute>
+            <CitizenRequests />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/meetings">
+        {() => (
+          <ProtectedRoute>
+            <Meetings />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/documents">
+        {() => (
+          <ProtectedRoute>
+            <Documents />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/org-structure">
+        {() => (
+          <ProtectedRoute>
+            <OrgStructureManagement2 />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/ai-agents/:id">
+        {(params) => (
+          <ProtectedRoute>
+            <AIAgents params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/ai-agents">
+        {() => (
+          <ProtectedRoute>
+            <AIAgents />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/rbac">
+        {() => (
+          <ProtectedRoute requiredRoles={["admin"]}>
+            <RbacManagement />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/knowledge">
+        {() => (
+          <ProtectedRoute>
+            <UnifiedCompanyKnowledge />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/company-knowledge">
+        {() => (
+          <ProtectedRoute>
+            <UnifiedCompanyKnowledge />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/knowledge-base">
+        {() => (
+          <ProtectedRoute>
+            <UnifiedCompanyKnowledge />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/profile">
+        {() => (
+          <ProtectedRoute>
+            <UserProfile />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/settings">
+        {() => (
+          <ProtectedRoute requiredRoles={["admin"]}>
+            <SystemSettings />
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/users">
+        {() => (
+          <ProtectedRoute requiredRoles={["admin"]}>
+            <Users />
+          </ProtectedRoute>
+        )}
+      </Route>
       <Route path="/integration-settings">
         {() => {
           // Перенаправление на страницу настроек с вкладкой интеграций
@@ -60,9 +168,15 @@ function Router() {
           return null;
         }}
       </Route>
-      <Route path="/dao-voting" component={DAOVoting} />
-      <Route path="/about" component={AboutSystem} />
-      <Route path="/embed" component={EmbedForm} />
+      <Route path="/dao-voting">
+        {() => (
+          <ProtectedRoute>
+            <DAOVoting />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      {/* Маршрут по умолчанию - 404 */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -73,16 +187,6 @@ function App() {
   // Используем только проверку по пути, так как проверка window.self !== window.top может
   // некорректно работать в среде разработки
   const isEmbedded = window.location.pathname.startsWith('/embed');
-  
-  // In a real app, we would get this from an auth system
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: 1,
-    username: "admin",
-    fullName: "Айнур Бекова",
-    department: "Департамент цифровизации",
-    role: "admin",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=256&h=256&q=80"
-  });
 
   // Определение состояния мобильного устройства 
   const [isMobile, setIsMobile] = useState(false);
@@ -145,12 +249,14 @@ function App() {
       ) : (
         // Обычный режим с полным интерфейсом
         <div className="min-h-screen flex flex-col bg-white text-slate-800">
+          {/* Добавляем компонент Header с меню пользователя */}
+          <Header />
+          
           <div className="flex flex-1">
             {/* Настольная версия сайдбара */}
             <Sidebar 
               collapsed={sidebarCollapsed} 
               onToggle={toggleSidebar} 
-              currentUser={currentUser} 
               isMobile={isMobile}
               visible={sidebarVisible}
             />
