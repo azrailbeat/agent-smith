@@ -194,8 +194,11 @@ const CitizenRequests = () => {
     queryKey: ["/api/citizen-requests"],
     queryFn: async () => {
       try {
+        console.log("Отправка запроса на получение обращений...");
         // Добавляем параметры для сортировки и пагинации
         const response = await fetch("/api/citizen-requests?sortBy=createdAt&sortOrder=desc&limit=100");
+        
+        console.log("Получен ответ:", response.status);
         
         if (!response.ok) {
           const errorText = await response.text();
@@ -203,7 +206,23 @@ const CitizenRequests = () => {
           throw new Error(`Ошибка при загрузке обращений: ${response.status} ${errorText}`);
         }
         
-        return await response.json();
+        const data = await response.json();
+        console.log("Данные обращений получены:", data);
+        
+        // Проверяем формат ответа
+        if (data.data && Array.isArray(data.data)) {
+          console.log("Получен массив обращений в поле data, возвращаем его");
+          return data.data;
+        }
+        
+        // Если данные пришли в корне ответа и это массив
+        if (Array.isArray(data)) {
+          console.log("Получен массив обращений в корне ответа");
+          return data;
+        }
+        
+        console.log("Необычный формат данных, возвращаем как есть:", data);
+        return data;
       } catch (error) {
         console.error("Ошибка при загрузке обращений:", error);
         // Генерируем ошибку, чтобы React Query выполнил повторный запрос
