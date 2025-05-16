@@ -190,7 +190,7 @@ const CitizenRequests = () => {
   });
   
   // Загрузка списка обращений
-  const { data: citizenRequests = [], isLoading, isError } = useQuery<CitizenRequest[]>({
+  const { data: citizenRequestsResponse, isLoading, isError } = useQuery<{ data: CitizenRequest[], pagination: any }>({
     queryKey: ["/api/citizen-requests"],
     queryFn: async () => {
       try {
@@ -211,18 +211,18 @@ const CitizenRequests = () => {
         
         // Проверяем формат ответа
         if (data.data && Array.isArray(data.data)) {
-          console.log("Получен массив обращений в поле data, возвращаем его");
-          return data.data;
+          console.log("Получен массив обращений в поле data, возвращаем структуру с data и pagination");
+          return data; // Возвращаем полную структуру { data: [...], pagination: {...} }
         }
         
         // Если данные пришли в корне ответа и это массив
         if (Array.isArray(data)) {
-          console.log("Получен массив обращений в корне ответа");
-          return data;
+          console.log("Получен массив обращений в корне ответа, оборачиваем в структуру");
+          return { data, pagination: { total: data.length, limit: 100, offset: 0 } };
         }
         
-        console.log("Необычный формат данных, возвращаем как есть:", data);
-        return data;
+        console.log("Необычный формат данных, возвращаем с оберткой:", data);
+        return { data: [], pagination: { total: 0, limit: 100, offset: 0 } };
       } catch (error) {
         console.error("Ошибка при загрузке обращений:", error);
         // Генерируем ошибку, чтобы React Query выполнил повторный запрос
@@ -233,6 +233,9 @@ const CitizenRequests = () => {
     retry: 2,
     retryDelay: 1000,
   });
+  
+  // Извлекаем массив обращений из ответа
+  const citizenRequests = citizenRequestsResponse?.data || [];
 
   // Загрузка списка агентов
   const { data: agents = [] } = useQuery<Agent[]>({
@@ -637,14 +640,17 @@ const CitizenRequests = () => {
         }, {
           onSuccess: () => {
             // После успешного обновления обновляем локальные данные
-            queryClient.setQueryData(['/api/citizen-requests'], (oldData: CitizenRequest[] | undefined) => {
-              if (!oldData) return oldData;
-              return oldData.map(r => {
-                if (r.id === requestId) {
-                  return { ...r, status: newStatus };
-                }
-                return r;
-              });
+            queryClient.setQueryData(['/api/citizen-requests'], (oldData: { data: CitizenRequest[], pagination: any } | undefined) => {
+              if (!oldData || !oldData.data) return oldData;
+              return {
+                ...oldData,
+                data: oldData.data.map(r => {
+                  if (r.id === requestId) {
+                    return { ...r, status: newStatus };
+                  }
+                  return r;
+                })
+              };
             });
             
             // В фоновом режиме создаем активность
