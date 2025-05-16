@@ -21,6 +21,8 @@ export function useAuth() {
     retry: false, // Не повторять запрос при ошибке
     refetchOnWindowFocus: false, // Не обновлять при фокусе окна
     staleTime: 1000 * 60 * 5, // Данные считаются актуальными в течение 5 минут
+    // Обработка ошибок 401 (Unauthorized) без показа уведомлений
+    gcTime: 0, // Не кэшировать ошибки
   });
 
   // Проверка, имеет ли пользователь указанную роль
@@ -47,7 +49,7 @@ export function useAuth() {
 
   // Выход из системы
   const logout = () => {
-    window.location.href = '/api/auth/logout';
+    window.location.href = '/api/logout';
   };
 
   return {

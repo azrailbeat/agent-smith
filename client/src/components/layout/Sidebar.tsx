@@ -267,85 +267,123 @@ const Sidebar = ({
         </div>
         
         <div className="px-3 mt-auto space-y-3">
-          {/* Профиль пользователя */}
+          {/* Профиль пользователя или кнопка входа */}
           <div className={cn(
             "border rounded-lg overflow-hidden",
             collapsed ? "p-2" : "p-3"
           )}>
-            {collapsed ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex justify-center">
-                      {currentUser.avatarUrl ? (
+            {!isAuthenticated ? (
+              // Если пользователь не аутентифицирован, показываем кнопку входа
+              collapsed ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <a href="/api/login" className="w-full flex justify-center">
+                        <User className="h-5 w-5 text-emerald-600" />
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Войти в систему</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <a 
+                  href="/api/login" 
+                  className="w-full flex items-center justify-center p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Войти в систему</span>
+                </a>
+              )
+            ) : (
+              // Если пользователь аутентифицирован, показываем профиль
+              collapsed ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex justify-center">
+                        {currentUser.profileImageUrl ? (
+                          <img
+                            className="h-8 w-8 rounded-full border border-slate-200 object-cover"
+                            src={currentUser.profileImageUrl}
+                            alt={`${currentUser.firstName || currentUser.email || 'User'} profile`}
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center">
+                            <span className="text-sm font-medium text-white">
+                              {currentUser.firstName?.charAt(0) || 
+                              currentUser.email?.charAt(0) || 'U'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {currentUser.firstName || currentUser.email || 'Пользователь'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="flex items-center cursor-pointer">
+                      {currentUser.profileImageUrl ? (
                         <img
-                          className="h-8 w-8 rounded-full border border-slate-200"
-                          src={currentUser.avatarUrl}
-                          alt={`${currentUser.fullName} profile`}
+                          className="h-8 w-8 rounded-full border border-slate-200 flex-shrink-0 object-cover"
+                          src={currentUser.profileImageUrl}
+                          alt={`${currentUser.firstName || currentUser.email || 'User'} profile`}
                         />
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center">
-                          <span className="text-sm font-medium text-white">{currentUser.fullName.charAt(0)}</span>
+                        <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-medium text-white">
+                            {currentUser.firstName?.charAt(0) || 
+                            currentUser.email?.charAt(0) || 'U'}
+                          </span>
                         </div>
                       )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{currentUser.fullName}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div className="flex items-center cursor-pointer">
-                    {currentUser.avatarUrl ? (
-                      <img
-                        className="h-8 w-8 rounded-full border border-slate-200 flex-shrink-0"
-                        src={currentUser.avatarUrl}
-                        alt={`${currentUser.fullName} profile`}
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-medium text-white">{currentUser.fullName.charAt(0)}</span>
+                      <div className="ml-3 overflow-hidden">
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {currentUser.firstName || currentUser.email || 'Пользователь'}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">
+                          {currentUser.department || (currentUser.roles && currentUser.roles.length > 0 ? 
+                            currentUser.roles[0] : 'Пользователь')}
+                        </p>
                       </div>
-                    )}
-                    <div className="ml-3 overflow-hidden">
-                      <p className="text-sm font-medium text-slate-800 truncate">{currentUser.fullName}</p>
-                      <p className="text-xs text-slate-500 truncate">{currentUser.department}</p>
                     </div>
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Мой аккаунт</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <Link href="/profile">
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Профиль</span>
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link href="/settings">
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Настройки</span>
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link href="/settings?tab=security">
-                    <DropdownMenuItem>
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>Безопасность и доступ</span>
-                    </DropdownMenuItem>
-                  </Link>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Мой аккаунт</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link href="/profile">
+                      <DropdownMenuItem>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Профиль</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/settings">
+                      <DropdownMenuItem>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Настройки</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/settings?tab=security">
+                      <DropdownMenuItem>
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Безопасность и доступ</span>
+                      </DropdownMenuItem>
+                    </Link>
 
-                  <DropdownMenuSeparator />
-                  {/* Ссылка для выхода из системы */}
-                  <a href="/api/logout" className="w-full">
-                    <DropdownMenuItem>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Выйти</span>
-                    </DropdownMenuItem>
-                  </a>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuSeparator />
+                    {/* Ссылка для выхода из системы */}
+                    <a href="/api/logout" className="w-full">
+                      <DropdownMenuItem>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Выйти</span>
+                      </DropdownMenuItem>
+                    </a>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
             )}
           </div>
           

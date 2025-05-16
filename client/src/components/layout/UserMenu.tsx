@@ -16,7 +16,15 @@ import { LogIn, User as UserIcon, LogOut, Settings, Shield } from 'lucide-react'
  * Компонент меню пользователя с функциями авторизации
  */
 export function UserMenu() {
-  const { user, isLoading, isAuthenticated, logout, hasRole } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
+  
+  // Проверка наличия роли у пользователя
+  const hasRole = (role: string) => {
+    if (!user || !user.roles || !Array.isArray(user.roles)) {
+      return false;
+    }
+    return user.roles.includes(role);
+  };
 
   // Инициалы пользователя для аватара
   const getUserInitials = () => {
@@ -57,7 +65,7 @@ export function UserMenu() {
       <Button
         variant="default"
         size="sm"
-        onClick={() => window.location.href = '/api/auth/login'}
+        onClick={() => window.location.href = '/api/login'}
       >
         <LogIn className="mr-2 h-4 w-4" />
         Войти
@@ -106,7 +114,7 @@ export function UserMenu() {
         
         <DropdownMenuSeparator />
         
-        <DropdownMenuItem onClick={logout}>
+        <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Выйти</span>
         </DropdownMenuItem>
