@@ -111,6 +111,9 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Настройка аутентификации Replit
+  await setupAuth(app);
+  
   // Регистрируем дополнительные маршруты
   registerSystemRoutes(app);
   registerDatabaseRoutes(app);
@@ -230,8 +233,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
-  // User routes
-  app.post('/api/auth/login', async (req, res) => {
+  // Традиционный маршрут авторизации (оставлен для обратной совместимости)
+  // Основная авторизация теперь происходит через Replit Auth
+  app.post('/api/auth/login-legacy', async (req, res) => {
     const { username, password } = req.body;
     
     if (!username || !password) {

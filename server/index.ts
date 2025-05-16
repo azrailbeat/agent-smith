@@ -1,12 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupAuth } from "./auth/replit-auth";
 
 // Объявляем глобальный интерфейс для доступа к сборщику мусора
 declare global {
   namespace NodeJS {
     interface Process {
       gc?: () => void;
+    }
+  }
+  
+  // Расширяем интерфейс Express.User для включения данных пользователя
+  namespace Express {
+    interface User {
+      claims?: any;
+      db?: any;
+      role?: string;
+      departmentId?: number;
     }
   }
 }
