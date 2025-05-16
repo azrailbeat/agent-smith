@@ -30,7 +30,7 @@ export default function ProtectedRoute({
   // Если пользователь не авторизован, перенаправляем на страницу входа
   if (!isAuthenticated) {
     // Перенаправляем на страницу входа
-    window.location.href = '/api/auth/login';
+    window.location.href = '/api/login';
     return null;
   }
 
