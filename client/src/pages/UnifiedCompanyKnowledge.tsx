@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Building, FileText, Upload, Plus } from "lucide-react";
 import { CompanyKnowledge } from "./CompanyKnowledge";
-import OrgStructureManagement from "./OrgStructureManagement";
+import OrgStructureManagement from "./OrgStructureManagement2";
 import {
   Dialog,
   DialogContent,
