@@ -226,12 +226,21 @@ const CitizenRequests = () => {
   });
 
   // Запрос всех обращений граждан
-  const { isLoading, data: citizenRequests = [] } = useQuery<CitizenRequest[]>({
+  const { isLoading, error, data: citizenRequests = [] } = useQuery<CitizenRequest[]>({
     queryKey: ["/api/citizen-requests"],
     onSuccess: (data) => {
       // После получения данных, обновляем канбан-доску
       organizeRequestsIntoKanban(data);
     },
+    onError: (err) => {
+      console.error("Ошибка загрузки обращений граждан:", err);
+      toast({
+        title: "Ошибка загрузки данных",
+        description: "Не удалось загрузить список обращений. Пожалуйста, попробуйте обновить страницу.",
+        variant: "destructive",
+      });
+    },
+    retry: 3, // Повторяем запрос 3 раза в случае ошибки
   });
 
   // Мутация для создания нового обращения
