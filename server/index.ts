@@ -64,9 +64,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Настраиваем аутентификацию с Replit
-  await setupAuth(app);
-  
+  // Аутентификация настраивается в registerRoutes
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

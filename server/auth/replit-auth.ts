@@ -156,7 +156,10 @@ export async function setupAuth(app: Express) {
       // Добавляем данные из БД в объект пользователя сессии
       user.db = dbUser;
       user.role = dbUser.role;
-      user.departmentId = dbUser.departmentId;
+      // Проверяем наличие свойства departmentId перед присвоением
+      if ('departmentId' in dbUser) {
+        user.departmentId = dbUser.departmentId;
+      }
       
       verified(null, user);
     } catch (error) {
