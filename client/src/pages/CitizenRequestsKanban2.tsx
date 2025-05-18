@@ -963,15 +963,30 @@ export default function CitizenRequestsKanban2() {
                     .map(reqId => citizenRequests.find(r => r.id === reqId))
                     .filter(Boolean) as CitizenRequest[];
                   
+                  // Фильтрация по поисковому запросу и выбранным фильтрам
+                  let filteredRequests = requestsInColumn;
+                  
                   // Фильтрация по поисковому запросу
-                  const filteredRequests = searchQuery 
-                    ? requestsInColumn.filter(request => {
-                        const query = searchQuery.toLowerCase();
-                        return request.fullName.toLowerCase().includes(query) ||
-                              request.subject.toLowerCase().includes(query) ||
-                              request.description.toLowerCase().includes(query);
-                      })
-                    : requestsInColumn;
+                  if (searchQuery) {
+                    filteredRequests = filteredRequests.filter(request => {
+                      const query = searchQuery.toLowerCase();
+                      return request.fullName.toLowerCase().includes(query) ||
+                            request.subject.toLowerCase().includes(query) ||
+                            request.description.toLowerCase().includes(query);
+                    });
+                  }
+                  
+                  // Фильтрация по статусу, если выбран фильтр и мы не в этой колонке
+                  if (statusFilter && columnId !== statusFilter) {
+                    filteredRequests = [];
+                  }
+                  
+                  // Фильтрация по приоритету
+                  if (priorityFilter) {
+                    filteredRequests = filteredRequests.filter(request => 
+                      request.priority === priorityFilter
+                    );
+                  }
                   
                   return (
                     <div key={column.id} className={`rounded-md border shadow-sm overflow-hidden flex flex-col min-h-[200px] ${getColumnStyle(columnId)}`}>
