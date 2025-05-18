@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { activityLogger } from "@/lib/activityLogger";
 import { 
   Card, 
   CardContent, 
@@ -216,10 +217,37 @@ const HistoryPage = () => {
     }
   ];
 
-  // Query history records
-  const { data: historyRecords = demoHistoryRecords, isLoading } = useQuery<HistoryRecord[]>({
-    queryKey: ['/api/activities'],
-  });
+  // Состояние для хранения полученных записей
+  const [allHistoryRecords, setAllHistoryRecords] = useState<HistoryRecord[]>(demoHistoryRecords);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Загрузка всех записей истории при монтировании компонента
+  useEffect(() => {
+    async function loadAllActivities() {
+      setIsLoading(true);
+      try {
+        // В реальном приложении здесь будет загрузка всех активностей или с фильтрацией
+        // Текущий демо-режим использует временные данные
+        
+        // Здесь может быть код для загрузки истории активностей для разных типов сущностей
+        // const citizenRequestActivities = await activityLogger.getActivities('citizen_request');
+        // const documentActivities = await activityLogger.getActivities('document');
+        // ... и т.д.
+        
+        // Для демонстрационных целей мы используем существующие данные
+        // setAllHistoryRecords([...citizenRequestActivities, ...documentActivities]);
+      } catch (error) {
+        console.error('Ошибка при загрузке истории:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadAllActivities();
+  }, []);
+  
+  // Используем allHistoryRecords вместо data из useQuery
+  const historyRecords = allHistoryRecords;
   
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "d MMMM yyyy, HH:mm", { locale: ru });

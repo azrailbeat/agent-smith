@@ -6,6 +6,7 @@ import {
   Draggable,
   DropResult
 } from '@hello-pangea/dnd';
+import { activityLogger } from '@/lib/activityLogger';
 import {
   Card,
   CardContent,
@@ -544,30 +545,46 @@ export default function CitizenRequestsKanban2() {
   }, [citizenRequests]);
 
   // Функция для загрузки истории действий
-  const loadActivities = (requestId: number) => {
-    // В реальном приложении здесь будет API-запрос
-    // apiRequest('GET', `/api/citizen-requests/${requestId}/activities`).then(...)
-    
-    // Для демонстрации используем тестовые данные
-    const demoActivities: Activity[] = [
-      {
-        actionType: "create",
-        description: "Обращение создано",
-        createdAt: new Date(Date.now() - 86400000) // вчера
-      },
-      {
-        actionType: "status_change",
-        description: "Статус изменен с 'Новый' на 'В обработке'",
-        createdAt: new Date(Date.now() - 43200000) // 12 часов назад
-      },
-      {
-        actionType: "ai_process",
-        description: "Обращение обработано ИИ",
-        createdAt: new Date(Date.now() - 21600000) // 6 часов назад
-      }
-    ];
-    
-    setActivities(demoActivities);
+  const loadActivities = async (requestId: number) => {
+    try {
+      // Запрашиваем историю через centralized логгер
+      const activitiesData = await activityLogger.getActivities('citizen_request', requestId);
+      
+      // Преобразуем формат записей к используемому в компоненте
+      const formattedActivities: Activity[] = activitiesData.map((record: any) => ({
+        id: record.id,
+        actionType: record.actionType,
+        description: record.description,
+        createdAt: record.timestamp ? new Date(record.timestamp) : new Date(),
+        userId: record.userId?.toString(),
+        metadata: record.metadata
+      }));
+      
+      setActivities(formattedActivities);
+    } catch (error) {
+      console.error('Ошибка при загрузке истории активности:', error);
+      
+      // Временные данные
+      const tempActivities: Activity[] = [
+        {
+          actionType: "create",
+          description: "Обращение создано",
+          createdAt: new Date(Date.now() - 86400000)
+        },
+        {
+          actionType: "status_change",
+          description: "Статус изменен с 'Новый' на 'В обработке'",
+          createdAt: new Date(Date.now() - 43200000)
+        },
+        {
+          actionType: "ai_process",
+          description: "Обращение обработано ИИ",
+          createdAt: new Date(Date.now() - 21600000)
+        }
+      ];
+      
+      setActivities(tempActivities);
+    }
   };
 
   // Обработчик просмотра деталей обращения
@@ -578,30 +595,42 @@ export default function CitizenRequestsKanban2() {
   };
   
   // Обработчик анализа обращения с помощью ИИ
-  const handleProcessWithAI = (request: CitizenRequest) => {
+  const handleProcessWithAI = async (request: CitizenRequest) => {
     toast({
       title: "Обработка с помощью ИИ",
       description: "Запущен анализ обращения с помощью искусственного интеллекта",
     });
     
-    // Имитируем задержку обработки ИИ
-    setTimeout(() => {
-      // Добавляем запись в историю действий
-      createActivity(
-        request.id, 
-        "ai_process", 
-        "Обращение обработано искусственным интеллектом"
-      );
+    try {
+      // Имитируем задержку обработки ИИ
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Добавляем запись в блокчейн
-      createBlockchainRecord(
-        request.id, 
-        "ai_analysis", 
+      // Используем централизованный логгер для записи активности
+      await activityLogger.logActivity(
+        "ai_process",
+        "Обращение обработано искусственным интеллектом",
+        request.id,
+        "citizen_request",
         {
           requestType: request.requestType,
+          subject: request.subject,
+          processedAt: new Date().toISOString()
+        }
+      );
+      
+      // Создаем запись в блокчейне для важных действий
+      const blockchainResult = await activityLogger.createBlockchainRecord(
+        "ai_analysis",
+        "citizen_request",
+        request.id,
+        {
+          requestType: request.requestType,
+          subject: request.subject,
           analysisTimestamp: new Date().toISOString()
         }
       );
+      
+      console.log("Запись в блокчейне создана:", blockchainResult);
       
       toast({
         title: "Анализ завершен",
@@ -610,33 +639,65 @@ export default function CitizenRequestsKanban2() {
       
       // Обновляем историю, если открыто диалоговое окно с деталями
       if (selectedRequest && selectedRequest.id === request.id) {
-        loadActivities(request.id);
+        await loadActivities(request.id);
       }
-    }, 2000);
+    } catch (error) {
+      console.error("Ошибка при обработке с помощью ИИ:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при обработке обращения",
+        variant: "destructive"
+      });
+    }
   };
 
   // Функция для создания записи в истории
-  const createActivity = (requestId: number, actionType: string, description: string) => {
+  const createActivity = async (requestId: number, actionType: string, description: string) => {
     console.log("Создание записи в истории:", { requestId, actionType, description });
-    // В реальном приложении здесь будет API-запрос
-    // apiRequest('POST', `/api/citizen-requests/${requestId}/activities`, { actionType, description }).then(...)
     
-    // Если открыто диалоговое окно с деталями данного обращения, обновляем историю
-    if (selectedRequest && selectedRequest.id === requestId) {
-      const newActivity: Activity = {
+    try {
+      // Используем централизованный логгер для записи активности
+      const result = await activityLogger.logActivity(
         actionType,
         description,
-        createdAt: new Date()
-      };
-      setActivities([newActivity, ...activities]);
+        requestId,
+        "citizen_request"
+      );
+      
+      // Если открыто диалоговое окно с деталями данного обращения, обновляем историю
+      if (selectedRequest && selectedRequest.id === requestId) {
+        const newActivity: Activity = {
+          id: result.id,
+          actionType,
+          description,
+          createdAt: new Date(),
+          userId: result.userId?.toString(),
+          metadata: result.metadata
+        };
+        setActivities([newActivity, ...activities]);
+      }
+    } catch (error) {
+      console.error("Ошибка при создании записи в истории:", error);
     }
   };
 
   // Функция для создания записи в блокчейне
-  const createBlockchainRecord = (requestId: number, action: string, metadata: any = {}) => {
+  const createBlockchainRecord = async (requestId: number, action: string, metadata: any = {}) => {
     console.log("Создание записи в блокчейне:", { requestId, action, metadata });
-    // В реальном приложении здесь будет API-запрос
-    // apiRequest('POST', `/api/citizen-requests/${requestId}/blockchain`, { action, entityType: 'citizen_request', entityId: requestId, metadata }).then(...)
+    
+    try {
+      // Используем централизованный логгер для записи в блокчейн
+      const result = await activityLogger.createBlockchainRecord(
+        action,
+        "citizen_request",
+        requestId,
+        metadata
+      );
+      return result;
+    } catch (error) {
+      console.error("Ошибка при создании записи в блокчейне:", error);
+      return null;
+    }
   };
 
   // Обработчик перетаскивания карточек
