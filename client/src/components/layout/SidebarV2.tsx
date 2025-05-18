@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { User as UserType } from "@/lib/types";
+import { getRouteGroups, appRoutes } from "@/routes/appRoutes";
 
 // Тип пользователя для компонента боковой панели
 interface SidebarUser {
@@ -17,7 +18,6 @@ interface SidebarUser {
   department?: string;
   role?: string;
 }
-import { getRouteGroups, appRoutes } from "@/routes/appRoutes";
 import {
   Mic,
   BarChart2,
