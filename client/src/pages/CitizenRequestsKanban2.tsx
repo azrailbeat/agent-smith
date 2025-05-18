@@ -352,6 +352,8 @@ export default function CitizenRequestsKanban2() {
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
 
   // Состояние для статистики
   const [stats, setStats] = useState({
@@ -894,22 +896,40 @@ export default function CitizenRequestsKanban2() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
                     <Filter className="h-4 w-4 mr-2" />
-                    Фильтры
+                    Фильтры {(statusFilter || priorityFilter) && <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full w-4 h-4 inline-flex items-center justify-center">!</span>}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuLabel>Статус</DropdownMenuLabel>
-                  <DropdownMenuItem>Все</DropdownMenuItem>
-                  <DropdownMenuItem>Новые</DropdownMenuItem>
-                  <DropdownMenuItem>В работе</DropdownMenuItem>
-                  <DropdownMenuItem>Ожидание</DropdownMenuItem>
-                  <DropdownMenuItem>Выполненные</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter(null)} className={!statusFilter ? 'bg-secondary' : ''}>
+                    Все
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('new')} className={statusFilter === 'new' ? 'bg-secondary' : ''}>
+                    Новые
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('inProgress')} className={statusFilter === 'inProgress' ? 'bg-secondary' : ''}>
+                    В работе
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('waiting')} className={statusFilter === 'waiting' ? 'bg-secondary' : ''}>
+                    Ожидание
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('completed')} className={statusFilter === 'completed' ? 'bg-secondary' : ''}>
+                    Выполненные
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Приоритет</DropdownMenuLabel>
-                  <DropdownMenuItem>Все</DropdownMenuItem>
-                  <DropdownMenuItem>Высокий</DropdownMenuItem>
-                  <DropdownMenuItem>Средний</DropdownMenuItem>
-                  <DropdownMenuItem>Низкий</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter(null)} className={!priorityFilter ? 'bg-secondary' : ''}>
+                    Все
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('high')} className={priorityFilter === 'high' ? 'bg-secondary' : ''}>
+                    Высокий
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('medium')} className={priorityFilter === 'medium' ? 'bg-secondary' : ''}>
+                    Средний
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPriorityFilter('low')} className={priorityFilter === 'low' ? 'bg-secondary' : ''}>
+                    Низкий
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
