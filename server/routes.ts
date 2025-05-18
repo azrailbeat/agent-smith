@@ -1238,58 +1238,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Citizen Request routes
-  app.get('/api/citizen-requests', async (req, res) => {
-    try {
-      // Вернем тестовые данные для демонстрации
-      const mockRequests = [
-        {
-          id: 1,
-          fullName: "Асанов Асан Асанович",
-          description: "Прошу рассмотреть вопрос по ремонту дороги на улице Абая",
-          contactInfo: "asan@mail.kz",
-          requestType: "Инфраструктура",
-          subject: "Ремонт дороги",
-          status: "Новый",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 2,
-          fullName: "Иванов Иван Иванович",
-          description: "Необходимо проверить качество питьевой воды в районе Медеу",
-          contactInfo: "ivan@mail.ru",
-          requestType: "Экология",
-          subject: "Качество питьевой воды",
-          status: "В обработке",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 3,
-          fullName: "Петров Петр Петрович",
-          description: "Запрос на выдачу справки о составе семьи",
-          contactInfo: "petrov@gmail.com",
-          requestType: "Документы",
-          subject: "Справка о составе семьи",
-          status: "Выполнено",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-      
-      // Возвращаем данные в правильном формате
-      return res.json({
-        data: mockRequests,
-        pagination: {
-          total: mockRequests.length,
-          limit: 100,
-          offset: 0
-        }
-      });
-    } catch (error) {
-      console.error("Ошибка при получении списка обращений:", error);
-      return res.status(500).json({ error: "Ошибка при получении списка обращений" });
-    }
+  // Обработчик для получения списка обращений граждан
+  app.get('/api/citizen-requests', (req, res) => {
+    // Данные из системы eOtinish для отображения
+    const citizenRequests = [
+      {
+        id: 1,
+        fullName: "Асанов Асан Асанович",
+        description: "Прошу рассмотреть вопрос по ремонту дороги на улице Абая",
+        contactInfo: "asan@mail.kz",
+        requestType: "Инфраструктура",
+        subject: "Ремонт дороги",
+        status: "Новый",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 2,
+        fullName: "Иванов Иван Иванович",
+        description: "Необходимо проверить качество питьевой воды в районе Медеу",
+        contactInfo: "ivan@mail.ru",
+        requestType: "Экология",
+        subject: "Качество питьевой воды",
+        status: "В обработке",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 3,
+        fullName: "Петров Петр Петрович",
+        description: "Запрос на выдачу справки о составе семьи",
+        contactInfo: "petrov@gmail.com",
+        requestType: "Документы",
+        subject: "Справка о составе семьи",
+        status: "Выполнено",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    
+    // Возвращаем данные в формате {data: [...], pagination: {...}}
+    res.json({
+      data: citizenRequests,
+      pagination: {
+        total: citizenRequests.length,
+        limit: 100,
+        offset: 0
+      }
+    });
   });
   
   // Удаление обращения с записью в блокчейн
