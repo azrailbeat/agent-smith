@@ -46,6 +46,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
+import { activityLogger } from "@/lib/activityLogger";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
@@ -353,7 +354,39 @@ const DAOVoting = () => {
   const createProposalMutation = useMutation({
     mutationFn: async (newProposal: ProposalFormValues) => {
       try {
+        // Создаем запись в истории о создании нового предложения
+        await activityLogger.logActivity(
+          'create_proposal',
+          `Создано новое предложение: ${newProposal.title}`,
+          undefined, // entityId будет задан после создания
+          'dao_proposal',
+          {
+            category: newProposal.category,
+            votingPeriod: newProposal.votingPeriod,
+            threshold: newProposal.threshold
+          }
+        );
+
         const response = await apiRequest('POST', '/api/dao/proposals', newProposal);
+        
+        // Получаем идентификатор созданного предложения
+        const createdProposal = await response.json();
+        
+        // Создаем запись в блокчейне для обеспечения неизменности
+        if (createdProposal && createdProposal.id) {
+          await activityLogger.createBlockchainRecord(
+            'proposal_created',
+            'dao_proposal',
+            createdProposal.id,
+            {
+              title: newProposal.title,
+              category: newProposal.category,
+              threshold: newProposal.threshold,
+              createdAt: new Date().toISOString()
+            }
+          );
+        }
+        
         return response;
       } catch (error) {
         console.error('Failed to create proposal', error);
@@ -379,7 +412,41 @@ const DAOVoting = () => {
       rationale?: string;
     }) => {
       try {
+        // Получаем название значения голоса на русском для записи в историю
+        const voteValueRussian = {
+          'for': 'За',
+          'against': 'Против',
+          'abstain': 'Воздержался'
+        }[voteValue];
+        
+        // Записываем действие в историю
+        await activityLogger.logActivity(
+          'proposal_vote',
+          `Голос по предложению #${proposalId}: ${voteValueRussian}`,
+          proposalId,
+          'dao_proposal',
+          {
+            vote: voteValue,
+            rationale: rationale || 'Без комментария'
+          }
+        );
+        
         const response = await apiRequest('POST', `/api/dao/proposals/${proposalId}/vote`, { vote: voteValue, rationale });
+        
+        // Обязательно записываем голос в блокчейн для обеспечения прозрачности и неизменности
+        await activityLogger.createBlockchainRecord(
+          'proposal_vote_cast',
+          'dao_proposal',
+          proposalId,
+          {
+            vote: voteValue,
+            timestamp: new Date().toISOString(),
+            // НЕ ХРАНИМ личность голосующего в открытом виде для соблюдения тайны голосования
+            // Только хеш или зашифрованный идентификатор может быть записан в реальной системе
+            voterHash: 'user_identity_hash_would_be_here_in_production'
+          }
+        );
+        
         return response;
       } catch (error) {
         console.error('Failed to send vote', error);
@@ -423,10 +490,17 @@ const DAOVoting = () => {
   const handleVote = () => {
     if (!showProposalDetails || !userVote) return;
     
-    // В реальном приложении здесь будет вызов API для отправки голоса
+    // Логируем действие для отладки
     console.log(`Голосование за предложение #${showProposalDetails.id}: ${userVote}`, voteRationale ? `(${voteRationale})` : '');
     
-    // Симуляция успешного голосования
+    // Вызываем нашу мутацию для отправки голоса с интеграцией activityLogger
+    voteProposalMutation.mutate({
+      proposalId: showProposalDetails.id,
+      voteValue: userVote,
+      rationale: voteRationale
+    });
+    
+    // Обновляем локальный UI для мгновенной обратной связи
     const updatedProposal = { 
       ...showProposalDetails,
       votesFor: userVote === 'for' ? showProposalDetails.votesFor + 1 : showProposalDetails.votesFor,
@@ -435,12 +509,6 @@ const DAOVoting = () => {
     };
     
     setShowProposalDetails(updatedProposal);
-    
-    // Сбрасываем состояние голосования
-    setTimeout(() => {
-      setUserVote(null);
-      setVoteRationale("");
-    }, 500);
   };
 
   // Фильтрация предложений в зависимости от выбранной вкладки
