@@ -18,7 +18,7 @@ import RbacManagement from "@/pages/RbacManagement";
 // Обращения граждан
 import CitizenRequests from "@/pages/CitizenRequestsKanban2";
 
-// Знания и контент
+// Знания
 import KnowledgeManagement from "@/pages/KnowledgeManagement";
 import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
 
@@ -156,11 +156,7 @@ export const appRoutes: RouteType[] = [
     name: "Орг. структура", 
     group: "Управление" 
   }),
-  createRoute("/documents", Documents, { 
-    protected: true, 
-    name: "Документы", 
-    group: "Управление" 
-  }),
+
   createRoute("/dao-voting", DAOVoting, { 
     protected: true, 
     name: "DAO Голосования", 
