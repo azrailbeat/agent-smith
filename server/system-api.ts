@@ -23,6 +23,140 @@ import { testOpenAIConnection } from './services/openai';
 
 export function registerSystemRoutes(app: express.Express): void {
   /**
+   * Получение и обновление всех системных настроек
+   */
+  app.get('/api/system/settings', (req: Request, res: Response) => {
+    try {
+      // Создаем демонстрационные настройки системы
+      const defaultSettings = {
+        general: {
+          systemName: "Agent Smith",
+          defaultLanguage: "ru",
+          enableActivityLogging: true,
+          enableBlockchainIntegration: true,
+          supportedLanguages: ["ru", "kk", "en"],
+          vectorStore: "qdrant",
+          fileStorage: "local",
+          enableBackups: true,
+          analytics: {
+            collectUsageMetrics: true,
+            reportInterval: "daily"
+          },
+          apiBaseUrl: "https://api.agentsmith.gov.kz",
+          apiEnabled: true
+        },
+        security: {
+          enableLocalAuth: true,
+          enableLdapAuth: false,
+          enableTwoFactor: false,
+          passwordRequirements: {
+            minLength: 8,
+            requireUppercase: true,
+            requireLowercase: true,
+            requireNumbers: true,
+            requireSpecialChars: false
+          },
+          sessionTimeout: 30,
+          ldapSettings: {
+            serverUrl: "",
+            baseDn: "",
+            bindDn: "",
+            bindCredentials: ""
+          },
+          twoFactorMethod: "sms",
+          rbacIntegrateWithOrgStructure: true,
+          encryption: {
+            algorithm: "AES-256",
+            keyRotationInterval: "90days",
+            enableAtRest: true,
+            enableInTransit: true
+          },
+          audit: {
+            retentionPeriod: "1year",
+            enableExport: true
+          },
+          blockchain: {
+            enabled: true,
+            nodeUrl: "https://besu.agent-smith.gov.kz:8545",
+            auditContractAddress: "0x7cf7b7834a45bcc60425c33c8a2d52b86ff1830f",
+            recordCitizenRequests: true,
+            recordDocuments: true,
+            recordMeetings: true
+          }
+        },
+        integrations: {
+          openai: {
+            enabled: true,
+            apiKey: process.env.OPENAI_API_KEY || "sk-placeholder",
+            defaultModel: "gpt-4",
+            baseUrl: "https://api.openai.com/v1",
+            testMode: false,
+            temperature: 0.7
+          },
+          anthropic: {
+            enabled: false,
+            apiKey: process.env.ANTHROPIC_API_KEY || "",
+            defaultModel: "claude-3-opus-20240229",
+            temperature: 0.7
+          },
+          eOtinish: {
+            enabled: true,
+            apiKey: "eotinish-api-key",
+            baseUrl: "https://api.eotinish.kz",
+            syncInterval: 30
+          },
+          hyperledger: {
+            enabled: true,
+            nodeUrl: "https://besu.agent-smith.gov.kz:8545",
+            contractAddress: "0x7cf7b7834a45bcc60425c33c8a2d52b86ff1830f"
+          },
+          yandexTranslate: {
+            enabled: true,
+            apiKey: "yandex-translate-api-key",
+            folderID: "yandex-folder-id"
+          },
+          yandexSpeech: {
+            enabled: true,
+            apiKey: "yandex-speech-api-key",
+            folderID: "yandex-folder-id"
+          },
+          moralis: {
+            enabled: true,
+            apiKey: process.env.MORALIS_API_KEY || "api-key-placeholder",
+            networkType: "testnet"
+          },
+          egov: {
+            enabled: true,
+            apiBaseUrl: "https://api.egov.kz/services",
+            certificate: "certificate-content-here"
+          }
+        }
+      };
+
+      res.json(defaultSettings);
+    } catch (error) {
+      console.error('Error getting system settings:', error);
+      res.status(500).json({ error: 'Failed to get system settings' });
+    }
+  });
+
+  // Обновление системных настроек
+  app.patch('/api/system/settings', (req: Request, res: Response) => {
+    try {
+      const updatedSettings = req.body;
+      
+      // Здесь должна быть логика сохранения настроек
+      // Для демонстрации просто возвращаем статус успеха
+      console.log('Updating system settings:', updatedSettings);
+      
+      res.json({ success: true, message: 'Настройки системы успешно обновлены' });
+    } catch (error) {
+      console.error('Error updating system settings:', error);
+      res.status(500).json({ error: 'Failed to update system settings' });
+    }
+  });
+
+  /**
    * Проверка API ключей и интеграций
    */
   app.get('/api/system/check-integrations', async (req: Request, res: Response) => {
