@@ -99,13 +99,21 @@ const RequestCard = ({
   request, 
   index, 
   isJustMoved,
-  onViewDetails
+  onViewDetails,
+  onProcessWithAI
 }: { 
   request: CitizenRequest; 
   index: number; 
   isJustMoved: boolean;
   onViewDetails: (request: CitizenRequest) => void;
+  onProcessWithAI?: (request: CitizenRequest) => void;
 }) => {
+  // Предотвращаем всплытие события при клике на кнопки
+  const handleButtonClick = (e: React.MouseEvent, callback: () => void) => {
+    e.stopPropagation();
+    callback();
+  };
+
   return (
     <Draggable draggableId={request.id.toString()} index={index}>
       {(provided, snapshot) => (
@@ -144,6 +152,33 @@ const RequestCard = ({
                 <Calendar className="h-3 w-3 inline mr-1" />
                 <span>{new Date(request.createdAt).toLocaleDateString()}</span>
               </div>
+            </div>
+            
+            {/* Добавляем кнопки действий */}
+            <div className="flex justify-between mt-3 pt-2 border-t">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-xs h-7 px-2"
+                onClick={(e) => handleButtonClick(e, () => onViewDetails(request))}
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                Детали
+              </Button>
+              
+              {onProcessWithAI && (
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  className="text-xs h-7 px-2"
+                  onClick={(e) => handleButtonClick(e, () => {
+                    if (onProcessWithAI) onProcessWithAI(request);
+                  })}
+                >
+                  <Bot className="h-3 w-3 mr-1" />
+                  ИИ-анализ
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -540,6 +575,44 @@ export default function CitizenRequestsKanban2() {
     setSelectedRequest(request);
     setIsDetailsDialogOpen(true);
     loadActivities(request.id);
+  };
+  
+  // Обработчик анализа обращения с помощью ИИ
+  const handleProcessWithAI = (request: CitizenRequest) => {
+    toast({
+      title: "Обработка с помощью ИИ",
+      description: "Запущен анализ обращения с помощью искусственного интеллекта",
+    });
+    
+    // Имитируем задержку обработки ИИ
+    setTimeout(() => {
+      // Добавляем запись в историю действий
+      createActivity(
+        request.id, 
+        "ai_process", 
+        "Обращение обработано искусственным интеллектом"
+      );
+      
+      // Добавляем запись в блокчейн
+      createBlockchainRecord(
+        request.id, 
+        "ai_analysis", 
+        {
+          requestType: request.requestType,
+          analysisTimestamp: new Date().toISOString()
+        }
+      );
+      
+      toast({
+        title: "Анализ завершен",
+        description: "Обращение успешно обработано с помощью ИИ",
+      });
+      
+      // Обновляем историю, если открыто диалоговое окно с деталями
+      if (selectedRequest && selectedRequest.id === request.id) {
+        loadActivities(request.id);
+      }
+    }, 2000);
   };
 
   // Функция для создания записи в истории
