@@ -148,7 +148,7 @@ const Sidebar = ({
           icon: <History size={20} />
         },
         {
-          name: "Настройки",
+          name: "Настройки системы",
           path: "/settings",
           icon: <Settings size={20} />
         },
