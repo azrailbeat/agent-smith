@@ -1241,9 +1241,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/citizen-requests', async (req, res) => {
     try {
       const requests = await storage.getCitizenRequests();
-      res.json(requests);
+      // Обернём ответ в нужный формат со структурой { data: [...], pagination: {...} }
+      res.json({
+        data: requests,
+        pagination: {
+          total: requests.length,
+          limit: 100,
+          offset: 0
+        }
+      });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Ошибка при получении списка обращений" });
     }
   });
   
