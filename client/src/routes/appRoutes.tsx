@@ -18,8 +18,7 @@ import RbacManagement from "@/pages/RbacManagement";
 // Обращения граждан
 import CitizenRequests from "@/pages/CitizenRequestsKanban2";
 
-// Документы и контент
-import Documents from "@/pages/Documents";
+// Знания и контент
 import KnowledgeManagement from "@/pages/KnowledgeManagement";
 import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
 
