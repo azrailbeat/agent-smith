@@ -206,8 +206,9 @@ const CitizenRequests = () => {
             requestType: "Инфраструктура",
             subject: "Ремонт дороги",
             status: "Новый",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            priority: "high" as const,
+            createdAt: new Date(),
+            updatedAt: new Date()
           },
           {
             id: 2,
@@ -217,8 +218,9 @@ const CitizenRequests = () => {
             requestType: "Экология",
             subject: "Качество питьевой воды",
             status: "В обработке",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            priority: "medium" as const,
+            createdAt: new Date(),
+            updatedAt: new Date()
           },
           {
             id: 3,
@@ -228,8 +230,9 @@ const CitizenRequests = () => {
             requestType: "Документы",
             subject: "Справка о составе семьи",
             status: "Выполнено",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            priority: "low" as const,
+            createdAt: new Date(),
+            updatedAt: new Date()
           }
         ];
       
@@ -254,6 +257,71 @@ const CitizenRequests = () => {
   
   // Извлекаем массив обращений из ответа
   const citizenRequests = citizenRequestsResponse?.data || [];
+  
+  // Распределяем обращения по колонкам канбан-доски при изменении списка обращений
+  useEffect(() => {
+    if (citizenRequests && citizenRequests.length > 0) {
+      // Создаем новую структуру доски
+      const newBoard: RequestsKanbanBoard = {
+        columns: {
+          new: {
+            id: "new",
+            title: "Новые",
+            requestIds: [],
+          },
+          inProgress: {
+            id: "inProgress",
+            title: "В работе",
+            requestIds: [],
+          },
+          waiting: {
+            id: "waiting",
+            title: "Ожидание",
+            requestIds: [],
+          },
+          completed: {
+            id: "completed",
+            title: "Выполнено",
+            requestIds: [],
+          },
+        },
+        columnOrder: ["new", "inProgress", "waiting", "completed"],
+      };
+      
+      // Распределяем обращения по колонкам
+      citizenRequests.forEach(request => {
+        // Приводим статус из API к ID колонки
+        let columnId = "new"; // По умолчанию
+        
+        if (request.status === "Новый" || request.status === "new") {
+          columnId = "new";
+        } else if (request.status === "В обработке" || request.status === "in_progress" || request.status === "В работе") {
+          columnId = "inProgress";
+        } else if (request.status === "Ожидание" || request.status === "waiting") {
+          columnId = "waiting";
+        } else if (request.status === "Выполнено" || request.status === "completed" || request.status === "Завершено") {
+          columnId = "completed";
+        }
+        
+        // Добавляем ID обращения в соответствующую колонку
+        if (newBoard.columns[columnId]) {
+          newBoard.columns[columnId].requestIds.push(request.id);
+        }
+      });
+      
+      // Обновляем состояние канбан-доски
+      setBoard(newBoard);
+      
+      // Обновляем статистику
+      setStats({
+        total: citizenRequests.length,
+        new: newBoard.columns.new.requestIds.length,
+        inProgress: newBoard.columns.inProgress.requestIds.length,
+        waiting: newBoard.columns.waiting.requestIds.length,
+        completed: newBoard.columns.completed.requestIds.length,
+      });
+    }
+  }, [citizenRequests]);
 
   // Загрузка списка агентов
   const { data: agents = [] } = useQuery<Agent[]>({
