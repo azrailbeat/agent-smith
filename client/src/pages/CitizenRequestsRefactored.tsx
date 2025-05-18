@@ -173,6 +173,42 @@ const CitizenRequests = () => {
   });
   const [selectedTab, setSelectedTab] = useState<string>('kanban');
   const [viewMode, setViewMode] = useState<'details' | 'ai' | 'history'>('details');
+  
+  // Состояние для канбан-доски
+  const [board, setBoard] = useState<RequestsKanbanBoard>({
+    columns: {
+      new: {
+        id: "new",
+        title: "Новые",
+        requestIds: [],
+      },
+      inProgress: {
+        id: "inProgress",
+        title: "В работе",
+        requestIds: [],
+      },
+      waiting: {
+        id: "waiting",
+        title: "Ожидание",
+        requestIds: [],
+      },
+      completed: {
+        id: "completed",
+        title: "Выполнено",
+        requestIds: [],
+      },
+    },
+    columnOrder: ["new", "inProgress", "waiting", "completed"],
+  });
+  
+  // Состояние для статистики
+  const [stats, setStats] = useState({
+    total: 0,
+    new: 0,
+    inProgress: 0,
+    waiting: 0,
+    completed: 0
+  });
 
   // Состояние для формы создания запроса
   const [formData, setFormData] = useState<{
@@ -257,71 +293,6 @@ const CitizenRequests = () => {
   
   // Извлекаем массив обращений из ответа
   const citizenRequests = citizenRequestsResponse?.data || [];
-  
-  // Распределяем обращения по колонкам канбан-доски при изменении списка обращений
-  useEffect(() => {
-    if (citizenRequests && citizenRequests.length > 0) {
-      // Создаем новую структуру доски
-      const newBoard: RequestsKanbanBoard = {
-        columns: {
-          new: {
-            id: "new",
-            title: "Новые",
-            requestIds: [],
-          },
-          inProgress: {
-            id: "inProgress",
-            title: "В работе",
-            requestIds: [],
-          },
-          waiting: {
-            id: "waiting",
-            title: "Ожидание",
-            requestIds: [],
-          },
-          completed: {
-            id: "completed",
-            title: "Выполнено",
-            requestIds: [],
-          },
-        },
-        columnOrder: ["new", "inProgress", "waiting", "completed"],
-      };
-      
-      // Распределяем обращения по колонкам
-      citizenRequests.forEach(request => {
-        // Приводим статус из API к ID колонки
-        let columnId = "new"; // По умолчанию
-        
-        if (request.status === "Новый" || request.status === "new") {
-          columnId = "new";
-        } else if (request.status === "В обработке" || request.status === "in_progress" || request.status === "В работе") {
-          columnId = "inProgress";
-        } else if (request.status === "Ожидание" || request.status === "waiting") {
-          columnId = "waiting";
-        } else if (request.status === "Выполнено" || request.status === "completed" || request.status === "Завершено") {
-          columnId = "completed";
-        }
-        
-        // Добавляем ID обращения в соответствующую колонку
-        if (newBoard.columns[columnId]) {
-          newBoard.columns[columnId].requestIds.push(request.id);
-        }
-      });
-      
-      // Обновляем состояние канбан-доски
-      setBoard(newBoard);
-      
-      // Обновляем статистику
-      setStats({
-        total: citizenRequests.length,
-        new: newBoard.columns.new.requestIds.length,
-        inProgress: newBoard.columns.inProgress.requestIds.length,
-        waiting: newBoard.columns.waiting.requestIds.length,
-        completed: newBoard.columns.completed.requestIds.length,
-      });
-    }
-  }, [citizenRequests]);
 
   // Загрузка списка агентов
   const { data: agents = [] } = useQuery<Agent[]>({
@@ -625,14 +596,7 @@ const CitizenRequests = () => {
     });
   };
 
-  // Статистика обращений
-  const stats = {
-    total: citizenRequests.length,
-    new: citizenRequests.filter(req => req.status === "new").length,
-    inProgress: citizenRequests.filter(req => req.status === "inProgress").length,
-    waiting: citizenRequests.filter(req => req.status === "waiting").length,
-    completed: citizenRequests.filter(req => req.status === "completed").length,
-  };
+  // Статистика обновляется внутри useEffect при изменении citizenRequests
 
   // Обработчик перетаскивания карточек в канбане
   const onDragEnd = (result: DropResult) => {
