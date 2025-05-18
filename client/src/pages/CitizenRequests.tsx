@@ -1835,7 +1835,13 @@ const CitizenRequests = () => {
       {/* Диалоговое окно автоматической обработки обращений */}
       <AutoProcessDialog 
         open={isAutoProcessOpen} 
-        onOpenChange={setIsAutoProcessOpen} 
+        onOpenChange={setIsAutoProcessOpen}
+        settings={autoProcessSettings}
+        onSettingsChange={setAutoProcessSettings}
+        onProcess={(settings) => {
+          console.log('Запуск обработки с настройками:', settings);
+          // Здесь будет API-запрос для запуска обработки
+        }}
       />
     </div>
   );
