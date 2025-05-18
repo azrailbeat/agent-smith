@@ -125,12 +125,6 @@ const Sidebar = ({
           icon: <Building size={20} />
         },
 
-
-        {
-          name: "Документы",
-          path: "/documents",
-          icon: <FileCheck size={20} />
-        },
         {
           name: "DAO Голосования",
           path: "/dao-voting",

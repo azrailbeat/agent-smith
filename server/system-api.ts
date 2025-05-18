@@ -134,9 +134,9 @@ export function registerSystemRoutes(app: express.Express): void {
       };
 
       res.json(defaultSettings);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting system settings:', error);
-      res.status(500).json({ error: 'Failed to get system settings' });
+      res.status(500).json({ error: 'Failed to get system settings', details: error.message });
     }
   });
 
@@ -150,9 +150,9 @@ export function registerSystemRoutes(app: express.Express): void {
       console.log('Updating system settings:', updatedSettings);
       
       res.json({ success: true, message: 'Настройки системы успешно обновлены' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating system settings:', error);
-      res.status(500).json({ error: 'Failed to update system settings' });
+      res.status(500).json({ error: 'Failed to update system settings', details: error.message });
     }
   });
 
@@ -183,7 +183,7 @@ export function registerSystemRoutes(app: express.Express): void {
       // ...
       
       res.json(results);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking integrations:', error);
       res.status(500).json({ error: 'Failed to check integrations', details: error.message });
     }
