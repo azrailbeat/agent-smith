@@ -13,7 +13,7 @@ import HistoryPage from "@/pages/History";
 import Analytics from "@/pages/Analytics";
 import DashboardAnalytics from "@/pages/DashboardAnalytics";
 import Translate from "@/pages/Translate";
-import CitizenRequests from "@/pages/CitizenRequests";
+import CitizenRequests from "@/pages/CitizenRequestsRefactored";
 import Meetings from "@/pages/Meetings";
 import SystemSettings from "@/pages/SystemSettings";
 import NotFound from "@/pages/not-found";
