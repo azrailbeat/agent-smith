@@ -813,15 +813,30 @@ export default function CitizenRequestsKanban2() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Обращения граждан</h1>
         <div className="flex space-x-3">
-          <Button>
+          <Button onClick={() => {
+              toast({
+                title: "Создание обращения",
+                description: "Функция создания нового обращения будет доступна вскоре",
+              });
+            }}>
             <Plus className="h-4 w-4 mr-2" />
             Новое обращение
           </Button>
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={() => {
+              toast({
+                title: "Импорт из файла",
+                description: "Функция импорта обращений из файла будет доступна вскоре",
+              });
+            }}>
             <FileText className="h-4 w-4 mr-2" />
             Импорт из файла
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => {
+              toast({
+                title: "Настройки ИИ",
+                description: "Настройки ИИ для обработки обращений будут доступны вскоре",
+              });
+            }}>
             <Bot className="h-4 w-4 mr-2" />
             Настройки ИИ
           </Button>
