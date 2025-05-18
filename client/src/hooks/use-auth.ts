@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from './use-toast';
 
-interface User {
+export interface User {
   id: string;
+  username?: string;
+  fullName?: string;
   email?: string;
   firstName?: string;
   lastName?: string;
@@ -10,6 +12,7 @@ interface User {
   roles?: string[];
   department?: string;
   position?: string;
+  role?: string;
 }
 
 export function useAuth() {

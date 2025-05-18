@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { User as UserType } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Mic,

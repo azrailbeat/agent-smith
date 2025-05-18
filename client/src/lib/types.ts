@@ -1,12 +1,16 @@
 // Common types used across the application
 
 export interface User {
-  id: number;
+  id: number | string;
   username: string;
   fullName: string;
+  firstName?: string;
+  email?: string;
+  profileImageUrl?: string;
   avatarUrl?: string;
   department?: string;
-  role: string;
+  role?: string;
+  roles?: string[];
 }
 
 export interface Task {
