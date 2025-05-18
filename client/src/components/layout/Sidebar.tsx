@@ -156,6 +156,11 @@ const Sidebar = ({
           name: "Переводчик",
           path: "/translate",
           icon: <Mic size={20} />
+        },
+        {
+          name: "База знаний",
+          path: "/knowledge",
+          icon: <BookOpen size={20} />
         }
       ]
     }
