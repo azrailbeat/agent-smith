@@ -910,6 +910,7 @@ export default function CitizenRequestsKanban2() {
                                   index={index}
                                   isJustMoved={request.id === lastMovedRequestId}
                                   onViewDetails={handleViewDetails}
+                                  onProcessWithAI={handleProcessWithAI}
                                 />
                               ))
                             )}
