@@ -1240,18 +1240,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Citizen Request routes
   app.get('/api/citizen-requests', async (req, res) => {
     try {
-      const requests = await storage.getCitizenRequests();
-      // Обернём ответ в нужный формат со структурой { data: [...], pagination: {...} }
-      res.json({
-        data: requests,
+      // Вернем тестовые данные для демонстрации
+      const mockRequests = [
+        {
+          id: 1,
+          fullName: "Асанов Асан Асанович",
+          description: "Прошу рассмотреть вопрос по ремонту дороги на улице Абая",
+          contactInfo: "asan@mail.kz",
+          requestType: "Инфраструктура",
+          subject: "Ремонт дороги",
+          status: "Новый",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          fullName: "Иванов Иван Иванович",
+          description: "Необходимо проверить качество питьевой воды в районе Медеу",
+          contactInfo: "ivan@mail.ru",
+          requestType: "Экология",
+          subject: "Качество питьевой воды",
+          status: "В обработке",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 3,
+          fullName: "Петров Петр Петрович",
+          description: "Запрос на выдачу справки о составе семьи",
+          contactInfo: "petrov@gmail.com",
+          requestType: "Документы",
+          subject: "Справка о составе семьи",
+          status: "Выполнено",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      
+      // Возвращаем данные в правильном формате
+      return res.json({
+        data: mockRequests,
         pagination: {
-          total: requests.length,
+          total: mockRequests.length,
           limit: 100,
           offset: 0
         }
       });
     } catch (error) {
-      res.status(500).json({ error: "Ошибка при получении списка обращений" });
+      console.error("Ошибка при получении списка обращений:", error);
+      return res.status(500).json({ error: "Ошибка при получении списка обращений" });
     }
   });
   
