@@ -1000,10 +1000,16 @@ const DAOVoting = () => {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="space-y-4 my-2">
-                <p className="text-neutral-700 whitespace-pre-line">
-                  {showProposalDetails.description}
-                </p>
+              <Tabs defaultValue="info" className="mt-2">
+                <TabsList className="grid grid-cols-2 mb-4">
+                  <TabsTrigger value="info">Информация</TabsTrigger>
+                  <TabsTrigger value="history">История действий</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="info" className="space-y-4">
+                  <p className="text-neutral-700 whitespace-pre-line">
+                    {showProposalDetails.description}
+                  </p>
                 
                 {showProposalDetails.documentLink && (
                   <div className="flex items-center">
