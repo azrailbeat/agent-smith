@@ -152,6 +152,15 @@ const CitizenRequests = () => {
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState<boolean>(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState<boolean>(false);
   const [isAutoProcessOpen, setIsAutoProcessOpen] = useState<boolean>(false);
+  
+  // Настройки для автоматической обработки обращений
+  const [autoProcessSettings, setAutoProcessSettings] = useState({
+    enabled: false,
+    agentId: undefined,
+    autoProcess: true,
+    autoClassify: true,
+    autoRespond: false
+  });
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [viewMode, setViewMode] = useState<'details' | 'ai' | 'history'>('details');

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { setupAuth } from "./auth/replit-auth";
 import { 
   summarizeDocument, 
   analyzeTranscription, 

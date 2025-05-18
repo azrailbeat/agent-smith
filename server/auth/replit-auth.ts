@@ -63,40 +63,72 @@ function updateUserSession(
 async function upsertUser(claims: any) {
   try {
     const userId = parseInt(claims["sub"]);
+    const email = claims["email"] || null;
+    const username = email ? email.split('@')[0] : `user${userId}`;
+    const firstName = claims["first_name"] || "";
+    const lastName = claims["last_name"] || "";
+    const fullName = `${firstName} ${lastName}`.trim() || username;
+    const avatarUrl = claims["profile_image_url"] || null;
     
-    // Проверяем существует ли пользователь
-    const existingUser = await storage.getUserById(userId);
+    // Базовая информация о пользователе
+    const basicUserData = {
+      username: username,
+      email: email,
+      fullName: fullName,
+      role: "user",
+      avatarUrl: avatarUrl,
+      isActive: true
+    };
     
-    if (existingUser) {
-      // Обновляем данные существующего пользователя
-      return await storage.updateUser(userId, {
-        email: claims["email"] || existingUser.email,
-        firstName: claims["first_name"] || existingUser.firstName,
-        lastName: claims["last_name"] || existingUser.lastName,
-        profileImageUrl: claims["profile_image_url"] || existingUser.profileImageUrl,
-        // Сохраняем текущую роль пользователя
-        role: existingUser.role,
-        departmentId: existingUser.departmentId,
-        isActive: true
-      });
-    } else {
-      // Создаем нового пользователя с ролью пользователя по умолчанию
-      const userData: InsertUser = {
-        id: userId,
-        username: claims["email"] ? claims["email"].split('@')[0] : `user${userId}`,
-        email: claims["email"] || null,
-        firstName: claims["first_name"] || null,
-        lastName: claims["last_name"] || null,
-        profileImageUrl: claims["profile_image_url"] || null,
-        role: "user", // По умолчанию назначаем роль "user"
-        isActive: true,
+    // Пробуем найти пользователя
+    try {
+      const existingUser = await storage.getUser(userId);
+      
+      if (existingUser) {
+        console.log("Пользователь найден в системе, обновляем данные", existingUser);
+        // Используем предыдущую роль пользователя, если она есть
+        const role = existingUser.role || "user";
+        const updatedData = {
+          ...basicUserData,
+          role: role  // Сохраняем роль пользователя
+        };
+        
+        // Возвращаем обновленные данные пользователя для сессии
+        return {...existingUser, ...updatedData};
+      }
+    } catch (findError) {
+      console.log("Пользователь не найден, будет создан новый", findError);
+    }
+    
+    // Создаем нового пользователя
+    try {
+      // Данные для создания нового пользователя
+      const newUserData = {
+        ...basicUserData,
+        password: `replitauth_${Math.random().toString(36).substring(2)}` // Генерируем случайный пароль
       };
       
-      return await storage.createUser(userData);
+      const createdUser = await storage.createUser(newUserData);
+      console.log("Создан новый пользователь", createdUser);
+      return createdUser;
+    } catch (createError) {
+      console.error("Ошибка при создании пользователя:", createError);
+      // Возвращаем базовые данные для сессии, если не удалось создать пользователя
+      return {
+        id: userId,
+        ...basicUserData
+      };
     }
   } catch (error) {
-    console.error("Ошибка при создании/обновлении пользователя:", error);
-    throw error;
+    console.error("Непредвиденная ошибка в upsertUser:", error);
+    // Возвращаем минимальный объект пользователя для сессии
+    return {
+      id: parseInt(claims["sub"]),
+      username: claims["email"] ? claims["email"].split('@')[0] : `user${claims["sub"]}`,
+      email: claims["email"] || null,
+      role: "user",
+      isActive: true
+    };
   }
 }
 
@@ -152,6 +184,14 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   // Маршрут входа в систему
+  app.get("/api/login", (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      prompt: "login consent",
+      scope: ["openid", "email", "profile", "offline_access"],
+    })(req, res, next);
+  });
+  
+  // Дополнительный маршрут для совместимости
   app.get("/api/auth/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
@@ -160,10 +200,18 @@ export async function setupAuth(app: Express) {
   });
 
   // Маршрут обратного вызова после аутентификации
+  app.get("/api/callback", (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      successReturnToOrRedirect: "/",
+      failureRedirect: "/api/login",
+    })(req, res, next);
+  });
+  
+  // Дополнительный маршрут обратного вызова для совместимости
   app.get("/api/auth/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
-      failureRedirect: "/api/auth/login",
+      failureRedirect: "/api/login",
     })(req, res, next);
   });
 
