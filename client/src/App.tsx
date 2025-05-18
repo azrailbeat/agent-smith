@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,181 +6,15 @@ import { NotificationProvider } from "@/components/notifications/NotificationPro
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import Sidebar from "@/components/layout/Sidebar";
-import Dashboard from "@/pages/Dashboard";
-import Tasks from "@/pages/Tasks";
-import HistoryPage from "@/pages/History";
-import Analytics from "@/pages/Analytics";
-import DashboardAnalytics from "@/pages/DashboardAnalytics";
-import Translate from "@/pages/Translate";
-import CitizenRequests from "@/pages/CitizenRequestsKanban2";
-import Meetings from "@/pages/Meetings";
-import SystemSettings from "@/pages/SystemSettings";
-import NotFound from "@/pages/not-found";
-import AboutSystem from "@/pages/AboutSystem";
-import OrgStructureManagement2 from "@/pages/OrgStructureManagement2";
-import Documents from "@/pages/Documents";
-import AIAgents from "@/pages/AIAgents";
-import DAOVoting from "@/pages/DAOVoting";
-import UserProfile from "@/pages/UserProfile";
-import KnowledgeManagement from "@/pages/KnowledgeManagement";
-import EmbedForm from "@/pages/EmbedForm";
-// Страница настроек интеграций управляется через SystemSettings
-// import IntegrationSettings from "@/pages/IntegrationSettings";
-import Users from "@/pages/Users";
-import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
-import RbacManagement from "@/pages/RbacManagement";
+import SidebarV2 from "@/components/layout/SidebarV2";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+
+// Импортируем новый компонент маршрутизации
+import AllRoutes from "@/routes/appRoutes";
 
 function Router() {
-  return (
-    <Switch>
-      {/* Общедоступные маршруты */}
-      <Route path="/" component={DashboardAnalytics} />
-      <Route path="/about" component={AboutSystem} />
-      <Route path="/embed" component={EmbedForm} />
-      
-      {/* Защищенные маршруты - требуют аутентификации */}
-      <Route path="/tasks">
-        {() => (
-          <ProtectedRoute>
-            <Tasks />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/history">
-        {() => (
-          <ProtectedRoute>
-            <HistoryPage />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/analytics">
-        {() => (
-          <ProtectedRoute>
-            <DashboardAnalytics />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/translate">
-        {() => (
-          <ProtectedRoute>
-            <Translate />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/citizen-requests">
-        {() => (
-          <ProtectedRoute>
-            <CitizenRequests />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/meetings">
-        {() => (
-          <ProtectedRoute>
-            <Meetings />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/documents">
-        {() => (
-          <ProtectedRoute>
-            <Documents />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/org-structure">
-        {() => (
-          <ProtectedRoute>
-            <OrgStructureManagement2 />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/ai-agents/:id">
-        {() => (
-          <ProtectedRoute>
-            <AIAgents />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/ai-agents">
-        {() => (
-          <ProtectedRoute>
-            <AIAgents />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/rbac">
-        {() => (
-          <ProtectedRoute requiredRoles={["admin"]}>
-            <RbacManagement />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/knowledge">
-        {() => (
-          <ProtectedRoute>
-            <UnifiedCompanyKnowledge />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/company-knowledge">
-        {() => (
-          <ProtectedRoute>
-            <UnifiedCompanyKnowledge />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/knowledge-base">
-        {() => (
-          <ProtectedRoute>
-            <UnifiedCompanyKnowledge />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/profile">
-        {() => (
-          <ProtectedRoute>
-            <UserProfile />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/settings">
-        {() => (
-          <ProtectedRoute requiredRoles={["admin"]}>
-            <SystemSettings />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/users">
-        {() => (
-          <ProtectedRoute requiredRoles={["admin"]}>
-            <Users />
-          </ProtectedRoute>
-        )}
-      </Route>
-      <Route path="/integration-settings">
-        {() => {
-          // Перенаправление на страницу настроек с вкладкой интеграций
-          window.location.href = '/settings';
-          return null;
-        }}
-      </Route>
-      <Route path="/dao-voting">
-        {() => (
-          <ProtectedRoute>
-            <DAOVoting />
-          </ProtectedRoute>
-        )}
-      </Route>
-      
-      {/* Маршрут по умолчанию - 404 */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+  return <AllRoutes />;
 }
 
 function App() {
@@ -255,7 +89,7 @@ function App() {
           
           <div className="flex flex-1">
             {/* Настольная версия сайдбара */}
-            <Sidebar 
+            <SidebarV2 
               collapsed={sidebarCollapsed} 
               onToggle={toggleSidebar} 
               isMobile={isMobile}
