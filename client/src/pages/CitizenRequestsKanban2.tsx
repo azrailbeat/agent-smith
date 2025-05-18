@@ -173,6 +173,9 @@ const RequestDetails = ({
       <DialogContent className="max-w-3xl overflow-y-auto max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Обращение №{request.id}: {request.subject}</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Подробная информация об обращении гражданина
+          </p>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>

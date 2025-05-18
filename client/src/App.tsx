@@ -25,7 +25,8 @@ import DAOVoting from "@/pages/DAOVoting";
 import UserProfile from "@/pages/UserProfile";
 import KnowledgeManagement from "@/pages/KnowledgeManagement";
 import EmbedForm from "@/pages/EmbedForm";
-import IntegrationSettings from "@/pages/IntegrationSettings";
+// Страница настроек интеграций управляется через SystemSettings
+// import IntegrationSettings from "@/pages/IntegrationSettings";
 import Users from "@/pages/Users";
 import UnifiedCompanyKnowledge from "@/pages/UnifiedCompanyKnowledge";
 import RbacManagement from "@/pages/RbacManagement";
@@ -99,9 +100,9 @@ function Router() {
         )}
       </Route>
       <Route path="/ai-agents/:id">
-        {(params) => (
+        {() => (
           <ProtectedRoute>
-            <AIAgents params={params} />
+            <AIAgents />
           </ProtectedRoute>
         )}
       </Route>
