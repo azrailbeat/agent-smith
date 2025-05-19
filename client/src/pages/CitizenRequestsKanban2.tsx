@@ -692,15 +692,16 @@ export default function CitizenRequestsKanban2() {
         throw new Error("Не найдены ИИ-агенты для обработки обращений граждан");
       }
       
-      // Отправляем обращение на обработку с использованием активного агента
+      // Отправляем обращение на обработку с использованием выбранного агента
       const processingResponse = await fetch(`/api/citizen-requests/${request.id}/process-with-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agentId: activeAgent.id,
+          agentId: selectedAgent.id,
           action: aiSettings.processType, // используем сохраненные настройки типа обработки
           useKnowledgeBase: aiSettings.useKnowledgeBase, // используем настройки использования базы знаний
-          useOrgStructure: aiSettings.useOrgStructure // используем настройки использования оргструктуры
+          useOrgStructure: aiSettings.useOrgStructure, // используем настройки использования оргструктуры
+          autoAssigned: aiSettings.autoAssignByType // информация о том, был ли агент назначен автоматически
         })
       });
       
@@ -755,10 +756,11 @@ export default function CitizenRequestsKanban2() {
         {
           requestType: request.requestType,
           subject: request.subject,
-          agentId: activeAgent.id,
-          agentName: activeAgent.name,
+          agentId: selectedAgent.id,
+          agentName: selectedAgent.name,
           processedAt: new Date().toISOString(),
-          classification: result.classification || 'general'
+          classification: result.classification || 'general',
+          autoAssigned: aiSettings.autoAssignByType
         }
       );
       
@@ -770,15 +772,22 @@ export default function CitizenRequestsKanban2() {
         {
           requestType: request.requestType,
           subject: request.subject,
-          analysisTimestamp: new Date().toISOString()
+          analysisTimestamp: new Date().toISOString(),
+          agentId: selectedAgent.id,
+          agentName: selectedAgent.name,
+          processType: aiSettings.processType,
+          autoAssigned: aiSettings.autoAssignByType
         }
       );
       
       console.log("Запись в блокчейне создана:", blockchainResult);
       
+      // Обновляем список обращений в интерфейсе
+      queryClient.invalidateQueries({ queryKey: ['/api/citizen-requests'] });
+      
       toast({
         title: "Анализ завершен",
-        description: "Обращение успешно обработано с помощью ИИ",
+        description: `Обращение успешно обработано ИИ-агентом "${selectedAgent.name}"`,
       });
       
       // Обновляем историю, если открыто диалоговое окно с деталями
@@ -977,7 +986,13 @@ export default function CitizenRequestsKanban2() {
           </Button>
           <Button variant="outline" onClick={() => setIsAISettingsOpen(true)}>
             <Bot className="h-4 w-4 mr-2" />
-            Настройки ИИ
+            {!aiSettings.autoAssignByType && aiSettings.selectedAgentId ? (
+              <>
+                Агент: {agents.find(a => a.id === aiSettings.selectedAgentId)?.name || "Не выбран"}
+              </>
+            ) : (
+              <>Настройки ИИ</>
+            )}
           </Button>
         </div>
       </div>
@@ -1412,6 +1427,13 @@ export default function CitizenRequestsKanban2() {
                             <div>
                               <div className="text-sm font-medium">{agent.name}</div>
                               <div className="text-xs text-muted-foreground line-clamp-1">{agent.description || 'Нет описания'}</div>
+                              {agent.settings?.specialization && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {Array.isArray(agent.settings.specialization) && agent.settings.specialization.map((spec: string) => (
+                                    <Badge key={spec} variant="outline" className="text-xs py-0 px-1">{spec}</Badge>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                           {aiSettings.selectedAgentId === agent.id && (
