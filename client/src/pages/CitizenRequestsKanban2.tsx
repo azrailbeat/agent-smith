@@ -605,10 +605,52 @@ export default function CitizenRequestsKanban2() {
     });
     
     try {
-      // Имитируем задержку обработки ИИ
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Получаем агентов для обработки обращений
+      const agentsResponse = await fetch('/api/agents?type=citizen_requests');
+      const agents = await agentsResponse.json();
       
-      // Используем централизованный логгер для записи активности
+      if (!agents || agents.length === 0) {
+        throw new Error("Не найдены ИИ-агенты для обработки обращений граждан");
+      }
+      
+      // Используем системные настройки, которые уже доступны в компоненте
+      // Находим активного агента - можно настроить приоритетность или выбрать первого активного
+      const activeAgent = agents.find(agent => agent.isActive) || agents[0];
+      
+      // Отправляем обращение на обработку с использованием активного агента
+      const processingResponse = await fetch(`/api/citizen-requests/${request.id}/process-with-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: activeAgent.id,
+          action: 'full', // можно настроить тип обработки: 'auto', 'full', 'classification'
+          useKnowledgeBase: true, // используем базу знаний для контекста
+          useOrgStructure: true // используем организационную структуру для маршрутизации
+        })
+      });
+      
+      if (!processingResponse.ok) {
+        const errorData = await processingResponse.json();
+        throw new Error(errorData.error || "Ошибка при обработке обращения");
+      }
+      
+      const result = await processingResponse.json();
+      
+      // Обновляем местное состояние, чтобы отразить изменения без перезагрузки
+      const updatedRequests = citizenRequests.map(req => {
+        if (req.id === request.id) {
+          return {
+            ...req,
+            aiProcessed: true,
+            aiClassification: result.classification || req.aiClassification,
+            aiSuggestion: result.suggestion || req.aiSuggestion,
+            status: 'inProgress'
+          };
+        }
+        return req;
+      });
+      
+      // Создаем запись активности
       await activityLogger.logActivity(
         "ai_process",
         "Обращение обработано искусственным интеллектом",
@@ -617,7 +659,10 @@ export default function CitizenRequestsKanban2() {
         {
           requestType: request.requestType,
           subject: request.subject,
-          processedAt: new Date().toISOString()
+          agentId: activeAgent.id,
+          agentName: activeAgent.name,
+          processedAt: new Date().toISOString(),
+          classification: result.classification || 'general'
         }
       );
       
