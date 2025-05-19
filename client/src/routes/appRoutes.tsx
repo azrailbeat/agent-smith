@@ -104,7 +104,7 @@ export const renderRoute = (route: RouteType) => {
 // Экспортируем все маршруты приложения
 export const appRoutes: RouteType[] = [
   // Публичные маршруты
-  createRoute("/", DashboardAnalytics, { name: "Главная", group: "Основное" }),
+  createRoute("/", Dashboard, { name: "Главная", group: "Основное" }),
   createRoute("/about", AboutSystem, { name: "О системе", group: "Информация" }),
   createRoute("/embed", EmbedForm, { name: "Встраивание", group: "Информация" }),
   

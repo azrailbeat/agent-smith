@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, Cog, Link2, RefreshCw, Check, X } from 'lucide-react';
+import { Shield, Cog, Link2, RefreshCw, Check, X, Users as UsersIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useIntegrationStatus } from '@/hooks/use-integration-status';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import Users from './Users';
 
 // Интерфейсы для типизации настроек системы
 interface SystemSettings {
@@ -2230,10 +2231,11 @@ const SystemSettings = () => {
       </div>
       
       <Tabs defaultValue="general" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 mb-8 bg-muted/20 p-1">
+        <TabsList className="grid w-full grid-cols-4 mb-8 bg-muted/20 p-1">
           <TabsTrigger value="general" className="rounded-md">Общие</TabsTrigger>
           <TabsTrigger value="integrations" className="rounded-md">Интеграции</TabsTrigger>
           <TabsTrigger value="security" className="rounded-md">Безопасность</TabsTrigger>
+          <TabsTrigger value="users" className="rounded-md">Пользователи</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general">
@@ -2246,6 +2248,23 @@ const SystemSettings = () => {
         
         <TabsContent value="security">
           <SecuritySettings />
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <div className="mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl flex items-center">
+                  <UsersIcon className="mr-2 h-5 w-5" />
+                  Управление пользователями
+                </CardTitle>
+                <CardDescription>
+                  Создание, редактирование и управление пользователями системы
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+          <Users />
         </TabsContent>
       </Tabs>
     </div>
