@@ -392,6 +392,18 @@ export default function CitizenRequestsKanban2() {
     useKnowledgeBase: true,
     useOrgStructure: true,
     processType: 'full' as 'auto' | 'full' | 'classification',
+    selectedAgentId: null as number | null,
+    autoAssignByType: true, // Автоматическое назначение по типу обращения
+  });
+  
+  // Получаем список всех ИИ-агентов для обработки обращений
+  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<Agent[]>({
+    queryKey: ['/api/agents?type=citizen_requests'],
+    queryFn: async () => {
+      const response = await fetch('/api/agents?type=citizen_requests');
+      if (!response.ok) throw new Error('Не удалось загрузить агентов');
+      return response.json();
+    }
   });
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -648,17 +660,37 @@ export default function CitizenRequestsKanban2() {
     });
     
     try {
-      // Получаем агентов для обработки обращений
-      const agentsResponse = await fetch('/api/agents?type=citizen_requests');
-      const agents = await agentsResponse.json();
+      // Получаем всех доступных агентов для обработки обращений
+      let selectedAgent: Agent | undefined;
       
-      if (!agents || agents.length === 0) {
-        throw new Error("Не найдены ИИ-агенты для обработки обращений граждан");
+      if (!aiSettings.autoAssignByType && aiSettings.selectedAgentId) {
+        // Если отключен автоматический выбор и задан конкретный агент, используем его
+        selectedAgent = agents.find(agent => agent.id === aiSettings.selectedAgentId);
+      } else {
+        // В противном случае выбираем агента по типу обращения или просто активного
+        if (aiSettings.autoAssignByType) {
+          // Пытаемся найти специализированного агента для типа обращения
+          selectedAgent = agents.find(
+            agent => 
+              agent.isActive && 
+              agent.settings?.specialization?.includes(request.requestType)
+          );
+        }
+        
+        // Если специализированный агент не найден, используем любого активного
+        if (!selectedAgent) {
+          selectedAgent = agents.find(agent => agent.isActive);
+        }
+        
+        // Если активный агент не найден, берем первого в списке
+        if (!selectedAgent) {
+          selectedAgent = agents[0];
+        }
       }
       
-      // Используем системные настройки, которые уже доступны в компоненте
-      // Находим активного агента - можно настроить приоритетность или выбрать первого активного
-      const activeAgent = agents.find((agent: Agent) => agent.isActive) || agents[0];
+      if (!selectedAgent) {
+        throw new Error("Не найдены ИИ-агенты для обработки обращений граждан");
+      }
       
       // Отправляем обращение на обработку с использованием активного агента
       const processingResponse = await fetch(`/api/citizen-requests/${request.id}/process-with-agent`, {
@@ -1333,6 +1365,64 @@ export default function CitizenRequestsKanban2() {
                 {aiSettings.processType === 'full' && 'Полная обработка с возможностью корректировки человеком'}
                 {aiSettings.processType === 'classification' && 'Только классификация и первичный анализ обращения'}
               </p>
+            </div>
+            
+            {/* Выбор конкретных агентов */}
+            <div className="space-y-2 mt-4">
+              <h4 className="text-sm font-medium">Назначение агентов</h4>
+              
+              {/* Переключатель автоматического назначения */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <h4 className="text-sm font-medium">Автоматический выбор агента</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Система будет автоматически выбирать подходящего агента по типу обращения
+                  </p>
+                </div>
+                <Switch 
+                  checked={aiSettings.autoAssignByType}
+                  onCheckedChange={(checked: boolean) => setAISettings(prev => ({ ...prev, autoAssignByType: checked }))}
+                />
+              </div>
+              
+              {/* Ручной выбор конкретного агента, если автоматический выбор отключен */}
+              {!aiSettings.autoAssignByType && (
+                <div className="space-y-2 mt-2">
+                  <h4 className="text-sm font-medium">Выбор агента для обработки</h4>
+                  
+                  {isLoadingAgents ? (
+                    <div className="flex items-center justify-center h-20">
+                      <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+                    </div>
+                  ) : agents.length === 0 ? (
+                    <div className="text-xs text-muted-foreground p-2 border rounded-md">
+                      Нет доступных агентов для обработки обращений граждан
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {agents.map(agent => (
+                        <div 
+                          key={agent.id}
+                          className={`p-2 border rounded-md cursor-pointer hover:bg-secondary/50 flex items-center justify-between
+                            ${aiSettings.selectedAgentId === agent.id ? 'border-primary bg-secondary' : ''}`}
+                          onClick={() => setAISettings(prev => ({ ...prev, selectedAgentId: agent.id }))}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Bot className={`h-5 w-5 ${agent.isActive ? 'text-green-500' : 'text-gray-400'}`} />
+                            <div>
+                              <div className="text-sm font-medium">{agent.name}</div>
+                              <div className="text-xs text-muted-foreground line-clamp-1">{agent.description || 'Нет описания'}</div>
+                            </div>
+                          </div>
+                          {aiSettings.selectedAgentId === agent.id && (
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
