@@ -50,6 +50,7 @@ import {
   User,
   Filter,
   MoreHorizontal,
+  Tag,
 } from 'lucide-react';
 
 // Интерфейсы для типизации
@@ -70,6 +71,8 @@ interface CitizenRequest {
   aiSuggestion?: string;
   responseText?: string;
   title?: string;
+  summary?: string;
+  blockchainHash?: string;
 }
 
 // Интерфейс для колонки Канбан-доски
@@ -156,6 +159,27 @@ const RequestCard = ({
               </Badge>
             </div>
             <p className="text-xs text-gray-500 mb-2 line-clamp-2">{request.description}</p>
+            
+            {/* Показываем результаты ИИ-анализа, если они есть */}
+            {request.aiProcessed && (
+              <div className="mb-2 border-t pt-1">
+                {request.aiClassification && (
+                  <div className="flex items-center gap-1 text-xs">
+                    <Tag className="h-3 w-3 text-blue-500" />
+                    <span className="text-blue-600 font-medium">Классификация: </span>
+                    <span className="text-gray-600">{request.aiClassification}</span>
+                  </div>
+                )}
+                {/* Проверяем summary с учетом возможной несогласованности типов */}
+                {(request as any).summary && (
+                  <div className="flex items-start gap-1 text-xs mt-1">
+                    <Bot className="h-3 w-3 text-primary mt-0.5" />
+                    <span className="text-gray-600 line-clamp-1">{(request as any).summary}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="flex justify-between items-center text-xs text-gray-500">
               <div className="flex items-center">
                 <User className="h-3 w-3 mr-1" />
@@ -1262,7 +1286,7 @@ export default function CitizenRequestsKanban2() {
               </div>
               <Switch 
                 checked={aiSettings.useKnowledgeBase}
-                onCheckedChange={(checked) => setAISettings(prev => ({ ...prev, useKnowledgeBase: checked }))}
+                onCheckedChange={(checked: boolean) => setAISettings(prev => ({ ...prev, useKnowledgeBase: checked }))}
               />
             </div>
             
@@ -1275,7 +1299,7 @@ export default function CitizenRequestsKanban2() {
               </div>
               <Switch 
                 checked={aiSettings.useOrgStructure}
-                onCheckedChange={(checked) => setAISettings(prev => ({ ...prev, useOrgStructure: checked }))}
+                onCheckedChange={(checked: boolean) => setAISettings(prev => ({ ...prev, useOrgStructure: checked }))}
               />
             </div>
             
