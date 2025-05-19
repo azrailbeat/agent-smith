@@ -136,7 +136,7 @@ const Sidebar = ({
         },
         {
           name: "Настройки системы",
-          path: "/settings",
+          path: "/system-settings",
           icon: <Settings size={20} />
         },
         {
