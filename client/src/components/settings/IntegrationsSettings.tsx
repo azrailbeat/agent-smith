@@ -88,30 +88,63 @@ export function IntegrationsSettings() {
   };
 
   return (
-    <div className="container py-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Настройки интеграций</h2>
+    <div className="py-6">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Database className="h-5 w-5" /> 
+          Общие настройки интеграций
+        </h2>
+        <p className="text-muted-foreground">Настройте внешние интеграции системы Agent Smith</p>
       </div>
       
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">API ключи</CardTitle>
+          <CardDescription>Управление API ключами для внешних интеграций</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="api-url">Базовый URL API</Label>
+                <Input id="api-url" value="https://api.agentsmith.gov.kz" className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="api-token">Основной API ключ</Label>
+                <Input id="api-token" value="2h6EdTNLGA8KFzhYGnIVLjMyRBrf83t9" type="password" className="mt-1 font-mono" />
+              </div>
+              <div className="flex items-end">
+                <Button variant="outline" size="sm">Сгенерировать новый ключ</Button>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch id="enable-api" defaultChecked />
+              <Label htmlFor="enable-api">Включить доступ к API для внешних систем</Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-5 mb-6 rounded-full bg-muted/50">
-          <TabsTrigger value="email" className="flex items-center gap-2 rounded-full">
+        <TabsList className="grid grid-cols-5 mb-6 bg-muted/50">
+          <TabsTrigger value="email" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             <span>Настройки Email</span>
           </TabsTrigger>
-          <TabsTrigger value="activedirectory" className="flex items-center gap-2 rounded-full">
+          <TabsTrigger value="activedirectory" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span>Active Directory</span>
           </TabsTrigger>
-          <TabsTrigger value="api" className="flex items-center gap-2 rounded-full">
+          <TabsTrigger value="api" className="flex items-center gap-2">
             <Webhook className="h-4 w-4" />
             <span>API для обращений</span>
           </TabsTrigger>
-          <TabsTrigger value="widget" className="flex items-center gap-2 rounded-full">
+          <TabsTrigger value="widget" className="flex items-center gap-2">
             <Code className="h-4 w-4" />
             <span>Виджет для сайта</span>
           </TabsTrigger>
-          <TabsTrigger value="htmlform" className="flex items-center gap-2 rounded-full">
+          <TabsTrigger value="htmlform" className="flex items-center gap-2">
             <FileCode className="h-4 w-4" />
             <span>HTML форма</span>
           </TabsTrigger>
