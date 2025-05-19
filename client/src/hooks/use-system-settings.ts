@@ -189,7 +189,7 @@ const defaultSettings: SystemSettings = {
   integrations: {
     openai: {
       enabled: true,
-      apiKey: process.env.OPENAI_API_KEY || "sk-placeholder",
+      apiKey: import.meta.env.VITE_OPENAI_API_KEY || "sk-placeholder",
       defaultModel: "gpt-4o",
       baseUrl: "https://api.openai.com/v1",
       testMode: false,
@@ -197,7 +197,7 @@ const defaultSettings: SystemSettings = {
     },
     anthropic: {
       enabled: false,
-      apiKey: process.env.ANTHROPIC_API_KEY || "",
+      apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY || "",
       defaultModel: "claude-3-opus-20240229",
       temperature: 0.7
     },
@@ -237,7 +237,7 @@ const defaultSettings: SystemSettings = {
     },
     moralis: {
       enabled: true,
-      apiKey: process.env.MORALIS_API_KEY || "api-key-placeholder",
+      apiKey: import.meta.env.VITE_MORALIS_API_KEY || "api-key-placeholder",
       networkType: "testnet"
     },
     yandexTranslate: {

@@ -4,7 +4,7 @@ import "./index.css";
 
 // Ensure API key is available if needed
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY || "";
-if (!apiKey && process.env.NODE_ENV === 'development') {
+if (!apiKey && import.meta.env.MODE === 'development') {
   console.warn("Warning: OPENAI_API_KEY environment variable is not set. Some AI features may not work.");
 }
 

@@ -195,7 +195,7 @@ const IntegrationSettings = () => {
 {`POST /api/external/citizen-requests
 curl -X POST https://agent-smith.replit.app/api/external/citizen-requests \\
 -H "Content-Type: application/json" \\
--H "X-API-Key: ${apiKey}" \\
+-H "X-API-Key: `}{apiKey}{`" \\
 -d '{
   "fullName": "Иван Петров",
   "contactInfo": "ivan@example.com",
