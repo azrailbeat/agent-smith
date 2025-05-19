@@ -33,6 +33,7 @@ interface SystemSettings {
     enableLocalAuth: boolean;
     enableLdapAuth: boolean;
     enableTwoFactor: boolean;
+    enableReplitAuth?: boolean;
     passwordRequirements: {
       minLength: number;
       requireUppercase: boolean;
