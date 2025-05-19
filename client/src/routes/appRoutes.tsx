@@ -109,7 +109,7 @@ export const appRoutes: RouteType[] = [
   createRoute("/embed", EmbedForm, { name: "Встраивание", group: "Информация" }),
   
   // Защищенные маршруты
-  createRoute("/dashboard", DashboardAnalytics, { 
+  createRoute("/dashboard", Dashboard, { 
     protected: true, 
     name: "Мониторинг", 
     group: "Основное" 

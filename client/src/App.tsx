@@ -36,8 +36,8 @@ function Router() {
   return (
     <Switch>
       {/* Общедоступные маршруты */}
-      <Route path="/" component={DashboardAnalytics} />
-      <Route path="/dashboard" component={DashboardAnalytics} />
+      <Route path="/" component={Dashboard} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/about" component={AboutSystem} />
       <Route path="/embed" component={EmbedForm} />
       
