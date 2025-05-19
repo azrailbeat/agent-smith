@@ -7,6 +7,7 @@ import {
   DropResult
 } from '@hello-pangea/dnd';
 import { activityLogger } from '@/lib/activityLogger';
+import { useGlobalSystemSettings } from '@/contexts/SystemSettingsContext';
 import {
   Card,
   CardContent,
@@ -1106,13 +1107,31 @@ export default function CitizenRequestsKanban2() {
                 <p className="text-sm text-gray-500 mb-4">
                   Интеграция с Электронным порталом обращений граждан Республики Казахстан.
                 </p>
-                <div className="flex items-center space-x-2">
-                  <div className="rounded-full h-3 w-3 bg-green-500"></div>
-                  <span className="text-sm">Активна</span>
-                </div>
+                {(() => {
+                  const { settings } = useGlobalSystemSettings();
+                  const eOtinishEnabled = settings.integrations.eOtinish?.enabled || false;
+                  
+                  return (
+                    <div className="flex items-center space-x-2">
+                      <div className={`rounded-full h-3 w-3 ${eOtinishEnabled ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                      <span className="text-sm">{eOtinishEnabled ? 'Активна' : 'Неактивна'}</span>
+                      {eOtinishEnabled && settings.integrations.eOtinish?.apiEndpoint && (
+                        <span className="text-xs text-gray-400 ml-2">
+                          {settings.integrations.eOtinish.apiEndpoint}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">Настроить интеграцию</Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => window.location.href = '/system-settings'}
+                >
+                  Настроить интеграцию
+                </Button>
               </CardFooter>
             </Card>
             

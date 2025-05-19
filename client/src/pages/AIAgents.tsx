@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { queryClient } from "@/lib/queryClient";
+import { useGlobalSystemSettings } from "@/contexts/SystemSettingsContext";
 
 // Определение типа для параметров URL
 type AIAgentParams = {
@@ -162,9 +163,11 @@ const AIAgentsPage = () => {
     roles: ('public' | 'internal' | 'admin')[];
   }
   
+  const { settings } = useGlobalSystemSettings();
+  
   const [personaConfig, setPersonaConfig] = useState<PersonaBuilderConfig>({
     name: '',
-    model: 'gpt-4o',
+    model: settings.integrations.openai.defaultModel || 'gpt-4o',
     prompt: '',
     knowledge_sources: [],
     triggers: [],
@@ -617,13 +620,40 @@ const AIAgentsPage = () => {
     }
   ];
   
-  // Демо данные для моделей (интеграций)
-  // Интеграции с языковыми моделями и блокчейном
+  // Интеграции с языковыми моделями и блокчейном на основе системных настроек
   const demoIntegrations: Integration[] = [
-    { id: 1, name: "OpenAI GPT-4o", type: "openai", apiUrl: "https://api.openai.com", isActive: true, config: { model: "gpt-4o" } },
-    { id: 2, name: "Anthropic Claude 3", type: "anthropic", apiUrl: "https://api.anthropic.com", isActive: true, config: { model: "claude-3-sonnet-20240229" } },
-    { id: 3, name: "Google Gemini Pro", type: "google", apiUrl: "https://generativelanguage.googleapis.com", isActive: true, config: { model: "gemini-pro" } },
-    { id: 4, name: "Moralis Blockchain API", type: "moralis", apiUrl: "https://deep-index.moralis.io/api/v2", isActive: true, config: { chain: "besu" } }
+    { 
+      id: 1, 
+      name: `OpenAI ${settings.integrations.openai.defaultModel}`, 
+      type: "openai", 
+      apiUrl: settings.integrations.openai.baseUrl || "https://api.openai.com", 
+      isActive: settings.integrations.openai.enabled, 
+      config: { model: settings.integrations.openai.defaultModel } 
+    },
+    { 
+      id: 2, 
+      name: `Anthropic ${settings.integrations.anthropic.defaultModel}`, 
+      type: "anthropic", 
+      apiUrl: "https://api.anthropic.com", 
+      isActive: settings.integrations.anthropic.enabled, 
+      config: { model: settings.integrations.anthropic.defaultModel } 
+    },
+    { 
+      id: 3, 
+      name: "Google Gemini Pro", 
+      type: "google", 
+      apiUrl: "https://generativelanguage.googleapis.com", 
+      isActive: true, 
+      config: { model: "gemini-pro" } 
+    },
+    { 
+      id: 4, 
+      name: "Moralis Blockchain API", 
+      type: "moralis", 
+      apiUrl: "https://deep-index.moralis.io/api/v2", 
+      isActive: settings.integrations.moralis?.enabled || false, 
+      config: { chain: settings.integrations.moralis?.networkType || "besu" } 
+    }
   ];
   
   // Демо задачи

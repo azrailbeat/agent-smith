@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import { SystemSettingsProvider } from "@/contexts/SystemSettingsContext";
+import SystemInitializer from "@/components/system/SystemInitializer";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -246,64 +247,67 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <NotificationProvider>
-        {isEmbedded ? (
-        // Встроенный режим без хедера, футера и сайдбара
-        <div className="min-h-screen flex flex-col bg-white text-slate-800">
-          <main className="flex-1">
-            <Router />
-          </main>
-        </div>
-      ) : (
-        // Обычный режим с полным интерфейсом
-        <div className="min-h-screen flex flex-col bg-white text-slate-800">
-          {/* Добавляем компонент Header с меню пользователя */}
-          <Header />
-          
-          <div className="flex flex-1">
-            {/* Настольная версия сайдбара */}
-            <Sidebar 
-              collapsed={sidebarCollapsed} 
-              onToggle={toggleSidebar} 
-              isMobile={isMobile}
-              visible={sidebarVisible}
-            />
-            
-            {/* Затемняющий оверлей при открытом сайдбаре на мобильных */}
-            {isMobile && sidebarVisible && (
-              <div 
-                className="fixed inset-0 bg-black/30 z-20 backdrop-blur-sm"
-                onClick={() => setSidebarVisible(false)}
-                style={{ animation: 'fadeIn 0.2s ease-in-out' }}
-              ></div>
-            )}
-            
-            {/* Кнопка открытия меню на мобильных */}
-            {isMobile && !sidebarVisible && (
-              <button 
-                className="fixed left-4 top-4 z-20 p-2 bg-white rounded-full shadow-md text-slate-700 hover:text-emerald-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                onClick={() => setSidebarVisible(true)}
-                aria-label="Открыть меню"
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            )}
-            
-            <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${
-              isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
-            }`}>
-              <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <SystemSettingsProvider>
+        <SystemInitializer />
+        <NotificationProvider>
+          {isEmbedded ? (
+            // Встроенный режим без хедера, футера и сайдбара
+            <div className="min-h-screen flex flex-col bg-white text-slate-800">
+              <main className="flex-1">
                 <Router />
+              </main>
+            </div>
+          ) : (
+            // Обычный режим с полным интерфейсом
+            <div className="min-h-screen flex flex-col bg-white text-slate-800">
+              {/* Добавляем компонент Header с меню пользователя */}
+              <Header />
+              
+              <div className="flex flex-1">
+                {/* Настольная версия сайдбара */}
+                <Sidebar 
+                  collapsed={sidebarCollapsed} 
+                  onToggle={toggleSidebar} 
+                  isMobile={isMobile}
+                  visible={sidebarVisible}
+                />
+                
+                {/* Затемняющий оверлей при открытом сайдбаре на мобильных */}
+                {isMobile && sidebarVisible && (
+                  <div 
+                    className="fixed inset-0 bg-black/30 z-20 backdrop-blur-sm"
+                    onClick={() => setSidebarVisible(false)}
+                    style={{ animation: 'fadeIn 0.2s ease-in-out' }}
+                  ></div>
+                )}
+                
+                {/* Кнопка открытия меню на мобильных */}
+                {isMobile && !sidebarVisible && (
+                  <button 
+                    className="fixed left-4 top-4 z-20 p-2 bg-white rounded-full shadow-md text-slate-700 hover:text-emerald-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                    onClick={() => setSidebarVisible(true)}
+                    aria-label="Открыть меню"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                )}
+                
+                <main className={`flex-1 py-5 sm:py-7 transition-all duration-300 ease-in-out ${
+                  isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-14 sm:ml-16' : 'ml-56 sm:ml-64')
+                }`}>
+                  <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                    <Router />
+                  </div>
+                </main>
               </div>
-            </main>
-          </div>
-          <Footer />
-        </div>
-      )}
-      <Toaster />
-      </NotificationProvider>
+              <Footer />
+            </div>
+          )}
+          <Toaster />
+        </NotificationProvider>
+      </SystemSettingsProvider>
     </QueryClientProvider>
   );
 }

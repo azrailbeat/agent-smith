@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useGlobalSystemSettings } from "@/contexts/SystemSettingsContext";
 import { 
   Tabs, 
   TabsContent, 
@@ -127,6 +128,7 @@ interface Vote {
 
 const DAOVoting = () => {
   const [activeTab, setActiveTab] = useState("active");
+  const { settings } = useGlobalSystemSettings();
   const [showNewProposalDialog, setShowNewProposalDialog] = useState(false);
   const [showProposalDetails, setShowProposalDetails] = useState<Proposal | null>(null);
   const [userVote, setUserVote] = useState<'for' | 'against' | 'abstain' | null>(null);
@@ -372,19 +374,29 @@ const DAOVoting = () => {
         // Получаем идентификатор созданного предложения
         const createdProposal = await response.json();
         
-        // Создаем запись в блокчейне для обеспечения неизменности
-        if (createdProposal && createdProposal.id) {
-          await activityLogger.createBlockchainRecord(
-            'proposal_created',
-            'dao_proposal',
-            createdProposal.id,
-            {
-              title: newProposal.title,
-              category: newProposal.category,
-              threshold: newProposal.threshold,
-              createdAt: new Date().toISOString()
-            }
-          );
+        // Создаем запись в блокчейне для обеспечения неизменности, если блокчейн включен в настройках
+        if (createdProposal && createdProposal.id && settings.security.blockchain?.enabled && settings.security.blockchain?.recordCitizenRequests) {
+          try {
+            await activityLogger.createBlockchainRecord(
+              'proposal_created',
+              'dao_proposal',
+              createdProposal.id,
+              {
+                title: newProposal.title,
+                category: newProposal.category,
+                threshold: newProposal.threshold,
+                createdAt: new Date().toISOString(),
+                contractAddress: settings.security.blockchain.auditContractAddress,
+                nodeUrl: settings.security.blockchain.nodeUrl
+              }
+            );
+            console.log('Blockchain record created successfully');
+          } catch (error) {
+            console.error('Failed to create blockchain record', error);
+            // Продолжаем работу даже при ошибке блокчейна, так как это не критично для основной функциональности
+          }
+        } else {
+          console.info('Blockchain recording is disabled in system settings');
         }
         
         return response;

@@ -93,11 +93,6 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        <DropdownMenuItem onClick={() => window.location.href = '/profile'}>
-          <UserIcon className="mr-2 h-4 w-4" />
-          <span>Профиль</span>
-        </DropdownMenuItem>
-        
         {hasRole('admin') && (
           <DropdownMenuItem onClick={() => window.location.href = '/system-settings'}>
             <Settings className="mr-2 h-4 w-4" />
