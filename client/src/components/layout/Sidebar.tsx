@@ -28,6 +28,7 @@ import {
   XCircle,
   FileStack,
   HelpCircle,
+  Link2,
   Key,
   Lock,
   Cpu,
@@ -138,6 +139,11 @@ const Sidebar = ({
           name: "Настройки системы",
           path: "/system-settings",
           icon: <Settings size={20} />
+        },
+        {
+          name: "Настройки интеграций",
+          path: "/integration-settings",
+          icon: <Database size={20} />
         },
         {
           name: "Переводчик",
