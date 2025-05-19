@@ -108,12 +108,6 @@ const Sidebar = ({
     {
       title: "Управление",
       items: [
-
-        {
-          name: "Пользователи",
-          path: "/users",
-          icon: <Users size={20} />
-        },
         {
           name: "ИИ агенты",
           path: "/ai-agents",
