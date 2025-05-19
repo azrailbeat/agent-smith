@@ -1,86 +1,60 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-// Интерфейс для статуса интеграций API
+// Типизация статуса интеграций
 export interface IntegrationStatus {
-  openai: boolean;
-  anthropic: boolean;
-  yandexGpt: boolean;
-  yandexSpeech: boolean;
-  eOtinish: boolean;
-  egov: boolean;
-  hyperledger: boolean;
-  supabase: boolean;
+  openai?: boolean;
+  anthropic?: boolean;
+  yandexGpt?: boolean;
+  yandexSpeech?: boolean;
+  eOtinish?: boolean;
+  hyperledger?: boolean;
+  supabase?: boolean;
+  moralis?: boolean;
+  yandexTranslate?: boolean;
 }
 
+// Хук для отслеживания статуса интеграций
 export function useIntegrationStatus() {
   const { toast } = useToast();
-  
-  // Состояние для отслеживания статуса API интеграций
-  const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus>({
-    openai: false,
-    anthropic: false,
-    yandexGpt: false,
-    yandexSpeech: false,
-    eOtinish: false,
-    egov: false,
-    hyperledger: false,
-    supabase: false
-  });
-  
+  const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus>({});
   const [isChecking, setIsChecking] = useState(false);
   
-  // Функция для проверки статуса интеграций
-  const checkIntegrationStatus = async (showToast = true) => {
-    if (isChecking) return;
+  // Проверка статуса интеграций
+  const checkIntegrationStatus = async () => {
     setIsChecking(true);
     
     try {
-      if (showToast) {
-        toast({
-          title: 'Проверка интеграций',
-          description: 'Проверяем подключение к внешним API...'
-        });
-      }
+      // Запрос к API для проверки статуса интеграций
+      const response = await apiRequest('GET', '/api/system/check-integrations');
+      const data = await response.json();
       
-      const response = await fetch('/api/system/check-integrations');
-      if (response.ok) {
-        const data = await response.json();
-        setIntegrationStatus(data);
-        
-        if (showToast) {
-          toast({
-            title: 'Статус интеграций обновлен',
-            description: 'Проверка подключений завершена'
-          });
-        }
-      } else {
-        if (showToast) {
-          toast({
-            title: 'Ошибка проверки',
-            description: 'Не удалось получить статус интеграций',
-            variant: 'destructive'
-          });
-        }
-      }
+      setIntegrationStatus(data);
     } catch (error) {
-      console.error('Ошибка при проверке интеграций:', error);
-      if (showToast) {
-        toast({
-          title: 'Ошибка проверки',
-          description: 'Произошла ошибка при выполнении запроса',
-          variant: 'destructive'
-        });
-      }
+      console.error('Ошибка проверки статуса интеграций:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось проверить статус интеграций',
+        variant: 'destructive',
+      });
+      
+      // В случае ошибки, устанавливаем все статусы в false
+      setIntegrationStatus({
+        openai: false,
+        anthropic: false,
+        yandexGpt: false,
+        yandexSpeech: false,
+        eOtinish: false,
+        hyperledger: false,
+        supabase: false,
+        moralis: false,
+        yandexTranslate: false
+      });
     } finally {
       setIsChecking(false);
     }
   };
-  
-  // Проверить статус интеграций при монтировании компонента
-  useEffect(() => {
-    checkIntegrationStatus(false);
-  }, []);
   
   return {
     integrationStatus,
