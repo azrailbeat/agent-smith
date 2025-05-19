@@ -169,6 +169,12 @@ export const appRoutes: RouteType[] = [
     name: "История", 
     group: "Информация" 
   }),
+  createRoute("/system-settings", SystemSettings, { 
+    protected: true, 
+    requiredRoles: ["admin"], 
+    name: "Настройки системы", 
+    group: "Информация" 
+  }),
   createRoute("/settings", SystemSettings, { 
     protected: true, 
     requiredRoles: ["admin"], 
