@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,6 +95,16 @@ interface Activity {
   createdAt: Date;
   userId?: string;
   metadata?: any;
+}
+
+// Интерфейс для ИИ-агента
+interface Agent {
+  id: number;
+  name: string;
+  description?: string;
+  type: string;
+  isActive: boolean;
+  settings?: Record<string, any>;
 }
 
 // Компонент карточки для канбан-доски
@@ -350,6 +361,14 @@ export default function CitizenRequestsKanban2() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTab, setSelectedTab] = useState('kanban');
   const [lastMovedRequestId, setLastMovedRequestId] = useState<number | null>(null);
+  
+  // Состояние для настроек ИИ
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
+  const [aiSettings, setAISettings] = useState({
+    useKnowledgeBase: true,
+    useOrgStructure: true,
+    processType: 'full' as 'auto' | 'full' | 'classification',
+  });
   const [selectedRequest, setSelectedRequest] = useState<CitizenRequest | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -615,7 +634,7 @@ export default function CitizenRequestsKanban2() {
       
       // Используем системные настройки, которые уже доступны в компоненте
       // Находим активного агента - можно настроить приоритетность или выбрать первого активного
-      const activeAgent = agents.find(agent => agent.isActive) || agents[0];
+      const activeAgent = agents.find((agent: Agent) => agent.isActive) || agents[0];
       
       // Отправляем обращение на обработку с использованием активного агента
       const processingResponse = await fetch(`/api/citizen-requests/${request.id}/process-with-agent`, {
@@ -623,9 +642,9 @@ export default function CitizenRequestsKanban2() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: activeAgent.id,
-          action: 'full', // можно настроить тип обработки: 'auto', 'full', 'classification'
-          useKnowledgeBase: true, // используем базу знаний для контекста
-          useOrgStructure: true // используем организационную структуру для маршрутизации
+          action: aiSettings.processType, // используем сохраненные настройки типа обработки
+          useKnowledgeBase: aiSettings.useKnowledgeBase, // используем настройки использования базы знаний
+          useOrgStructure: aiSettings.useOrgStructure // используем настройки использования оргструктуры
         })
       });
       
@@ -636,14 +655,35 @@ export default function CitizenRequestsKanban2() {
       
       const result = await processingResponse.json();
       
-      // Обновляем местное состояние, чтобы отразить изменения без перезагрузки
+      // Обновляем запрос в состоянии Kanban-доски
+      // Перемещаем запрос в колонку "В работе" и обновляем его свойства
+      const newBoard = {...board};
+      
+      // Обновляем статус обращения на "inProgress" если оно было в другой колонке
+      if (request.status !== 'inProgress') {
+        // Удаляем из текущей колонки
+        const currentColumn = request.status;
+        const currentColumnIndex = newBoard.columns[currentColumn].requestIds.indexOf(request.id);
+        
+        if (currentColumnIndex !== -1) {
+          newBoard.columns[currentColumn].requestIds.splice(currentColumnIndex, 1);
+        }
+        
+        // Добавляем в колонку "inProgress"
+        newBoard.columns['inProgress'].requestIds.push(request.id);
+        
+        // Обновляем доску
+        setBoard(newBoard);
+      }
+
+      // Обновляем местный список обращений
       const updatedRequests = citizenRequests.map(req => {
         if (req.id === request.id) {
           return {
             ...req,
             aiProcessed: true,
-            aiClassification: result.classification || req.aiClassification,
-            aiSuggestion: result.suggestion || req.aiSuggestion,
+            aiClassification: result.classification || ((req as any).aiClassification || ''),
+            aiSuggestion: result.suggestion || ((req as any).aiSuggestion || ''),
             status: 'inProgress'
           };
         }
@@ -879,12 +919,7 @@ export default function CitizenRequestsKanban2() {
             <FileText className="h-4 w-4 mr-2" />
             Импорт из файла
           </Button>
-          <Button variant="outline" onClick={() => {
-              toast({
-                title: "Настройки ИИ",
-                description: "Настройки ИИ для обработки обращений будут доступны вскоре",
-              });
-            }}>
+          <Button variant="outline" onClick={() => setIsAISettingsOpen(true)}>
             <Bot className="h-4 w-4 mr-2" />
             Настройки ИИ
           </Button>
@@ -1210,6 +1245,79 @@ export default function CitizenRequestsKanban2() {
           onClose={() => setIsDetailsDialogOpen(false)}
         />
       )}
+      
+      {/* Модальное окно настроек ИИ */}
+      <Dialog open={isAISettingsOpen} onOpenChange={setIsAISettingsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Настройки ИИ для обработки обращений</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <h4 className="text-sm font-medium">Использовать базу знаний</h4>
+                <p className="text-xs text-muted-foreground">
+                  ИИ будет использовать базу знаний для поиска контекста и ответов
+                </p>
+              </div>
+              <Switch 
+                checked={aiSettings.useKnowledgeBase}
+                onCheckedChange={(checked) => setAISettings(prev => ({ ...prev, useKnowledgeBase: checked }))}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <h4 className="text-sm font-medium">Использовать организационную структуру</h4>
+                <p className="text-xs text-muted-foreground">
+                  ИИ будет использовать оргструктуру для определения ответственных подразделений
+                </p>
+              </div>
+              <Switch 
+                checked={aiSettings.useOrgStructure}
+                onCheckedChange={(checked) => setAISettings(prev => ({ ...prev, useOrgStructure: checked }))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Тип обработки обращений</h4>
+              <div className="grid grid-cols-3 gap-2">
+                <Button 
+                  variant={aiSettings.processType === 'auto' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => setAISettings(prev => ({ ...prev, processType: 'auto' }))}
+                >
+                  Авто
+                </Button>
+                <Button 
+                  variant={aiSettings.processType === 'full' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => setAISettings(prev => ({ ...prev, processType: 'full' }))}
+                >
+                  Полная
+                </Button>
+                <Button 
+                  variant={aiSettings.processType === 'classification' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => setAISettings(prev => ({ ...prev, processType: 'classification' }))}
+                >
+                  Классификация
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {aiSettings.processType === 'auto' && 'Автоматическая обработка с минимальным вмешательством человека'}
+                {aiSettings.processType === 'full' && 'Полная обработка с возможностью корректировки человеком'}
+                {aiSettings.processType === 'classification' && 'Только классификация и первичный анализ обращения'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsAISettingsOpen(false)}>
+              Сохранить настройки
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
