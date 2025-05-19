@@ -262,11 +262,7 @@ export function useSystemSettings() {
     error
   } = useQuery<SystemSettings>({
     queryKey: ['/api/system/settings'],
-    // Если API недоступен, используем демо-данные
-    onError: (error) => {
-      console.error('Ошибка загрузки настроек из API:', error);
-      console.warn('Используются демонстрационные настройки.');
-    }
+    retry: 1
   });
   
   // Мутация для обновления настроек

@@ -1,151 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
 import { Shield, Cog, Link2, RefreshCw, Check, X, Users as UsersIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useIntegrationStatus } from '@/hooks/use-integration-status';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import Users from './Users';
-
-// Интерфейсы для типизации настроек системы
-interface SystemSettings {
-  general: {
-    systemName: string;
-    defaultLanguage: string;
-    enableActivityLogging: boolean;
-    enableBlockchainIntegration: boolean;
-    supportedLanguages?: string[];
-    vectorStore?: string;
-    fileStorage?: string;
-    enableBackups?: boolean;
-    analytics?: {
-      collectUsageMetrics: boolean;
-      reportInterval: string;
-    };
-    apiBaseUrl?: string;
-    apiEnabled?: boolean;
-  };
-  security: {
-    enableLocalAuth: boolean;
-    enableLdapAuth: boolean;
-    enableTwoFactor: boolean;
-    enableReplitAuth?: boolean;
-    passwordRequirements: {
-      minLength: number;
-      requireUppercase: boolean;
-      requireLowercase: boolean;
-      requireNumbers: boolean;
-      requireSpecialChars: boolean;
-    };
-    sessionTimeout: number;
-    ldapSettings?: {
-      serverUrl: string;
-      baseDn: string;
-      bindDn: string;
-      bindCredentials: string;
-    };
-    twoFactorMethod?: string;
-    rbacIntegrateWithOrgStructure?: boolean;
-    encryption?: {
-      algorithm: string;
-      keyRotationInterval: string;
-      enableAtRest: boolean;
-      enableInTransit: boolean;
-    };
-    audit?: {
-      retentionPeriod: string;
-      enableExport: boolean;
-    };
-  };
-  integrations: {
-    openai: {
-      enabled: boolean;
-      apiKey: string;
-      defaultModel: string;
-      baseUrl?: string;
-      testMode?: boolean;
-      temperature?: number;
-    };
-    anthropic: {
-      enabled: boolean;
-      apiKey: string;
-      defaultModel: string;
-      temperature?: number;
-    };
-    yandexGpt?: {
-      enabled: boolean;
-      apiKey: string;
-      defaultModel: string;
-    };
-    yandexSpeech: {
-      enabled: boolean;
-      apiKey: string;
-      defaultVoice?: string;
-      enableSTT?: boolean;
-      enableTTS?: boolean;
-    };
-    eOtinish?: {
-      enabled: boolean;
-      apiEndpoint: string;
-      authToken: string;
-      syncInterval?: string;
-      autoProcess?: boolean;
-    };
-    egov?: {
-      enabled: boolean;
-      apiEndpoint: string;
-      certificate?: string;
-    };
-    hyperledger?: {
-      enabled: boolean;
-      nodeUrl: string;
-      privateKey: string;
-      contractAddress?: string;
-      network?: string;
-      storeMeetings?: boolean;
-      storeRequests?: boolean;
-      storeVoting?: boolean;
-    };
-    supabase?: {
-      enabled: boolean;
-      url: string;
-      apiKey: string;
-    };
-  };
-}
+import { useSystemSettings } from '@/hooks/use-system-settings';
 
 // Компонент настроек безопасности
 const SecuritySettings = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const { data: settings, isLoading } = useQuery<SystemSettings>({
-    queryKey: ['/api/system/settings'],
-  });
-  
-  const updateSettingsMutation = useMutation({
-    mutationFn: (newSettings: Partial<SystemSettings>) => {
-      return apiRequest('PATCH', '/api/system/settings', newSettings);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/system/settings'] });
-      toast({
-        title: 'Настройки безопасности обновлены',
-        description: 'Изменения были успешно сохранены',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось обновить настройки безопасности',
-        variant: 'destructive',
-      });
-    },
-  });
+  const { 
+    settings, 
+    isLoading, 
+    updateSettings 
+  } = useSystemSettings();
   
   if (isLoading) {
     return <div className="flex items-center justify-center h-64">

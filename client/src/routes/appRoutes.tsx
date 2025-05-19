@@ -12,6 +12,7 @@ import EmbedForm from "@/pages/EmbedForm";
 
 // Административные
 import SystemSettings from "@/pages/SystemSettings"; 
+import IntegrationSettings from "@/pages/IntegrationSettings";
 import Users from "@/pages/Users";
 import RbacManagement from "@/pages/RbacManagement";
 
@@ -220,7 +221,7 @@ export const appRoutes: RouteType[] = [
   }),
   
   // Обработка перенаправления на страницу настроек с вкладкой интеграций
-  createRoute("/integration-settings", SystemSettings, { 
+  createRoute("/integration-settings", IntegrationSettings, { 
     protected: true, 
     requiredRoles: ["admin"], 
     name: "Настройки интеграций", 
