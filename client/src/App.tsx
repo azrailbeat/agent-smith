@@ -147,6 +147,13 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
+      <Route path="/system-settings">
+        {() => (
+          <ProtectedRoute requiredRoles={["admin"]}>
+            <SystemSettings />
+          </ProtectedRoute>
+        )}
+      </Route>
       <Route path="/settings">
         {() => (
           <ProtectedRoute requiredRoles={["admin"]}>

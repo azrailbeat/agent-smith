@@ -2219,7 +2219,7 @@ const SystemSettings = () => {
       <Breadcrumbs
         items={[
           { title: 'Главная', href: '/' },
-          { title: 'Настройки системы', href: '/settings' }
+          { title: 'Настройки системы', href: '/system-settings' }
         ]}
       />
       
