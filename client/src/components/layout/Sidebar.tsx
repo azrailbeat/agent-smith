@@ -141,11 +141,6 @@ const Sidebar = ({
           icon: <Settings size={20} />
         },
         {
-          name: "Настройки интеграций",
-          path: "/integration-settings",
-          icon: <Database size={20} />
-        },
-        {
           name: "Переводчик",
           path: "/translate",
           icon: <Mic size={20} />
